@@ -48,9 +48,14 @@
 }
 
 /* Custom global styles to lock dark mode aesthetics and scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(35, 40, 51, 0.4) transparent;
+}
+
 html,
 body {
-  background-color: #09090b;
+  background-color: var(--color-bg);
   color: #e2e8f0;
   font-family: var(--font-sans);
   overflow-x: hidden;
@@ -63,16 +68,17 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #23262f;
-  border-radius: 3px;
+  background: rgba(35, 40, 51, 0.4);
+  border-radius: 99px;
+  transition: background 0.15s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3b82f6;
+  background: rgba(55, 62, 77, 0.7);
 }
 
 /* Sleek noise backdrop and scanning grid */

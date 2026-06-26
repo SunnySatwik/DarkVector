@@ -167,7 +167,7 @@ export function VectorPanel({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ── Header ── */}
-      <div className="px-4 py-3 border-b border-border-custom/30 shrink-0">
+      <div className="px-4 py-3 border-b border-border-custom/15 shrink-0 bg-surface/10">
         <div className="flex items-center gap-2.5">
           <div className="w-5 h-5 rounded-md bg-violet-500/12 flex items-center justify-center">
             <Sparkles className="w-3 h-3 text-violet-400" />
@@ -183,317 +183,309 @@ export function VectorPanel({
         </div>
       </div>
 
-      {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 scrollbar-thin">
+      {/* ── Scrollable intelligence body ── */}
+      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-6 scrollbar-thin">
 
         {/* 1. Summary — What happened? */}
-        <SectionLabel>Summary</SectionLabel>
-        <motion.p
-          key={alert.id + "-summary"}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
-          className="text-[13px] text-gray-300 leading-relaxed font-sans"
-        >
-          {alert.source} triggered {summaryText}
-        </motion.p>
-
-        <Divider />
+        <div className="space-y-2">
+          <SectionLabel>Summary</SectionLabel>
+          <motion.p
+            key={alert.id + "-summary"}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="text-[13px] text-gray-300 leading-relaxed font-sans"
+          >
+            {alert.source} triggered {summaryText}
+          </motion.p>
+        </div>
 
         {/* 2. Evidence — What supports this? */}
-        <SectionLabel>Evidence</SectionLabel>
-        <motion.div
-          key={alert.id + "-evidence"}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.22, delay: 0.04, ease: "easeOut" }}
-          className="space-y-1.5"
-        >
-          {[
-            alert.details.processPath && {
-              label: "Process",
-              value: alert.details.processPath,
-              mono: true,
-            },
-            alert.details.commandLine && {
-              label: "Command",
-              value: alert.details.commandLine,
-              mono: true,
-            },
-            alert.details.ipAddress && {
-              label: "Remote IP",
-              value: `${alert.details.ipAddress}${alert.details.port ? `:${alert.details.port}` : ""}`,
-              mono: true,
-            },
-            alert.details.username && {
-              label: "User",
-              value: alert.details.username,
-              mono: false,
-            },
-            alert.details.bytesTransferred && {
-              label: "Transferred",
-              value: `${(alert.details.bytesTransferred / 1024).toFixed(1)} KB`,
-              mono: false,
-            },
-          ]
-            .filter(Boolean)
-            .map((item, i) => {
-              if (!item) return null;
-              return (
-                <div key={i} className="flex items-baseline gap-2">
-                  <span className="text-[10px] text-gray-500 shrink-0 w-16 text-right">
-                    {item.label}
-                  </span>
-                  <span
-                    className={`text-[12px] text-gray-300 truncate ${
-                      item.mono ? "font-mono" : "font-sans"
-                    }`}
-                  >
-                    {item.value as string}
-                  </span>
-                </div>
-              );
-            })}
+        <div className="space-y-2">
+          <SectionLabel>Evidence</SectionLabel>
+          <motion.div
+            key={alert.id + "-evidence"}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, delay: 0.04, ease: "easeOut" }}
+            className="space-y-1.5"
+          >
+            {[
+              alert.details.processPath && {
+                label: "Process",
+                value: alert.details.processPath,
+              },
+              alert.details.commandLine && {
+                label: "Command",
+                value: alert.details.commandLine,
+              },
+              alert.details.ipAddress && {
+                label: "Remote IP",
+                value: `${alert.details.ipAddress}${alert.details.port ? `:${alert.details.port}` : ""}`,
+              },
+              alert.details.username && {
+                label: "User",
+                value: alert.details.username,
+              },
+              alert.details.bytesTransferred && {
+                label: "Transferred",
+                value: `${(alert.details.bytesTransferred / 1024).toFixed(1)} KB`,
+              },
+            ]
+              .filter(Boolean)
+              .map((item, i) => {
+                if (!item) return null;
+                return (
+                  <div key={i} className="flex items-baseline gap-3 py-0.5">
+                    <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
+                      {item.label}
+                    </span>
+                    <span className="text-[11px] font-mono text-gray-300 min-w-0 flex-1 truncate select-all">
+                      {item.value as string}
+                    </span>
+                  </div>
+                );
+              })}
 
-          {/* Anomaly score inline */}
-          <div className="flex items-baseline gap-2">
-            <span className="text-[10px] text-gray-500 shrink-0 w-16 text-right">
-              Score
-            </span>
-            <span className="text-[12px] font-mono text-red-400">
-              {alert.score} / 100
-            </span>
-          </div>
-        </motion.div>
-
-        <Divider />
+            {/* Anomaly score inline */}
+            <div className="flex items-baseline gap-3 py-0.5">
+              <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
+                Score
+              </span>
+              <span className="text-[11px] font-mono text-red-400">
+                {alert.score} / 100
+              </span>
+            </div>
+          </motion.div>
+        </div>
 
         {/* 3. Reasoning — Why was it flagged? */}
-        <SectionLabel>Reasoning</SectionLabel>
-        <motion.div
-          key={alert.id + "-reasoning"}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.22, delay: 0.08, ease: "easeOut" }}
-          className="space-y-2.5"
-        >
-          <p className="text-[13px] text-gray-400 leading-relaxed font-sans">
-            <ReactMarkdown>{reasoningText}</ReactMarkdown>
-          </p>
+        <div className="space-y-2">
+          <SectionLabel>Reasoning</SectionLabel>
+          <motion.div
+            key={alert.id + "-reasoning"}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, delay: 0.08, ease: "easeOut" }}
+            className="space-y-2.5"
+          >
+            <p className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
+              <ReactMarkdown>{reasoningText}</ReactMarkdown>
+            </p>
 
-          {/* SHAP bar chart — compact */}
-          {alert.details.shapFactors &&
-            alert.details.shapFactors.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                {alert.details.shapFactors.slice(0, 3).map((f, i) => (
-                  <div key={i} className="space-y-0.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] text-gray-500 font-sans truncate pr-2">
-                        {f.factor}
-                      </span>
-                      <span className="text-[10px] font-mono text-gray-500 shrink-0">
-                        {(f.impact * 100).toFixed(0)}%
-                      </span>
+            {/* SHAP bar chart — compact */}
+            {alert.details.shapFactors &&
+              alert.details.shapFactors.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  {alert.details.shapFactors.slice(0, 3).map((f, i) => (
+                    <div key={i} className="space-y-0.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] text-gray-500 font-sans truncate pr-2">
+                          {f.factor}
+                        </span>
+                        <span className="text-[10px] font-mono text-gray-500 shrink-0">
+                          {(f.impact * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-0.5 bg-border-custom/25 rounded-full overflow-hidden">
+                        <motion.div
+                          className="bg-violet-400/60 h-full rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${f.impact * 100}%` }}
+                          transition={{
+                            duration: 0.4,
+                            delay: i * 0.06,
+                            ease: "easeOut",
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full h-0.5 bg-border-custom/40 rounded-full overflow-hidden">
-                      <motion.div
-                        className="bg-violet-400/60 h-full rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${f.impact * 100}%` }}
-                        transition={{
-                          duration: 0.4,
-                          delay: i * 0.06,
-                          ease: "easeOut",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-        </motion.div>
-
-        <Divider />
+                  ))}
+                </div>
+              )}
+          </motion.div>
+        </div>
 
         {/* 4. Recommended actions — ghost buttons, not CTAs */}
-        <SectionLabel>Recommended actions</SectionLabel>
-        <motion.div
-          key={alert.id + "-actions"}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.22, delay: 0.12, ease: "easeOut" }}
-          className="space-y-1.5"
-        >
-          {/* Isolate node */}
-          <div className="flex items-center justify-between py-1.5 group">
-            <div className="flex items-center gap-2 min-w-0">
-              <Unplug className="w-3 h-3 text-red-400/70 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[12px] text-gray-300 font-sans">
-                  Isolate node
-                </p>
-                <p className="text-[10px] text-gray-600 font-mono truncate">
-                  {alert.source}
-                </p>
-              </div>
-            </div>
-
-            {/* Progress or ghost button */}
-            {quarantineStatus === "quarantining" ? (
-              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                <div className="w-16 h-0.5 bg-border-custom/40 rounded-full overflow-hidden">
-                  <div
-                    className="bg-red-500/60 h-full transition-all duration-200 rounded-full"
-                    style={{ width: `${quarantineProgress}%` }}
-                  />
-                </div>
-                <span className="text-[10px] text-gray-500 font-mono shrink-0">
-                  {quarantineProgress}%
-                </span>
-              </div>
-            ) : (
-              <button
-                onClick={onIsolate}
-                disabled={quarantineStatus !== "active"}
-                className={`shrink-0 ml-2 text-[11px] px-2.5 py-1 rounded-md border transition-all duration-120 cursor-pointer font-sans ${
-                  quarantineStatus === "quarantined"
-                    ? "text-red-400 border-red-500/30 bg-red-500/5 cursor-default opacity-60"
-                    : "text-gray-400 border-border-custom/50 hover:text-gray-200 hover:border-gray-500/50 hover:bg-elevated/40 disabled:opacity-30 disabled:cursor-not-allowed"
-                }`}
-              >
-                {quarantineStatus === "quarantined" ? "Isolated" : "Isolate"}
-              </button>
-            )}
-          </div>
-
-          {/* Block IP — only if available */}
-          {alert.details.ipAddress && (
-            <div className="flex items-center justify-between py-1.5">
+        <div className="space-y-2">
+          <SectionLabel>Recommended actions</SectionLabel>
+          <motion.div
+            key={alert.id + "-actions"}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, delay: 0.12, ease: "easeOut" }}
+            className="space-y-1.5"
+          >
+            {/* Isolate node */}
+            <div className="flex items-center justify-between py-1.5 group">
               <div className="flex items-center gap-2 min-w-0">
-                <Shield className="w-3 h-3 text-blue-400/70 shrink-0" />
+                <Unplug className="w-3 h-3 text-red-400/70 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-[12px] text-gray-300 font-sans">
-                    Block IP
+                    Isolate node
                   </p>
                   <p className="text-[10px] text-gray-600 font-mono truncate">
-                    {alert.details.ipAddress}
-                    {alert.details.port ? `:${alert.details.port}` : ""}
+                    {alert.source}
                   </p>
                 </div>
               </div>
-              <button
-                onClick={onBlockIp}
-                disabled={isBlockApplied}
-                className={`shrink-0 ml-2 text-[11px] px-2.5 py-1 rounded-md border transition-all duration-120 cursor-pointer font-sans ${
-                  isBlockApplied
-                    ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/5 cursor-default opacity-70"
-                    : "text-gray-400 border-border-custom/50 hover:text-gray-200 hover:border-gray-500/50 hover:bg-elevated/40 disabled:opacity-30 disabled:cursor-not-allowed"
-                }`}
-              >
-                {isBlockApplied ? "Blocked" : "Block"}
-              </button>
+
+              {/* Progress or ghost button */}
+              {quarantineStatus === "quarantining" ? (
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <div className="w-16 h-0.5 bg-border-custom/30 rounded-full overflow-hidden">
+                    <div
+                      className="bg-red-500/60 h-full transition-all duration-200 rounded-full"
+                      style={{ width: `${quarantineProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-gray-500 font-mono shrink-0">
+                    {quarantineProgress}%
+                  </span>
+                </div>
+              ) : (
+                <button
+                  onClick={onIsolate}
+                  disabled={quarantineStatus !== "active"}
+                  className={`shrink-0 ml-2 text-[11px] px-2.5 py-1 rounded-md border transition-all duration-120 cursor-pointer font-sans ${
+                    quarantineStatus === "quarantined"
+                      ? "text-red-400 border-red-500/20 bg-red-500/5 cursor-default opacity-60"
+                      : "text-gray-400 border-border-custom/30 hover:text-gray-200 hover:border-gray-500/30 hover:bg-elevated/40 disabled:opacity-30 disabled:cursor-not-allowed"
+                  }`}
+                >
+                  {quarantineStatus === "quarantined" ? "Isolated" : "Isolate"}
+                </button>
+              )}
             </div>
-          )}
-        </motion.div>
 
-        <Divider />
+            {/* Block IP — only if available */}
+            {alert.details.ipAddress && (
+              <div className="flex items-center justify-between py-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Shield className="w-3 h-3 text-blue-400/70 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[12px] text-gray-300 font-sans">
+                      Block IP
+                    </p>
+                    <p className="text-[10px] text-gray-600 font-mono truncate">
+                      {alert.details.ipAddress}
+                      {alert.details.port ? `:${alert.details.port}` : ""}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={onBlockIp}
+                  disabled={isBlockApplied}
+                  className={`shrink-0 ml-2 text-[11px] px-2.5 py-1 rounded-md border transition-all duration-120 cursor-pointer font-sans ${
+                    isBlockApplied
+                      ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 cursor-default opacity-70"
+                      : "text-gray-400 border-border-custom/30 hover:text-gray-200 hover:border-gray-500/30 hover:bg-elevated/40 disabled:opacity-30 disabled:cursor-not-allowed"
+                  }`}
+                >
+                  {isBlockApplied ? "Blocked" : "Block"}
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </div>
 
-        {/* 5. Conversation — collapsible, secondary weight */}
-        <div>
-          <button
-            onClick={() => setConversationOpen((v) => !v)}
-            className="flex items-center justify-between w-full group cursor-pointer"
-            aria-expanded={conversationOpen}
-          >
-            <SectionLabel>Conversation</SectionLabel>
-            <ChevronDown
-              className={`w-3 h-3 text-gray-600 transition-transform duration-150 mb-2 ${
-                conversationOpen ? "rotate-0" : "-rotate-90"
-              }`}
-            />
-          </button>
+      {/* ── Pinned Conversation history ── */}
+      <div className="border-t border-border-custom/15 bg-bg/50 px-4 py-3 shrink-0 flex flex-col min-h-0 max-h-[260px] md:max-h-[300px]">
+        <button
+          onClick={() => setConversationOpen((v) => !v)}
+          className="flex items-center justify-between w-full group cursor-pointer pb-2"
+          aria-expanded={conversationOpen}
+        >
+          <p className="text-[10px] tracking-wide text-gray-500 font-sans uppercase">
+            Conversation
+          </p>
+          <ChevronDown
+            className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-150 ${
+              conversationOpen ? "rotate-0" : "-rotate-90"
+            }`}
+          />
+        </button>
 
-          <AnimatePresence initial={false}>
-            {conversationOpen && (
-              <motion.div
-                key="conversation"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="overflow-hidden"
-              >
-                <div className="space-y-3">
-                  {chatMessages.map((msg, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.18, ease: "easeOut" }}
-                      className={`flex flex-col ${
-                        msg.sender === "user" ? "items-end" : "items-start"
+        <AnimatePresence initial={false}>
+          {conversationOpen && (
+            <motion.div
+              key="conversation"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="flex-1 overflow-y-auto min-h-0 space-y-3 pr-1 scrollbar-thin pb-1"
+            >
+              <div className="space-y-3">
+                {chatMessages.map((msg, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                    className={`flex flex-col ${
+                      msg.sender === "user" ? "items-end" : "items-start"
+                    }`}
+                  >
+                    <span className="text-[10px] text-gray-600 mb-1 px-0.5 font-sans">
+                      {msg.sender === "ai" ? "Vector" : "You"} · {msg.time}
+                    </span>
+                    <div
+                      className={`max-w-[96%] rounded-lg px-2.5 py-1.5 text-[12px] leading-relaxed ${
+                        msg.sender === "user"
+                          ? "bg-violet-500/8 text-gray-300"
+                          : "bg-surface/60 text-gray-400"
                       }`}
                     >
-                      <span className="text-[10px] text-gray-600 mb-1 px-0.5 font-sans">
-                        {msg.sender === "ai" ? "Vector" : "You"} · {msg.time}
-                      </span>
-                      <div
-                        className={`max-w-[96%] rounded-lg px-2.5 py-1.5 text-[12px] leading-relaxed ${
-                          msg.sender === "user"
-                            ? "bg-violet-500/8 text-gray-300"
-                            : "bg-surface/60 text-gray-400"
-                        }`}
-                      >
-                        <div className="prose prose-invert prose-xs max-w-none [&_p]:my-0 [&_strong]:text-gray-300 font-sans">
-                          <ReactMarkdown>{msg.text}</ReactMarkdown>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-
-                  {/* Typing indicator — three dots with staggered opacity, no bounce */}
-                  {isResponding && (
-                    <div className="flex flex-col items-start">
-                      <span className="text-[10px] text-gray-600 mb-1 px-0.5 font-sans">
-                        Vector
-                      </span>
-                      <div className="bg-surface/60 rounded-lg px-2.5 py-2 flex items-center gap-1">
-                        {[0, 100, 200].map((delay) => (
-                          <motion.span
-                            key={delay}
-                            className="w-1 h-1 rounded-full bg-violet-400/60"
-                            animate={{ opacity: [0.3, 1, 0.3] }}
-                            transition={{
-                              duration: 1.2,
-                              repeat: Infinity,
-                              delay: delay / 1000,
-                              ease: "easeInOut",
-                            }}
-                          />
-                        ))}
+                      <div className="prose prose-invert prose-xs max-w-none [&_p]:my-0 [&_strong]:text-gray-300 font-sans">
+                        <ReactMarkdown>{msg.text}</ReactMarkdown>
                       </div>
                     </div>
-                  )}
+                  </motion.div>
+                ))}
 
-                  <div ref={chatEndRef} />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                {isResponding && (
+                  <div className="flex flex-col items-start">
+                    <span className="text-[10px] text-gray-600 mb-1 px-0.5 font-sans">
+                      Vector
+                    </span>
+                    <div className="bg-surface/60 rounded-lg px-2.5 py-2 flex items-center gap-1">
+                      {[0, 100, 200].map((delay) => (
+                        <motion.span
+                          key={delay}
+                          className="w-1 h-1 rounded-full bg-violet-400/60"
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{
+                            duration: 1.2,
+                            repeat: Infinity,
+                            delay: delay / 1000,
+                            ease: "easeInOut",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* ── Input — always pinned to bottom ── */}
       <form
         onSubmit={handleSend}
-        className="px-4 py-3 border-t border-border-custom/30 flex items-center gap-2 shrink-0"
+        className="px-4 py-3 border-t border-border-custom/15 flex items-center gap-2 shrink-0 bg-surface/10"
       >
         <input
           type="text"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           placeholder="Ask Vector..."
-          className="flex-1 bg-transparent border border-border-custom/40 focus:border-violet-500/30 focus:outline-none rounded-lg px-3 py-1.5 text-[12px] text-gray-200 placeholder-gray-600 transition-colors duration-150 font-sans"
+          className="flex-1 bg-transparent border border-border-custom/20 focus:border-violet-500/30 focus:outline-none rounded-lg px-3 py-1.5 text-[12px] text-gray-200 placeholder-gray-600 transition-colors duration-150 font-sans"
         />
         <button
           type="submit"

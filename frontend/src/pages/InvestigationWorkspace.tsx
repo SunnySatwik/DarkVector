@@ -126,7 +126,7 @@ export default function InvestigationWorkspace({
       className="flex flex-col h-[calc(100vh-64px)] bg-bg overflow-hidden"
     >
       {/* ── Tab bar / breadcrumb ───────────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center justify-between px-5 py-2.5 border-b border-border-custom/30 bg-surface/20">
+      <div className="shrink-0 flex items-center justify-between px-5 py-2.5 border-b border-border-custom/18 bg-surface/20">
         {/* Back + open tabs */}
         <div className="flex items-center gap-2 min-w-0">
           <button
@@ -148,7 +148,7 @@ export default function InvestigationWorkspace({
                   layout
                   className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] cursor-pointer shrink-0 transition-colors duration-120 ${
                     isActive
-                      ? "bg-elevated border border-border-custom/60 text-gray-200"
+                      ? "bg-elevated border border-border-custom/40 text-gray-200"
                       : "text-gray-500 hover:text-gray-300 hover:bg-elevated/30"
                   }`}
                   onClick={() => onSelectAlert(tab)}
@@ -191,12 +191,12 @@ export default function InvestigationWorkspace({
       </div>
 
       {/* ── Three-column body ──────────────────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="flex-1 flex overflow-hidden min-h-0 w-full">
 
         {/* LEFT — Timeline + Event log */}
         <motion.div
           {...fadeIn(0.06)}
-          className="w-56 shrink-0 border-r border-border-custom/25 flex flex-col overflow-hidden hidden md:flex"
+          className="hidden md:flex flex-col shrink-0 grow-0 md:w-[22%] xl:w-[20%] 2xl:w-[18%] border-r border-border-custom/15 overflow-hidden"
         >
           {/* Timeline section */}
           <div className="flex-1 overflow-y-auto p-4 scrollbar-thin min-h-0">
@@ -208,7 +208,7 @@ export default function InvestigationWorkspace({
           </div>
 
           {/* Event log section */}
-          <div className="border-t border-border-custom/25 p-4 overflow-y-auto max-h-[44%] scrollbar-thin">
+          <div className="border-t border-border-custom/15 p-4 overflow-y-auto max-h-[44%] scrollbar-thin">
             <div className="flex items-center gap-1.5 mb-3">
               <Layers className="w-3.5 h-3.5 text-gray-500" />
               <h2 className="text-[11px] font-sans font-medium text-gray-500">Event log</h2>
@@ -223,10 +223,10 @@ export default function InvestigationWorkspace({
           className="flex-1 overflow-y-auto scrollbar-thin min-h-0 min-w-0"
         >
           {/* Constrain content width for readability */}
-          <div className="max-w-2xl mx-auto px-8 py-8 space-y-8">
+          <div className="max-w-2xl mx-auto px-8 py-8">
 
             {/* ── 1. Incident hero — What happened? ─────────────────────── */}
-            <section>
+            <section className="space-y-4">
               {/* Meta row */}
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <Badge variant={severityBadgeVariant(activeAlert.severity)}>
@@ -251,7 +251,7 @@ export default function InvestigationWorkspace({
               </h1>
 
               {/* Description */}
-              <p className="text-[13px] text-gray-400 leading-relaxed font-sans mb-4">
+              <p className="text-[13px] text-gray-400 leading-relaxed font-sans mb-4 max-w-[72ch]">
                 {activeAlert.description}
               </p>
 
@@ -280,11 +280,8 @@ export default function InvestigationWorkspace({
               </div>
             </section>
 
-            {/* Divider */}
-            <div className="border-t border-border-custom/20" />
-
             {/* ── 2. Evidence — What supports this? ─────────────────────── */}
-            <section className="space-y-5">
+            <section className="border-t border-border-custom/12 pt-6 mt-6 space-y-4">
               <SectionLabel icon={Fingerprint}>Evidence</SectionLabel>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -299,14 +296,11 @@ export default function InvestigationWorkspace({
               </div>
             </section>
 
-            {/* Divider */}
-            <div className="border-t border-border-custom/20" />
-
             {/* ── 3. Reasoning — Why was it flagged? ────────────────────── */}
-            <section className="space-y-4">
+            <section className="border-t border-border-custom/12 pt-6 mt-6 space-y-4">
               <SectionLabel icon={Sparkles}>AI reasoning</SectionLabel>
 
-              <p className="text-[13px] text-gray-400 leading-relaxed font-sans">
+              <p className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
                 Vector has assessed the suspicious spawn indicators and correlated them
                 against historical server configurations. The execution patterns match
                 catalogued namespace manipulations and represent an active escape trajectory.
@@ -320,7 +314,7 @@ export default function InvestigationWorkspace({
                     <div className="space-y-2">
                       {activeAlert.details.shapFactors.map((f, i) => (
                         <div key={i} className="space-y-1">
-                          <div className="flex justify-between items-baseline">
+                           <div className="flex justify-between items-baseline">
                             <span className="text-[11px] text-gray-500 font-sans">{f.factor}</span>
                             <span className="text-[10px] font-mono text-gray-600">
                               {(f.impact * 100).toFixed(0)}%
@@ -359,35 +353,32 @@ export default function InvestigationWorkspace({
 
             {/* ── 4. Related incidents ───────────────────────────────────── */}
             {relatedAlerts.length > 0 && (
-              <>
-                <div className="border-t border-border-custom/20" />
-                <section className="space-y-3">
-                  <div className="flex items-center gap-1.5">
-                    <Target className="w-3.5 h-3.5 text-gray-500" />
-                    <h2 className="text-[11px] font-sans font-medium text-gray-500">Related incidents</h2>
-                    <span className="text-[10px] text-gray-700">· same category</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    {relatedAlerts.map((related) => (
-                      <button
-                        key={related.id}
-                        onClick={() => onSelectAlert(related)}
-                        className="flex items-center justify-between px-3 py-2 rounded-lg border border-border-custom/25 hover:border-border-custom/50 hover:bg-elevated/30 transition-all duration-120 text-left cursor-pointer group"
-                      >
-                        <div className="min-w-0">
-                          <span className="text-[10px] font-mono text-gray-500 block">
-                            {related.id}
-                          </span>
-                          <p className="text-[11px] text-gray-400 truncate font-sans mt-0.5">
-                            {related.type}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-3 h-3 text-gray-600 shrink-0 ml-2 group-hover:text-gray-400 transition-colors" />
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              </>
+              <section className="border-t border-border-custom/12 pt-6 mt-6 space-y-3">
+                <div className="flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-gray-500" />
+                  <h2 className="text-[11px] font-sans font-medium text-gray-500">Related incidents</h2>
+                  <span className="text-[10px] text-gray-700">· same category</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {relatedAlerts.map((related) => (
+                    <button
+                      key={related.id}
+                      onClick={() => onSelectAlert(related)}
+                      className="flex items-center justify-between px-3 py-2 rounded-lg border border-border-custom/15 hover:border-border-custom/30 hover:bg-elevated/20 transition-all duration-120 text-left cursor-pointer group"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-mono text-gray-500 block">
+                          {related.id}
+                        </span>
+                        <p className="text-[11px] text-gray-400 truncate font-sans mt-0.5">
+                          {related.type}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-3 h-3 text-gray-600 shrink-0 ml-2 group-hover:text-gray-400 transition-colors" />
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
 
             {/* Bottom breathing room */}
@@ -398,7 +389,7 @@ export default function InvestigationWorkspace({
         {/* RIGHT — Vector AI panel */}
         <motion.div
           {...fadeIn(0.22)}
-          className="w-64 shrink-0 border-l border-border-custom/25 flex flex-col overflow-hidden hidden lg:flex"
+          className="hidden lg:flex flex-col shrink-0 grow-0 lg:w-[25%] xl:w-[26%] 2xl:w-[26%] border-l border-border-custom/15 overflow-hidden"
         >
           <VectorPanel
             alert={activeAlert}

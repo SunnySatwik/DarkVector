@@ -79,25 +79,30 @@ export function EventTimeline({ alert }: EventTimelineProps) {
   const events = buildTimeline(alert);
 
   return (
-    <div className="space-y-0">
+    <div className="relative space-y-1">
       {events.map((evt, i) => {
         const isLast = i === events.length - 1;
         return (
-          <div key={i} className="relative flex gap-2.5">
-            {/* Track */}
+          <div
+            key={i}
+            className="group relative flex gap-3 px-2.5 py-1.5 -mx-2.5 rounded-md hover:bg-elevated/12 transition-all duration-120 cursor-default"
+          >
+            {/* Absolute Track Line */}
+            {!isLast && (
+              <div className="absolute left-[14px] top-[18px] bottom-0 w-px bg-border-custom/15 pointer-events-none" />
+            )}
+
+            {/* Track Dot */}
             <div className="flex flex-col items-center shrink-0" style={{ width: 10 }}>
               <div
-                className={`w-1.5 h-1.5 rounded-full mt-[7px] shrink-0 ${DOT_CLASSES[evt.status]} ${
+                className={`w-1.5 h-1.5 rounded-full mt-[5px] shrink-0 ${DOT_CLASSES[evt.status]} ${
                   evt.status === "critical" ? "animate-pulse" : ""
                 }`}
               />
-              {!isLast && (
-                <div className="w-px flex-1 bg-border-custom/30 mt-1 mb-0.5" />
-              )}
             </div>
 
             {/* Content */}
-            <div className={`flex-1 min-w-0 ${isLast ? "pb-0" : "pb-3"}`}>
+            <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-1">
                 <span className={`text-[11px] font-medium leading-tight ${TITLE_CLASSES[evt.status]}`}>
                   {evt.title}
@@ -106,7 +111,7 @@ export function EventTimeline({ alert }: EventTimelineProps) {
                   {evt.time}
                 </span>
               </div>
-              <p className="text-[10px] text-gray-600 leading-snug mt-0.5 pr-1">
+              <p className="text-[10px] text-gray-500 leading-snug mt-0.5 pr-1">
                 {evt.desc}
               </p>
             </div>
