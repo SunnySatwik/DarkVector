@@ -103,7 +103,7 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   const baseStyle =
-    "text-[9px] uppercase font-mono font-semibold tracking-wider px-1.5 py-0.5 rounded-md border inline-flex items-center select-none";
+    "text-[10px] font-sans font-semibold px-1.5 py-0.5 rounded-md border inline-flex items-center select-none";
 
   const variants = {
     default: "bg-[#161A22] border-[#23262F]/80 text-gray-400",
@@ -181,7 +181,7 @@ export const TableHead: React.FC<React.ThHTMLAttributes<HTMLTableCellElement>> =
   return (
     <th
       className={joinClasses(
-        "text-[10px] font-mono font-bold uppercase tracking-wider text-gray-500 py-2.5 px-3",
+        "text-[10px] font-mono font-bold text-gray-500 py-2.5 px-3",
         className
       )}
       {...props}
@@ -298,7 +298,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
       )}
     >
       <div>
-        <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-gray-400">
+        <h2 className="text-xs font-mono font-bold text-gray-400">
           {title}
         </h2>
         {subtitle && <p className="text-[10px] text-gray-500 mt-0.5 font-sans">{subtitle}</p>}

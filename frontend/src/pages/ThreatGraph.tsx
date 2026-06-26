@@ -101,7 +101,7 @@ export default function ThreatGraph() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          Security Threat Graph
+          Security threat graph
         </h1>
         <p className="text-xs text-gray-400 mt-1">
           Interactive forensic topology mapper correlating container processes, socket paths, and
@@ -116,17 +116,17 @@ export default function ThreatGraph() {
             <div className="p-4 border-b border-[#23262F]/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Network className="w-4 h-4 text-blue-400" />
-                <span className="font-mono text-xs font-bold text-gray-200 uppercase tracking-wider">
-                  Threat Propagation Vector Map
+                <span className="font-mono text-xs font-bold text-gray-200">
+                  Threat propagation vector map
                 </span>
               </div>
               <div className="flex gap-2">
-                <Badge variant="critical">Critical Link Triggered</Badge>
+                <Badge variant="critical">Critical link triggered</Badge>
               </div>
             </div>
 
             {/* Interactive Topology Graph Canvas */}
-            <div className="relative w-full overflow-x-auto min-h-[400px] flex justify-center items-center p-6 cyber-grid">
+            <div className="relative w-full overflow-x-auto min-h-[400px] flex justify-center items-center p-6 bg-black/25">
               <svg className="w-[750px] h-[300px] select-none" viewBox="0 0 750 300">
                 {/* Connections (Links) */}
                 {MOCK_LINKS.map((link, idx) => {
@@ -268,10 +268,10 @@ export default function ThreatGraph() {
             <div className="px-4 py-3 border-t border-[#23262F]/40 bg-[#161A22]/20 flex items-center justify-between text-[10px] font-mono text-gray-500">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1">
-                  <circle cx="4" cy="4" r="3" fill="#EF4444" /> Critical Threat Vector
+                  <circle cx="4" cy="4" r="3" fill="#EF4444" /> Critical threat vector
                 </span>
                 <span className="flex items-center gap-1">
-                  <circle cx="4" cy="4" r="3" fill="#3B82F6" /> Connected Pod
+                  <circle cx="4" cy="4" r="3" fill="#3B82F6" /> Connected pod
                 </span>
                 <span className="flex items-center gap-1">
                   <line
@@ -283,7 +283,7 @@ export default function ThreatGraph() {
                     strokeWidth="2"
                     strokeDasharray="2,2"
                   />{" "}
-                  Socket Egress Connection
+                  Socket egress connection
                 </span>
               </div>
               <span>Click nodes to inspect metadata</span>
@@ -306,7 +306,7 @@ export default function ThreatGraph() {
                   <div className="flex items-center justify-between border-b border-[#23262F]/40 pb-3">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-blue-400" />
-                      <span className="font-mono text-xs font-bold text-gray-200">Asset Audit</span>
+                      <span className="font-mono text-xs font-bold text-gray-200">Asset audit</span>
                     </div>
                     <Badge
                       variant={selectedNode.severity === "none" ? "default" : selectedNode.severity}
@@ -317,8 +317,8 @@ export default function ThreatGraph() {
 
                   <div className="space-y-3">
                     <div>
-                      <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-                        Asset Name
+                      <div className="text-[10px] font-mono text-gray-500">
+                        Asset name
                       </div>
                       <div className="text-xs font-mono font-bold text-gray-200 mt-0.5">
                         {selectedNode.label}
@@ -326,8 +326,8 @@ export default function ThreatGraph() {
                     </div>
 
                     <div>
-                      <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-                        Asset Category
+                      <div className="text-[10px] font-mono text-gray-500">
+                        Asset category
                       </div>
                       <div className="text-xs text-gray-400 capitalize font-medium mt-0.5">
                         {selectedNode.type}
@@ -335,8 +335,8 @@ export default function ThreatGraph() {
                     </div>
 
                     <div>
-                      <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-                        Technical Forensic Details
+                      <div className="text-[10px] font-mono text-gray-500">
+                        Technical forensic details
                       </div>
                       <p className="text-[11px] text-gray-400 leading-relaxed mt-1 font-sans bg-[#09090B] border border-[#23262F]/50 rounded-lg p-2.5">
                         {selectedNode.details}
@@ -351,7 +351,7 @@ export default function ThreatGraph() {
                         onClick={() => handleIsolate(selectedNode.id)}
                         className="w-full py-2 cursor-pointer font-bold"
                       >
-                        RE-ESTABLISH ASSET TRUST
+                        Re-establish asset trust
                       </Button>
                     ) : (
                       <Button
@@ -359,7 +359,7 @@ export default function ThreatGraph() {
                         onClick={() => handleIsolate(selectedNode.id)}
                         className="w-full py-2 cursor-pointer font-bold"
                       >
-                        ISOLATE / CONTAIN ASSET
+                        Isolate / contain asset
                       </Button>
                     )}
                   </div>

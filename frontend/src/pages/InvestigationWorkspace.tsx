@@ -147,19 +147,19 @@ export default function InvestigationWorkspace({
 
     // Pre-populate AI response
     setIsAiResponding(true);
-    const textIntro = `### 🧬 Gemini Forensic Evaluator Report
+    const textIntro = `### 🧬 Gemini forensic evaluator report
 
 I have retrieved the security context from ChromaDB vectors for **\`${activeAlert.id}\`**.
 
-#### 🎯 Forensic Analysis:
-- **Anomaly Vector**: \`${activeAlert.type}\`
-- **Deviation Score**: \`${activeAlert.score}%\`
-- **Identified Risk Signature**: Anomaly triggers closely correlate with **APT-29 (Cozy Bear)** container breakout strategies and credential exfiltration.
+#### 🎯 Forensic analysis:
+- **Anomaly vector**: \`${activeAlert.type}\`
+- **Deviation score**: \`${activeAlert.score}%\`
+- **Identified risk signature**: Anomaly triggers closely correlate with **APT-29 (Cozy Bear)** container breakout strategies and credential exfiltration.
 
-#### 📜 Suggested Action Plan:
-1. Dispatch **Network Policy Firewall Shield** block for target IP \`${activeAlert.details.ipAddress || "194.26.135.84"}\`.
-2. Apply **gRPC Isolation Directive** to decouple container namespaces.
-3. Export **JSON Audit Trace** to SIEM servers.`;
+#### 📜 Suggested action plan:
+1. Dispatch **network policy firewall shield** block for target IP \`${activeAlert.details.ipAddress || "194.26.135.84"}\`.
+2. Apply **gRPC isolation directive** to decouple container namespaces.
+3. Export **JSON audit trace** to SIEM servers.`;
 
     const delay = setTimeout(() => {
       setChatMessages([
@@ -195,7 +195,7 @@ I have retrieved the security context from ChromaDB vectors for **\`${activeAler
             ...prev,
             {
               sender: "ai",
-              text: `### 🛑 CONTAINER ISOLATION SUCCESSFUL\n\n- Node **\`${activeAlert.source}\`** has been successfully isolated inside the Kubernetes network namespace.\n- **Policy Applied**: \`block-all-egress\`\n- **Status**: Secure`,
+              text: `### 🛑 Container isolation successful\n\n- Node **\`${activeAlert.source}\`** has been successfully isolated inside the Kubernetes network namespace.\n- **Policy applied**: \`block-all-egress\`\n- **Status**: Secure`,
               time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             },
           ]);
@@ -213,7 +213,7 @@ I have retrieved the security context from ChromaDB vectors for **\`${activeAler
       ...prev,
       {
         sender: "ai",
-        text: `### 🛡️ Outbound Network Shield Active\n\nI have automatically committed a Kubernetes \`NetworkPolicy\` rule to block all outbound sockets destined for: **\`${activeAlert.details.ipAddress || "194.26.135.84"}\`** on port **\`${activeAlert.details.port || 443}\`**.`,
+        text: `### 🛡️ Outbound network shield active\n\nI have automatically committed a Kubernetes \`NetworkPolicy\` rule to block all outbound sockets destined for: **\`${activeAlert.details.ipAddress || "194.26.135.84"}\`** on port **\`${activeAlert.details.port || 443}\`**.`,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
     ]);
@@ -236,30 +236,30 @@ I have retrieved the security context from ChromaDB vectors for **\`${activeAler
       const query = userText.toLowerCase();
 
       if (query.includes("isolate") || query.includes("quarantine")) {
-        aiText = `### 🚨 Isolation Protocol Activated
+        aiText = `### 🚨 Isolation protocol activated
         
 I am ready to quarantine host **\`${activeAlert.source}\`**.
 
-Would you like to trigger the isolation sequence now? Click the **APPLY DISPATCH** button in the remediation playbook or ask me to export the YAML deployment configurations.`;
+Would you like to trigger the isolation sequence now? Click the **Apply dispatch** button in the remediation playbook or ask me to export the YAML deployment configurations.`;
       } else if (query.includes("explain") || query.includes("shap") || query.includes("why")) {
-        aiText = `### 📊 Explanation of Contributing Factors (SHAP)
+        aiText = `### 📊 Explanation of contributing factors (SHAP)
         
 Our Isolation Forest identified three core baseline anomalies for **\`${activeAlert.id}\`**:
 ${activeAlert.details.shapFactors?.map((sh) => `- **${sh.factor}**: Contributed **${(shapWeights[sh.factor] ? shapWeights[sh.factor] * 100 : sh.impact * 100).toFixed(0)}%** to the final score.`).join("\n")}
 
 *These figures indicate substantial deviation from the established cluster baseline (calculated over 100,000 standard transactions).*`;
       } else if (query.includes("notes") || query.includes("write")) {
-        aiText = `### 📝 Analyst Notes Synced
+        aiText = `### 📝 Analyst notes synced
         
 I can see your notes indicate anomalous namespace creations. I recommend adding a trace tag for audit queries: \`tag: forensics-${activeAlert.id.toLowerCase()}\`.`;
       } else {
-        aiText = `### 🔍 ChromaDB Similarity Context
+        aiText = `### 🔍 ChromaDB similarity context
         
 I parsed your query: *"_**${userText}**_"*.
 
 I have scanned the local threat vector embeddings and correlated this incident with:
-1. **CVE-2022-0847 (Dirty Pipe)**: Privilege escalation in container nodes (92% Cosine similarity)
-2. **Mitre ATT&CK Technique T1611**: Escape to host from privileged environment container.
+1. **CVE-2022-0847 (Dirty Pipe)**: Privilege escalation in container nodes (92% cosine similarity)
+2. **Mitre ATT&CK technique T1611**: Escape to host from privileged environment container.
 
 Let me know if you need to generate mitigation scripts for these specific threat templates.`;
       }
@@ -293,28 +293,28 @@ Let me know if you need to generate mitigation scripts for these specific threat
   // Helper timeline events mapping
   const activeTimelineEvents = [
     {
-      title: "Container Pod Initialization",
+      title: "Container pod initialization",
       desc: `Namespace isolation parameters verified on ${activeAlert.source}. Baseline matching score: 99.8%.`,
       status: "success",
       icon: <Layers className="w-3.5 h-3.5" />,
       meta: "kube-system replica",
     },
     {
-      title: "Anomalous Namespace Redirection System Call",
+      title: "Anomalous namespace redirection system call",
       desc: `Root process (PID 28410) issued sys_clone with unusual parameters, breaking typical pod baseline configurations.`,
       status: "warning",
       icon: <Cpu className="w-3.5 h-3.5" />,
       meta: activeAlert.details.processPath || "bin/exec-payload",
     },
     {
-      title: "Outbound TCP Connection Request",
+      title: "Outbound TCP connection request",
       desc: `Socket connection initiated to reputation threat destination ${activeAlert.details.ipAddress || "194.26.135.84"} on port ${activeAlert.details.port || 443}.`,
       status: "error",
       icon: <Network className="w-3.5 h-3.5" />,
       meta: `Target IP: ${activeAlert.details.ipAddress || "194.26.135.84"}`,
     },
     {
-      title: "Isolation Forest Anomaly Alarm Flagged",
+      title: "Isolation Forest anomaly alarm flagged",
       desc: `Attributed SHAP score delta crossed critical baseline thresh (Trigger value: ${activeAlert.score}% out-of-bounds).`,
       status: "critical-alert",
       icon: <ShieldAlert className="w-3.5 h-3.5" />,
@@ -325,12 +325,12 @@ Let me know if you need to generate mitigation scripts for these specific threat
   return (
     <div className="bg-[#09090B] border border-[#23262F]/60 rounded-xl flex flex-col h-[calc(100vh-140px)] select-none overflow-hidden text-gray-200">
       {/* Top Document Header Tab Bar (Cursor/IDE Style) */}
-      <div className="bg-[#111317] border-b border-[#23262F]/60 px-3 py-1.5 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pr-4">
+      <div className="bg-[#111317] border-b border-[#23262F]/60 px-4 py-2 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pr-4">
           {/* Logo element resembling file root */}
-          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-gray-500 border-r border-[#23262F] pr-3 mr-2 select-none shrink-0">
+          <div className="flex items-center gap-2 text-xs font-mono font-bold text-gray-500 border-r border-[#23262F] pr-4 mr-2 select-none shrink-0">
             <Flame className="w-4 h-4 text-red-400" />
-            <span className="text-gray-300">DV-INVESTIGATION</span>
+            <span className="text-gray-300">DarkVector trace</span>
           </div>
 
           {/* Opened investigation tabs */}
@@ -342,7 +342,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                 onClick={() => onSelectAlert(tab)}
                 layout
                 whileTap={{ scale: 0.98 }}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono cursor-pointer relative shrink-0 transition-colors duration-250 border ${
+                className={`flex items-center gap-2 px-4 py-2 rounded text-xs font-mono cursor-pointer relative shrink-0 transition-colors duration-250 border ${
                   isActive
                     ? "text-purple-400 border-purple-500/25 font-semibold"
                     : "bg-[#161A22]/20 border-transparent text-gray-500 hover:text-gray-300 hover:bg-[#161A22]/40"
@@ -357,7 +357,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                   />
                 )}
 
-                <div className="flex items-center gap-1.5 relative z-10">
+                <div className="flex items-center gap-2 relative z-10">
                   <FileCode
                     className={`w-3.5 h-3.5 ${isActive ? "text-purple-400" : "text-gray-500"}`}
                   />
@@ -369,7 +369,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                       e.stopPropagation();
                       onCloseAlertTab(tab.id);
                     }}
-                    className="p-0.5 hover:bg-[#23262F] rounded text-gray-600 hover:text-gray-300 transition-colors cursor-pointer ml-1 relative z-20"
+                    className="p-1 hover:bg-[#23262F] rounded text-gray-600 hover:text-gray-300 transition-colors cursor-pointer ml-2 relative z-20"
                   >
                     <X className="w-2.5 h-2.5" />
                   </button>
@@ -382,10 +382,10 @@ Let me know if you need to generate mitigation scripts for these specific threat
         {/* Escape Fullscreen Workspace button */}
         <button
           onClick={onCloseWorkspace}
-          className="flex items-center gap-1 text-[11px] font-mono text-gray-400 hover:text-white bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0"
+          className="flex items-center gap-2 text-[11px] font-mono text-gray-400 hover:text-white bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-4 py-2 rounded transition-colors cursor-pointer shrink-0"
         >
           <X className="w-3.5 h-3.5" />
-          <span>Exit Workspace</span>
+          <span>Exit workspace</span>
         </button>
       </div>
 
@@ -395,42 +395,42 @@ Let me know if you need to generate mitigation scripts for these specific threat
         <div className="w-64 bg-[#111317]/90 border-r border-[#23262F]/60 flex flex-col justify-between shrink-0 hidden md:flex">
           <div className="flex flex-col h-full min-h-0">
             {/* Outline title */}
-            <div className="p-3 border-b border-[#23262F]/40 flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold text-gray-400 tracking-wider flex items-center gap-1.5 uppercase">
+            <div className="p-4 border-b border-[#23262F]/40 flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold text-gray-400 flex items-center gap-2">
                 <Layers3 className="w-3.5 h-3.5 text-purple-400" />
-                WORKSPACE OUTLINE
+                Workspace outline
               </span>
-              <span className="text-[8px] font-mono text-gray-500 px-1 py-0.2 rounded bg-black/40 border border-[#23262F]">
-                TREE
+              <span className="text-[8px] font-mono text-gray-500 px-2 py-0.5 rounded bg-black/40 border border-[#23262F]">
+                Tree
               </span>
             </div>
 
             {/* Folder explorer mock files list specific to activeAlert */}
-            <div className="flex-1 overflow-y-auto p-2.5 space-y-3.5 scrollbar-thin">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1 text-[10px] font-mono text-gray-500 uppercase tracking-widest font-extrabold mb-1">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 font-extrabold mb-2">
                   <FolderOpen className="w-3 h-3 text-blue-400" />
-                  <span>Case Assets</span>
+                  <span>Case assets</span>
                 </div>
 
                 {/* Simulated Document Tree Files */}
-                <div className="space-y-0.5 pl-2 border-l border-[#23262F]/60 ml-1.5">
-                  <button className="w-full flex items-center gap-1.5 py-1 px-1.5 bg-purple-500/10 text-purple-400 rounded text-[11px] font-mono text-left">
+                <div className="space-y-1 pl-2 border-l border-[#23262F]/60 ml-2">
+                  <button className="w-full flex items-center gap-2 py-1 px-2 bg-purple-500/10 text-purple-400 rounded text-[11px] font-mono text-left">
                     <FileCode className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                     <span className="truncate">{activeAlert.id}.dvtrace</span>
                   </button>
 
-                  <button className="w-full flex items-center gap-1.5 py-1 px-1.5 hover:bg-[#161A22]/40 text-gray-500 hover:text-gray-300 rounded text-[11px] font-mono text-left">
+                  <button className="w-full flex items-center gap-2 py-1 px-2 hover:bg-[#161A22]/40 text-gray-500 hover:text-gray-300 rounded text-[11px] font-mono text-left">
                     <FileJson className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">incident-metadata.json</span>
                   </button>
 
-                  <button className="w-full flex items-center gap-1.5 py-1 px-1.5 hover:bg-[#161A22]/40 text-gray-500 hover:text-gray-300 rounded text-[11px] font-mono text-left">
+                  <button className="w-full flex items-center gap-2 py-1 px-2 hover:bg-[#161A22]/40 text-gray-500 hover:text-gray-300 rounded text-[11px] font-mono text-left">
                     <Binary className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">memory-dump.bin</span>
                   </button>
 
-                  <button className="w-full flex items-center gap-1.5 py-1 px-1.5 hover:bg-[#161A22]/40 text-gray-500 hover:text-gray-300 rounded text-[11px] font-mono text-left">
+                  <button className="w-full flex items-center gap-2 py-1 px-2 hover:bg-[#161A22]/40 text-gray-500 hover:text-gray-300 rounded text-[11px] font-mono text-left">
                     <Database className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">network-flow.pcap</span>
                   </button>
@@ -438,16 +438,16 @@ Let me know if you need to generate mitigation scripts for these specific threat
               </div>
 
               {/* Threat Relationships Graph Correlation */}
-              <div className="space-y-1 pt-2">
-                <div className="flex items-center gap-1 text-[10px] font-mono text-gray-500 uppercase tracking-widest font-extrabold mb-1">
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 font-extrabold mb-2">
                   <Workflow className="w-3.5 h-3.5 text-red-400" />
-                  <span>Threat Relationships</span>
+                  <span>Threat relationships</span>
                 </div>
 
-                <div className="space-y-2 pl-1.5">
+                <div className="space-y-2 pl-2">
                   <div className="bg-black/30 border border-[#23262F]/40 p-2 rounded-lg text-[10px] font-mono space-y-1">
                     <div className="text-gray-400 font-bold flex items-center justify-between">
-                      <span>PRIMARY HOST:</span>
+                      <span>Primary host:</span>
                       <span className="text-blue-400 font-normal">Active</span>
                     </div>
                     <div className="text-gray-300 truncate font-semibold">{activeAlert.source}</div>
@@ -457,8 +457,8 @@ Let me know if you need to generate mitigation scripts for these specific threat
                   {activeAlert.details.ipAddress && (
                     <div className="bg-red-500/5 border border-red-500/20 p-2 rounded-lg text-[10px] font-mono space-y-1">
                       <div className="text-red-400 font-bold flex items-center justify-between">
-                        <span>C2 ADDRESS:</span>
-                        <span className="text-red-400 font-normal">Reputation Threat</span>
+                        <span>C2 address:</span>
+                        <span className="text-red-400 font-normal">Reputation threat</span>
                       </div>
                       <div className="text-gray-300 truncate font-semibold">
                         {activeAlert.details.ipAddress}
@@ -472,8 +472,8 @@ Let me know if you need to generate mitigation scripts for these specific threat
                   {activeAlert.details.username && (
                     <div className="bg-blue-500/5 border border-blue-500/20 p-2 rounded-lg text-[10px] font-mono space-y-1">
                       <div className="text-blue-400 font-bold flex items-center justify-between">
-                        <span>USER SECURITY AD:</span>
-                        <span className="text-yellow-400 font-bold text-[9px]">RISK 88%</span>
+                        <span>User security AD:</span>
+                        <span className="text-yellow-400 font-bold text-[9px]">Risk 88%</span>
                       </div>
                       <div className="text-gray-300 truncate font-semibold">
                         {activeAlert.details.username}
@@ -486,31 +486,31 @@ Let me know if you need to generate mitigation scripts for these specific threat
           </div>
 
           {/* Core metadata details */}
-          <div className="p-3 border-t border-[#23262F]/40 bg-black/30 text-[10px] font-mono text-gray-500">
+          <div className="p-4 border-t border-[#23262F]/40 bg-black/30 text-[10px] font-mono text-gray-500">
             <div className="flex items-center justify-between">
-              <span>SYSTEM BASELINE:</span>
-              <span className="text-green-500">SECURE</span>
+              <span>System baseline:</span>
+              <span className="text-green-500">Secure</span>
             </div>
           </div>
         </div>
 
         {/* CENTER COLUMN: Document View (Timeline, SHAP, CVE, Scratchpad, Logs) */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scrollbar-thin p-5 space-y-5 bg-[#09090B]">
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scrollbar-thin p-6 space-y-6 bg-[#09090B]">
           {/* Top Banner: Core Threat Fingerprint */}
           <div className="bg-[#111317] border border-[#23262F]/80 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span
-                  className={`text-[10px] font-mono font-extrabold border uppercase px-2 py-0.5 rounded ${getSeverityStyle(activeAlert.severity)}`}
+                  className={`text-[10px] font-mono font-extrabold border px-2 py-0.5 rounded capitalize ${getSeverityStyle(activeAlert.severity)}`}
                 >
                   {activeAlert.severity}
                 </span>
-                <span className="text-xs font-mono text-gray-500">ID:</span>
+                <span className="text-xs font-mono text-gray-500">Id:</span>
                 <span className="text-xs font-mono text-purple-400 font-semibold">
                   {activeAlert.id}
                 </span>
                 <span className="text-xs font-mono text-gray-500">•</span>
-                <span className="text-[11px] font-mono text-gray-400 flex items-center gap-1">
+                <span className="text-[11px] font-mono text-gray-400 flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5" />
                   {new Date(activeAlert.timestamp).toUTCString()}
                 </span>
@@ -527,10 +527,10 @@ Let me know if you need to generate mitigation scripts for these specific threat
             </div>
 
             {/* Big anomaly score metrics */}
-            <div className="flex items-center gap-4 shrink-0 bg-[#09090B] border border-[#23262F] rounded-lg p-3">
+            <div className="flex items-center gap-4 shrink-0 bg-[#09090B] border border-[#23262F] rounded-lg p-4">
               <div className="text-right">
-                <span className="text-[9px] font-mono text-gray-500 block uppercase font-bold">
-                  Anomaly Score
+                <span className="text-[9px] font-mono text-gray-500 block font-bold">
+                  Anomaly score
                 </span>
                 <span className="text-2xl font-mono font-extrabold text-orange-400">
                   {activeAlert.score}%
@@ -538,8 +538,8 @@ Let me know if you need to generate mitigation scripts for these specific threat
               </div>
               <div className="w-px h-10 bg-[#23262F]" />
               <div className="text-right">
-                <span className="text-[9px] font-mono text-gray-500 block uppercase font-bold">
-                  ChromaDB Dist
+                <span className="text-[9px] font-mono text-gray-500 block font-bold">
+                  ChromaDB dist
                 </span>
                 <span className="text-2xl font-mono font-extrabold text-blue-400">0.0892</span>
               </div>
@@ -547,20 +547,20 @@ Let me know if you need to generate mitigation scripts for these specific threat
           </div>
 
           {/* Workspace Tab Content View (Timeline of Events) */}
-          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4.5 space-y-4">
+          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4 space-y-4">
             {/* Timeline header */}
-            <div className="flex items-center justify-between border-b border-[#23262F]/60 pb-3">
+            <div className="flex items-center justify-between border-b border-[#23262F]/60 pb-2 mb-4">
               <div className="flex items-center gap-2">
                 <Activity className="w-4.5 h-4.5 text-blue-400" />
-                <h3 className="text-xs font-mono font-bold tracking-wider uppercase text-gray-200">
-                  Forensic Timeline of Events (Chronological narrative)
+                <h3 className="text-xs font-mono font-bold text-gray-200">
+                  Forensic timeline of events (chronological narrative)
                 </h3>
               </div>
-              <span className="text-[9px] font-mono text-gray-500 uppercase">Interactive logs</span>
+              <span className="text-[9px] font-mono text-gray-500">Interactive logs</span>
             </div>
 
             {/* Vertical Event Timeline sequence */}
-            <div className="relative border-l border-[#23262F] ml-3 pl-6 space-y-5 py-2">
+            <div className="relative border-l border-[#23262F] ml-3 pl-6 space-y-4 py-2">
               {activeTimelineEvents.map((evt, idx) => {
                 const isOpen = expandedEvents[idx];
                 return (
@@ -588,7 +588,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-bold text-gray-200">{evt.title}</span>
                         <div className="flex items-center gap-2 text-[10px] font-mono">
-                          <span className="text-gray-500 bg-black/40 px-1.5 py-0.2 rounded border border-[#23262F]">
+                          <span className="text-gray-500 bg-black/40 px-2 py-0.5 rounded border border-[#23262F]">
                             {evt.meta}
                           </span>
                           <span className="text-gray-600">
@@ -626,19 +626,19 @@ Let me know if you need to generate mitigation scripts for these specific threat
           {/* Evidence Board, Baseline Deviations & Retrieved Knowledge */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {/* EVIDENCE & BASELINE CONTEXT */}
-            <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4.5 flex flex-col justify-between">
+            <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4 flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-2 border-b border-[#23262F]/60 pb-2.5 mb-3">
+                <div className="flex items-center gap-2 border-b border-[#23262F]/60 pb-2 mb-4">
                   <Fingerprint className="w-4 h-4 text-red-400" />
-                  <h3 className="text-xs font-mono font-bold tracking-wider text-gray-200 uppercase">
-                    Physical Evidence & Attributes
+                  <h3 className="text-xs font-mono font-bold text-gray-200">
+                    Physical evidence & attributes
                   </h3>
                 </div>
 
                 <div className="space-y-2 text-xs font-mono">
                   {activeAlert.details.processPath && (
                     <div className="flex items-center justify-between p-2 rounded bg-black/20 border border-[#23262F]/40">
-                      <span className="text-gray-500">Binary Path:</span>
+                      <span className="text-gray-500">Binary path:</span>
                       <span className="text-purple-400 text-[11px] select-all font-semibold">
                         {activeAlert.details.processPath}
                       </span>
@@ -647,8 +647,8 @@ Let me know if you need to generate mitigation scripts for these specific threat
 
                   {activeAlert.details.commandLine && (
                     <div className="p-2 rounded bg-black/20 border border-[#23262F]/40 space-y-1">
-                      <span className="text-gray-500 text-[10px] block font-bold uppercase">
-                        Spawned Command Line Arguments:
+                      <span className="text-gray-500 text-[10px] block font-bold">
+                        Spawned command line arguments:
                       </span>
                       <code className="text-red-400 text-[11px] select-all block break-all font-semibold leading-normal font-mono">
                         {activeAlert.details.commandLine}
@@ -665,7 +665,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                         </span>
                       </div>
                       <div className="flex items-center justify-between p-2 rounded bg-black/20 border border-[#23262F]/40">
-                        <span className="text-gray-500">Target Port:</span>
+                        <span className="text-gray-500">Target port:</span>
                         <span className="text-gray-300 text-[11px] font-semibold">
                           {activeAlert.details.port || 443}
                         </span>
@@ -674,7 +674,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                   )}
 
                   <div className="flex items-center justify-between p-2 rounded bg-black/20 border border-[#23262F]/40">
-                    <span className="text-gray-500">SHA256 File Signature:</span>
+                    <span className="text-gray-500">SHA256 file signature:</span>
                     <span className="text-gray-400 text-[10px] truncate max-w-[200px]">
                       e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
                     </span>
@@ -682,26 +682,26 @@ Let me know if you need to generate mitigation scripts for these specific threat
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[#23262F]/30 mt-3 text-[10px] font-mono text-gray-500 flex items-center gap-1.5">
+              <div className="pt-4 border-t border-[#23262F]/30 mt-4 text-[10px] font-mono text-gray-500 flex items-center gap-2">
                 <Info className="w-3.5 h-3.5" />
                 <span>Forensic indicators cached safely in offline SQLite database.</span>
               </div>
             </div>
 
             {/* RETRIEVED KNOWLEDGE (CHROME DB VECTORS COGNITION) */}
-            <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4.5 flex flex-col justify-between">
+            <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4 flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-2 border-b border-[#23262F]/60 pb-2.5 mb-3">
+                <div className="flex items-center gap-2 border-b border-[#23262F]/60 pb-2 mb-4">
                   <BookOpen className="w-4 h-4 text-purple-400" />
-                  <h3 className="text-xs font-mono font-bold tracking-wider text-gray-200 uppercase">
-                    Retrieved Threat Intelligence Knowledge
+                  <h3 className="text-xs font-mono font-bold text-gray-200">
+                    Retrieved threat intelligence knowledge
                   </h3>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="p-2.5 bg-black/40 border border-[#23262F] rounded-lg">
+                <div className="space-y-4">
+                  <div className="p-4 bg-black/40 border border-[#23262F] rounded-lg">
                     <div className="flex justify-between items-center text-[10px] font-mono">
-                      <span className="text-purple-400 font-bold">APT-29 (Cozy Bear) Strategy</span>
+                      <span className="text-purple-400 font-bold">APT-29 (Cozy Bear) strategy</span>
                       <span className="text-gray-500">Match 92.4%</span>
                     </div>
                     <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
@@ -710,9 +710,9 @@ Let me know if you need to generate mitigation scripts for these specific threat
                     </p>
                   </div>
 
-                  <div className="p-2.5 bg-black/40 border border-[#23262F] rounded-lg">
+                  <div className="p-4 bg-black/40 border border-[#23262F] rounded-lg">
                     <div className="flex justify-between items-center text-[10px] font-mono">
-                      <span className="text-blue-400 font-bold">CVE-2022-0847 Exploit Base</span>
+                      <span className="text-blue-400 font-bold">CVE-2022-0847 exploit base</span>
                       <span className="text-gray-500">Match 85.1%</span>
                     </div>
                     <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
@@ -723,23 +723,23 @@ Let me know if you need to generate mitigation scripts for these specific threat
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[#23262F]/30 mt-3 flex items-center justify-between text-[10px] font-mono text-gray-500">
-                <span>RAG Vector database: ChromaDB v1.8</span>
+              <div className="pt-4 border-t border-[#23262F]/30 mt-4 flex items-center justify-between text-[10px] font-mono text-gray-500">
+                <span>Rag vector database: ChromaDB v1.8</span>
                 <span className="text-purple-400">Synced</span>
               </div>
             </div>
           </div>
 
           {/* Dynamic Contributing Factors & Interactive SHAP Estimators */}
-          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4.5 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#23262F]/60 pb-3">
+          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between border-b border-[#23262F]/60 pb-2 mb-4">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="w-4.5 h-4.5 text-purple-400" />
-                <h3 className="text-xs font-mono font-bold tracking-wider text-gray-200 uppercase">
-                  Explainable AI (SHAP Factors) & Interactive Parameter Tweak
+                <h3 className="text-xs font-mono font-bold text-gray-200">
+                  Explainable AI (SHAP factors) & interactive parameter tweak
                 </h3>
               </div>
-              <span className="text-[9px] font-mono text-gray-500 uppercase">
+              <span className="text-[9px] font-mono text-gray-500">
                 Dynamic simulator
               </span>
             </div>
@@ -751,7 +751,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Sliders columns */}
-              <div className="bg-[#09090B] border border-[#23262F]/60 rounded-lg p-3 space-y-3">
+              <div className="bg-[#09090B] border border-[#23262F]/60 rounded-lg p-4 space-y-4">
                 {activeAlert.details.shapFactors?.map((f, i) => {
                   const curVal =
                     shapWeights[f.factor] !== undefined ? shapWeights[f.factor] : f.impact;
@@ -783,19 +783,19 @@ Let me know if you need to generate mitigation scripts for these specific threat
               </div>
 
               {/* Tweak simulation status message */}
-              <div className="bg-[#09090B] border border-[#23262F]/60 rounded-lg p-4.5 flex flex-col justify-between text-xs text-gray-400">
-                <div className="space-y-1.5">
-                  <div className="font-mono text-[10px] text-gray-500 font-extrabold uppercase">
-                    Simulation Recalculation Outflow:
+              <div className="bg-[#09090B] border border-[#23262F]/60 rounded-lg p-4 flex flex-col justify-between text-xs text-gray-400">
+                <div className="space-y-2">
+                  <div className="font-mono text-[10px] text-gray-500 font-extrabold">
+                    Simulation recalculation outflow:
                   </div>
                   <p className="text-[11px] leading-relaxed">
                     Tweaking parameters dynamically overrides isolation weights in the model
                     simulator pipeline.
                   </p>
 
-                  <div className="p-2.5 bg-purple-500/5 border border-purple-500/10 rounded font-mono text-[11px] space-y-1 text-gray-300">
+                  <div className="p-2 bg-purple-500/5 border border-purple-500/10 rounded font-mono text-[11px] space-y-1 text-gray-300">
                     <div>
-                      Calculated Contamination index:{" "}
+                      Calculated contamination index:{" "}
                       <span className="text-purple-400 font-bold">
                         {(
                           (Object.values(shapWeights).reduce((a, b) => a + b, 0) /
@@ -807,7 +807,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                     <div>
                       Baseline status:{" "}
                       <span className="text-red-400 font-bold animate-pulse">
-                        DEV OUT-OF-BOUNDS
+                        Dev out-of-bounds
                       </span>
                     </div>
                   </div>
@@ -824,9 +824,9 @@ Let me know if you need to generate mitigation scripts for these specific threat
                       setShapWeights(weights);
                     }
                   }}
-                  className="mt-3 py-1 bg-black border border-[#23262F] hover:border-gray-500 rounded text-[10px] font-mono text-gray-400 hover:text-white transition-colors cursor-pointer"
+                  className="mt-4 py-1 bg-black border border-[#23262F] hover:border-gray-500 rounded text-[10px] font-mono text-gray-400 hover:text-white transition-colors cursor-pointer"
                 >
-                  Reset Factory Baselines
+                  Reset factory baselines
                 </button>
               </div>
             </div>
@@ -835,17 +835,17 @@ Let me know if you need to generate mitigation scripts for these specific threat
           {/* Analyst Scratchpad Persistent Notes & Raw Telemetry Streams */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {/* NOTES SCRATCHPAD (PERSISTENT VIA LOCALSTORAGE) */}
-            <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4.5 flex flex-col justify-between">
+            <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4 flex flex-col justify-between">
               <div className="space-y-2">
-                <div className="flex items-center justify-between border-b border-[#23262F]/60 pb-2.5">
+                <div className="flex items-center justify-between border-b border-[#23262F]/60 pb-2">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-blue-400" />
-                    <h3 className="text-xs font-mono font-bold tracking-wider text-gray-200 uppercase">
-                      Analyst Scratchpad & Notes (Persistent)
+                    <h3 className="text-xs font-mono font-bold text-gray-200">
+                      Analyst scratchpad & notes (persistent)
                     </h3>
                   </div>
 
-                  <span className="text-[9px] font-mono text-gray-500 uppercase">
+                  <span className="text-[9px] font-mono text-gray-500">
                     Markdown supported
                   </span>
                 </div>
@@ -859,17 +859,17 @@ Let me know if you need to generate mitigation scripts for these specific threat
                   value={analystNote}
                   onChange={(e) => setAnalystNote(e.target.value)}
                   placeholder="Draft your diagnostic findings here..."
-                  className="w-full bg-[#09090B] border border-[#23262F] hover:border-purple-500/40 focus:border-purple-500 focus:outline-none rounded-lg p-2.5 text-xs text-gray-200 font-mono h-40 resize-none font-mono"
+                  className="w-full bg-[#09090B] border border-[#23262F] hover:border-purple-500/40 focus:border-purple-500 focus:outline-none rounded-lg p-2 text-xs text-gray-200 font-mono h-40 resize-none font-mono"
                 />
               </div>
 
-              <div className="pt-3 border-t border-[#23262F]/30 mt-3 flex items-center justify-between">
+              <div className="pt-4 border-t border-[#23262F]/30 mt-4 flex items-center justify-between">
                 <button
                   onClick={handleSaveNotes}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-blue-500/10 cursor-pointer"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-mono font-bold flex items-center gap-2 transition-all shadow-sm shadow-blue-500/10 cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  <span>{isSaved ? "Notes Saved!" : "Save Markdown notes"}</span>
+                  <span>{isSaved ? "Notes saved!" : "Save markdown notes"}</span>
                 </button>
                 <span className="text-[9px] font-mono text-gray-500">
                   Auto-saved to localStorage
@@ -878,13 +878,13 @@ Let me know if you need to generate mitigation scripts for these specific threat
             </div>
 
             {/* RAW TELEMETRY LOGS OUTPUT */}
-            <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4.5 flex flex-col justify-between">
+            <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4 flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between border-b border-[#23262F]/60 pb-2.5 mb-3">
+                <div className="flex items-center justify-between border-b border-[#23262F]/60 pb-2 mb-4">
                   <div className="flex items-center gap-2">
                     <TerminalIcon className="w-4 h-4 text-purple-400" />
-                    <h3 className="text-xs font-mono font-bold tracking-wider text-gray-200 uppercase">
-                      Interactive Raw Log Stream
+                    <h3 className="text-xs font-mono font-bold text-gray-200">
+                      Interactive raw log stream
                     </h3>
                   </div>
 
@@ -897,7 +897,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                   />
                 </div>
 
-                <div className="bg-black/40 border border-[#23262F] rounded-xl p-2.5 font-mono text-[10px] leading-relaxed max-h-48 overflow-y-auto min-h-[140px] space-y-2 scrollbar-thin text-gray-400">
+                <div className="bg-black/40 border border-[#23262F] rounded-xl p-2 font-mono text-[10px] leading-relaxed max-h-48 overflow-y-auto min-h-[140px] space-y-2 scrollbar-thin text-gray-400">
                   {threatLogs
                     .filter(
                       (log) => !logFilter || log.toLowerCase().includes(logFilter.toLowerCase())
@@ -911,18 +911,18 @@ Let me know if you need to generate mitigation scripts for these specific threat
                         className="p-1 rounded hover:bg-[#161A22]/40 transition-colors cursor-pointer flex items-start gap-2 group"
                       >
                         <span className="text-purple-400 font-bold select-none shrink-0">
-                          [LOG]
+                          [Log]
                         </span>
                         <span className="text-gray-300 break-all flex-1">{log}</span>
                         <span className="opacity-0 group-hover:opacity-100 text-[8px] text-purple-400 font-bold shrink-0 ml-1 font-mono">
-                          [FEED CO-PILOT]
+                          [Feed copilot]
                         </span>
                       </div>
                     ))}
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[#23262F]/30 mt-3 text-[10px] font-mono text-gray-500">
+              <div className="pt-4 border-t border-[#23262F]/30 mt-4 text-[10px] font-mono text-gray-500">
                 * Click any trace logs to feed its contents directly to the Gemini Evaluator chat on
                 the right.
               </div>
@@ -933,47 +933,47 @@ Let me know if you need to generate mitigation scripts for these specific threat
         {/* RIGHT COLUMN: Interactive AI Copilot & Remediation Control Center */}
         <div className="w-80 bg-[#111317] border-l border-[#23262F]/60 flex flex-col justify-between shrink-0 hidden lg:flex">
           {/* Header containing Copilot status info */}
-          <div className="p-3 bg-[#161A22]/30 border-b border-[#23262F]/60 shrink-0">
+          <div className="p-4 bg-[#161A22]/30 border-b border-[#23262F]/60 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
                 <span className="text-xs font-mono font-bold text-gray-200">
-                  GEMINI FORENSICS COPILOT
+                  Gemini forensics copilot
                 </span>
               </div>
-              <span className="text-[8px] font-mono text-purple-400 bg-black/40 border border-[#23262F] px-1.5 py-0.2 rounded">
-                SEC-AGENT-2.5
+              <span className="text-[8px] font-mono text-purple-400 bg-black/40 border border-[#23262F] px-2 py-0.5 rounded">
+                Sec-agent-2.5
               </span>
             </div>
           </div>
 
           {/* Scrollable Copilot chat space */}
-          <div className="flex-1 overflow-y-auto p-4.5 space-y-4 scrollbar-thin min-h-0">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin min-h-0">
             {/* Direct Playbooks Trigger Panel inside Right rail */}
-            <div className="space-y-2.5 border-b border-[#23262F]/50 pb-4.5 mb-4">
-              <span className="text-[10px] font-mono font-extrabold text-gray-500 uppercase tracking-widest block">
-                Remediation Playbook Actions
+            <div className="space-y-2 border-b border-[#23262F]/50 pb-4 mb-4">
+              <span className="text-[10px] font-mono font-extrabold text-gray-500 block">
+                Remediation playbook actions
               </span>
 
               {/* Action 1: Network Quarantine */}
-              <div className="p-2.5 bg-black/30 border border-[#23262F] rounded-lg space-y-2">
+              <div className="p-4 bg-black/30 border border-[#23262F] rounded-lg space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-mono font-bold text-gray-200 flex items-center gap-1">
+                  <span className="text-[11px] font-mono font-bold text-gray-200 flex items-center gap-2">
                     <Unplug className="w-3.5 h-3.5 text-red-400" />
-                    Container Lockdown
+                    Container lockdown
                   </span>
                   <span
-                    className={`text-[8px] font-mono uppercase font-bold px-1 rounded ${
+                    className={`text-[8px] font-mono font-bold px-1 rounded ${
                       quarantineStatus === "quarantined"
                         ? "bg-red-500/10 text-red-400"
                         : "bg-orange-500/10 text-orange-400"
                     }`}
                   >
                     {quarantineStatus === "quarantined"
-                      ? "ISOLATED"
+                      ? "Isolated"
                       : quarantineStatus === "quarantining"
-                        ? "BLOCKING..."
-                        : "DISARMED"}
+                        ? "Blocking..."
+                        : "Disarmed"}
                   </span>
                 </div>
 
@@ -997,29 +997,29 @@ Let me know if you need to generate mitigation scripts for these specific threat
                   className="w-full bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-mono text-[9px] font-bold py-1 px-2 rounded cursor-pointer transition-colors shadow shadow-red-500/15"
                 >
                   {quarantineStatus === "quarantined"
-                    ? "NODE QUARANTINED"
+                    ? "Node quarantined"
                     : quarantineStatus === "quarantining"
-                      ? "APPLYING POLICIES..."
-                      : "DISPATCH LOCKDOWN POLICY"}
+                      ? "Applying policies..."
+                      : "Dispatch lockdown policy"}
                 </button>
               </div>
 
               {/* Action 2: Apply egress firewall block */}
               {activeAlert.details.ipAddress && (
-                <div className="p-2.5 bg-black/30 border border-[#23262F] rounded-lg space-y-2">
+                <div className="p-4 bg-black/30 border border-[#23262F] rounded-lg space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-mono font-bold text-gray-200 flex items-center gap-1">
+                    <span className="text-[11px] font-mono font-bold text-gray-200 flex items-center gap-2">
                       <Shield className="w-3.5 h-3.5 text-blue-400" />
-                      Egress Shield Policy
+                      Egress shield policy
                     </span>
                     <span
-                      className={`text-[8px] font-mono uppercase font-bold px-1 rounded ${
+                      className={`text-[8px] font-mono font-bold px-1 rounded ${
                         isBlockApplied
                           ? "bg-green-500/10 text-green-400"
                           : "bg-gray-500/10 text-gray-500"
                       }`}
                     >
-                      {isBlockApplied ? "ACTIVE" : "READY"}
+                      {isBlockApplied ? "Active" : "Ready"}
                     </span>
                   </div>
 
@@ -1034,7 +1034,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                     disabled={isBlockApplied}
                     className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-mono text-[9px] font-bold py-1 px-2 rounded cursor-pointer transition-colors shadow shadow-blue-500/15"
                   >
-                    {isBlockApplied ? "SHIELD DEPLOYED" : "COMMIT FIREWALL POLICY"}
+                    {isBlockApplied ? "Shield deployed" : "Commit firewall policy"}
                   </button>
                 </div>
               )}
@@ -1042,8 +1042,8 @@ Let me know if you need to generate mitigation scripts for these specific threat
 
             {/* Conversational chat messages */}
             <div className="space-y-4">
-              <span className="text-[10px] font-mono font-extrabold text-gray-500 uppercase tracking-widest block">
-                Forensic Reasoning & Agent
+              <span className="text-[10px] font-mono font-extrabold text-gray-500 block">
+                Forensic reasoning & agent
               </span>
 
               {chatMessages.map((msg, index) => (
@@ -1052,7 +1052,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
                   className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
                 >
                   <span className="text-[9px] font-mono text-gray-500 mb-1 px-1">
-                    {msg.sender === "ai" ? "🤖 SEC_CO_PILOT" : "👤 ANALYST"} • {msg.time}
+                    {msg.sender === "ai" ? "🤖 Sec copilot" : "👤 Analyst"} • {msg.time}
                   </span>
                   <div
                     className={`max-w-[95%] rounded-xl px-3 py-2 text-[11px] font-sans leading-relaxed border ${
@@ -1071,7 +1071,7 @@ Let me know if you need to generate mitigation scripts for these specific threat
               {isAiResponding && (
                 <div className="flex flex-col items-start">
                   <span className="text-[9px] font-mono text-gray-500 mb-1 px-1">
-                    🤖 SEC_CO_PILOT is thinking...
+                    🤖 Sec copilot is thinking...
                   </span>
                   <div className="bg-[#09090B] border border-[#23262F] rounded-xl px-3 py-2 text-xs text-gray-500 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" />
@@ -1086,14 +1086,14 @@ Let me know if you need to generate mitigation scripts for these specific threat
           {/* Interactive Chat Input pinned to bottom of right panel */}
           <form
             onSubmit={handleSendChat}
-            className="p-3 bg-[#161A22]/30 border-t border-[#23262F]/60 flex items-center gap-2 shrink-0"
+            className="p-4 bg-[#161A22]/30 border-t border-[#23262F]/60 flex items-center gap-2 shrink-0"
           >
             <input
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder="Ask Copilot..."
-              className="flex-1 bg-[#09090B] border border-[#23262F] focus:border-purple-500 focus:outline-none rounded-lg px-2.5 py-1.5 text-xs text-gray-200 font-mono placeholder-gray-600 transition-colors"
+              className="flex-1 bg-[#09090B] border border-[#23262F] focus:border-purple-500 focus:outline-none rounded-lg px-3 py-2 text-xs text-gray-200 font-mono placeholder-gray-600 transition-colors"
             />
             <button
               type="submit"

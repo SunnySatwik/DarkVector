@@ -41,16 +41,12 @@ export default function Sidebar({
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
 
   const menuItems = [
-    { id: "dashboard", label: "Forensic Studio", icon: LayoutDashboard, badge: null },
-    { id: "explorer", label: "Threat Explorer", icon: SearchCode, badge: null },
-    { id: "graph", label: "Threat Graph", icon: Network, badge: null },
-    { id: "threats", label: "Vector Timeline", icon: ShieldAlert, badge: "8" },
-    { id: "investigations", label: "Case Records", icon: LogAlert, badge: "3" },
-    { id: "knowledge", label: "Knowledge Base", icon: BookOpen, badge: null },
-    { id: "live", label: "Socket Terminal", icon: Radio, badge: "LIVE" },
-    { id: "models", label: "Neural Tuning", icon: Cpu, badge: null },
-    { id: "reports", label: "Forensic Audits", icon: FileText, badge: null },
-    { id: "settings", label: "Sensor Config", icon: Settings, badge: null },
+    { id: "dashboard", label: "Overview", icon: LayoutDashboard },
+    { id: "investigations", label: "Investigate", icon: LogAlert },
+    { id: "graph", label: "Graph", icon: Network },
+    { id: "reports", label: "Reports", icon: FileText },
+    { id: "models", label: "Models", icon: Cpu },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -69,9 +65,9 @@ export default function Sidebar({
         {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
       </motion.button>
 
-      <div>
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
         {/* Brand Logo & Name */}
-        <div className="p-4 border-b border-[#23262F]/60 flex items-center justify-between h-16">
+        <div className="p-4 border-b border-[#23262F]/60 flex items-center justify-between h-16 shrink-0">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-500/10 shrink-0">
               <svg
@@ -99,8 +95,8 @@ export default function Sidebar({
                 <span className="font-display font-bold text-sm tracking-wide text-gray-100 uppercase">
                   DarkVector
                 </span>
-                <span className="text-[9px] font-mono font-medium text-blue-400 tracking-widest uppercase">
-                  AI SEC PLATFORM
+                <span className="text-[9px] font-mono font-medium text-blue-400 tracking-wider">
+                  AI security platform
                 </span>
               </motion.div>
             )}
@@ -108,7 +104,7 @@ export default function Sidebar({
         </div>
 
         {/* Workspace Selector */}
-        <div className="p-3 border-b border-[#23262F]/40 relative">
+        <div className="p-3 border-b border-[#23262F]/40 relative shrink-0">
           {isCollapsed ? (
             <div className="flex justify-center">
               <button
@@ -129,7 +125,7 @@ export default function Sidebar({
                   <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                   <div className="min-w-0">
                     <div className="text-[10px] font-mono font-semibold text-gray-500 tracking-wider">
-                      WORKSPACE
+                      Workspace
                     </div>
                     <div className="text-xs font-semibold text-gray-300 truncate group-hover:text-white transition-colors">
                       {activeWorkspace.name}
@@ -209,69 +205,10 @@ export default function Sidebar({
                     </motion.span>
                   )}
                 </div>
-
-                {/* Badges */}
-                {!isCollapsed && item.badge && (
-                  <span
-                    className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded shrink-0 relative z-10 ${
-                      item.badge === "LIVE"
-                        ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                        : "bg-[#23262F] text-gray-400"
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
               </motion.button>
             );
           })}
         </nav>
-      </div>
-
-      {/* Bottom utility controls */}
-      <div className="border-t border-[#23262F]/60 p-3 bg-black/10">
-        {/* Locked dark mode indicator with subtle toggle style */}
-        <div className="flex items-center justify-between p-2 rounded-lg bg-[#161A22]/40 border border-[#23262F]/30 mb-2">
-          {isCollapsed ? (
-            <div className="w-full flex justify-center">
-              <SunMoon className="w-4 h-4 text-purple-400" />
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-2">
-                <SunMoon className="w-4 h-4 text-purple-400" />
-                <span className="text-[10px] font-mono text-gray-400">Tactical Dark Mode</span>
-              </div>
-              <div className="w-7 h-4 rounded-full bg-purple-500/20 border border-purple-500/30 p-0.5 flex justify-end">
-                <div className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* User Profile Trigger */}
-        <div className="flex items-center gap-2.5 p-1.5 rounded-lg border border-transparent hover:bg-[#161A22]/60 hover:border-[#23262F]/60 transition-colors duration-150 cursor-pointer">
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"
-            alt="User profile"
-            referrerPolicy="no-referrer"
-            className="w-7 h-7 rounded-full object-cover border border-purple-500/30 shrink-0"
-          />
-          {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col min-w-0"
-            >
-              <span className="text-xs font-semibold text-gray-200 truncate leading-none">
-                sunnysatwik95
-              </span>
-              <span className="text-[9px] font-mono text-gray-500 truncate mt-0.5">
-                Staff Cyber Analyst
-              </span>
-            </motion.div>
-          )}
-        </div>
       </div>
     </motion.aside>
   );

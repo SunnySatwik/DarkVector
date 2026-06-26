@@ -33,7 +33,7 @@ export default function Models() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          Model Tuning Center
+          Model tuning center
         </h1>
         <p className="text-xs text-gray-400 mt-1">
           Configure anomaly classification thresholds, tune RAG embeddings database, and control
@@ -75,8 +75,8 @@ export default function Models() {
           <Card className="space-y-6">
             <div className="flex items-center gap-2 border-b border-[#23262F]/40 pb-3">
               <Cpu className="w-4.5 h-4.5 text-blue-400" />
-              <h3 className="text-xs font-mono font-bold tracking-wider text-gray-200 uppercase">
-                Anomaly Detection Algorithm [Isolation Forest]
+              <h3 className="text-xs font-mono font-bold text-gray-200">
+                Anomaly detection algorithm [isolation forest]
               </h3>
             </div>
 
@@ -84,7 +84,7 @@ export default function Models() {
               {/* Num Estimators */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-300">Number of Estimators (Trees)</span>
+                  <span className="font-semibold text-gray-300">Number of estimators (trees)</span>
                   <span className="font-mono text-blue-400 font-bold">{numEstimators} Trees</span>
                 </div>
                 <input
@@ -105,7 +105,7 @@ export default function Models() {
               {/* Contamination Index */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-300">Contamination Ratio</span>
+                  <span className="font-semibold text-gray-300">Contamination ratio</span>
                   <span className="font-mono text-blue-400 font-bold">
                     {(contamination * 100).toFixed(1)}%
                   </span>
@@ -127,14 +127,14 @@ export default function Models() {
 
               {/* Max Samples selector */}
               <div className="space-y-2">
-                <span className="font-semibold text-gray-300">Bootstrap Sampling Method</span>
+                <span className="font-semibold text-gray-300">Bootstrap sampling method</span>
                 <div className="grid grid-cols-2 gap-3 mt-1.5">
                   <button className="bg-blue-500/5 border border-blue-500/20 text-blue-400 p-2.5 rounded-lg text-left font-mono select-none">
-                    <div className="font-bold text-[10px]">AUTO-MAX-SAMPLES</div>
+                    <div className="font-bold text-[10px]">Auto max samples</div>
                     <div className="text-[9px] text-gray-500 mt-0.5">Use optimal sample splits</div>
                   </button>
                   <button className="bg-black/20 border border-[#23262F]/60 text-gray-400 hover:text-gray-200 p-2.5 rounded-lg text-left font-mono select-none">
-                    <div className="font-bold text-[10px]">FORCE-BOOTSTRAP</div>
+                    <div className="font-bold text-[10px]">Force bootstrap</div>
                     <div className="text-[9px] text-gray-500 mt-0.5">
                       Iterate sub-datasets explicitly
                     </div>
@@ -153,10 +153,10 @@ export default function Models() {
                 {trainingState === "training" ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>TRAINING FOREST...</span>
+                    <span>Training forest...</span>
                   </>
                 ) : (
-                  <span>RETRAIN OUTLIER FOREST</span>
+                  <span>Retrain outlier forest</span>
                 )}
               </Button>
               <Button
@@ -166,7 +166,7 @@ export default function Models() {
                   setContamination(0.02);
                 }}
               >
-                RESET PARAMETERS
+                Reset parameters
               </Button>
             </div>
           </Card>
@@ -178,29 +178,29 @@ export default function Models() {
           <Card className="space-y-4">
             <div className="flex items-center gap-2 border-b border-[#23262F]/40 pb-3">
               <Database className="w-4.5 h-4.5 text-purple-400" />
-              <h3 className="text-xs font-mono font-bold tracking-wider text-gray-200 uppercase">
-                Vector Knowledge [ChromaDB]
+              <h3 className="text-xs font-mono font-bold text-gray-200">
+                Vector knowledge [ChromaDB]
               </h3>
             </div>
 
             <div className="space-y-3.5 text-xs">
               <div className="flex items-center justify-between font-mono text-[11px]">
-                <span className="text-gray-400 font-sans">Embedding Model:</span>
+                <span className="text-gray-400 font-sans">Embedding model:</span>
                 <span className="text-gray-200">text-embedding-004</span>
               </div>
               <div className="flex items-center justify-between font-mono text-[11px]">
-                <span className="text-gray-400 font-sans">Indexed Threat Vectors:</span>
+                <span className="text-gray-400 font-sans">Indexed threat vectors:</span>
                 <span className="text-gray-200">1,489,102 vectors</span>
               </div>
               <div className="flex items-center justify-between font-mono text-[11px]">
-                <span className="text-gray-400 font-sans">Average Search Latency:</span>
+                <span className="text-gray-400 font-sans">Average search latency:</span>
                 <span className="text-emerald-400">1.8 ms</span>
               </div>
 
               {/* Progress bar mapping size */}
               <div className="space-y-1.5 pt-1">
                 <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
-                  <span>ChromaDB Storage Pool</span>
+                  <span>ChromaDB storage pool</span>
                   <span className="text-purple-400 font-bold">42% (2.1 GB)</span>
                 </div>
                 <div className="w-full bg-[#09090B] h-1.5 rounded-full overflow-hidden">
@@ -214,8 +214,8 @@ export default function Models() {
           <Card className="space-y-4">
             <div className="flex items-center gap-2 border-b border-[#23262F]/40 pb-3">
               <Sparkles className="w-4.5 h-4.5 text-purple-400" />
-              <h3 className="text-xs font-mono font-bold tracking-wider text-gray-200 uppercase">
-                AI Analyst Personality
+              <h3 className="text-xs font-mono font-bold text-gray-200">
+                AI analyst personality
               </h3>
             </div>
 
@@ -234,7 +234,7 @@ export default function Models() {
                   }`}
                 >
                   <div>
-                    <div className="font-bold text-[10px]">OBJECTIVE CO-PILOT</div>
+                    <div className="font-bold text-[10px]">Objective co-pilot</div>
                     <div className="text-[9px] text-gray-500 mt-0.5 font-sans">
                       Objective, forensic-level descriptions
                     </div>
@@ -253,7 +253,7 @@ export default function Models() {
                   }`}
                 >
                   <div>
-                    <div className="font-bold text-[10px]">REMEDIATION ADVOCATE</div>
+                    <div className="font-bold text-[10px]">Remediation advocate</div>
                     <div className="text-[9px] text-gray-500 mt-0.5 font-sans">
                       Prioritizes YAML scripts and containment
                     </div>

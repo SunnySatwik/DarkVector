@@ -36,9 +36,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
     {
       id: "nav-dashboard",
       category: "Navigation",
-      title: "Go to Forensic Studio",
-      subtitle:
-        "Analyze live anomaly traces, trace lineage flows, and invoke containment playbooks",
+      title: "Go to overview",
+      subtitle: "Analyze live anomaly traces, continue investigations, and ask Vector",
       icon: Activity,
       action: () => {
         onNavigate("dashboard");
@@ -46,22 +45,10 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
       },
     },
     {
-      id: "nav-feed",
-      category: "Navigation",
-      title: "Go to Vector Timeline",
-      subtitle: "Raw cluster logs, network socket packets, and trace stream timelines",
-      icon: ShieldAlert,
-      action: () => {
-        onNavigate("threats");
-        onClose();
-      },
-    },
-    {
       id: "nav-investigations",
       category: "Navigation",
-      title: "Go to Case Records",
-      subtitle:
-        "Active forensics reports, container quarantine logs, and active incident response boards",
+      title: "Go to investigate",
+      subtitle: "Active case records, container quarantine logs, and incidents list",
       icon: CornerDownLeft,
       action: () => {
         onNavigate("investigations");
@@ -69,11 +56,21 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
       },
     },
     {
+      id: "nav-graph",
+      category: "Navigation",
+      title: "Go to graph",
+      subtitle: "Trace threat lineage flows, process ancestry, and alert clusters",
+      icon: Activity,
+      action: () => {
+        onNavigate("graph");
+        onClose();
+      },
+    },
+    {
       id: "nav-models",
       category: "Navigation",
-      title: "Go to Neural Tuning",
-      subtitle:
-        "Configure Isolation Forest trees, contamination indexes, and ChromaDB vector embeddings",
+      title: "Go to models",
+      subtitle: "Configure isolation forest trees and contamination indexes",
       icon: Cpu,
       action: () => {
         onNavigate("models");
@@ -83,8 +80,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
     {
       id: "nav-reports",
       category: "Navigation",
-      title: "Go to Forensic Audits",
-      subtitle: "Export executive compliance reviews with automated explainers",
+      title: "Go to reports",
+      subtitle: "Export executive compliance reviews and automated explanations",
       icon: FileText,
       action: () => {
         onNavigate("reports");
@@ -94,8 +91,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
     {
       id: "nav-settings",
       category: "Navigation",
-      title: "Go to Sensor Config",
-      subtitle: "Configure gRPC telemetry and API security credentials",
+      title: "Go to settings",
+      subtitle: "Configure gRPC telemetry, sensor parameters, and security credentials",
       icon: Settings,
       action: () => {
         onNavigate("settings");
@@ -104,8 +101,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
     },
     {
       id: "act-scan",
-      category: "Quick Actions",
-      title: "Trigger Isolation Forest Scan",
+      category: "Quick actions",
+      title: "Trigger isolation forest scan",
       subtitle: "Force immediate check on all active log nodes",
       icon: Sliders,
       action: () => {
@@ -115,8 +112,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
     },
     {
       id: "act-isolate",
-      category: "Quick Actions",
-      title: "Isolate Critical Container Node srv-k8s-api-01",
+      category: "Quick actions",
+      title: "Isolate critical container node srv-k8s-api-01",
       subtitle: "Quarantine privileged containers immediately via gRPC",
       icon: ShieldAlert,
       action: () => {
@@ -215,7 +212,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
                 className="w-full bg-transparent text-gray-100 placeholder-gray-500 focus:outline-none text-sm font-sans"
               />
               <span className="text-[10px] text-gray-500 font-mono bg-[#161A22] border border-[#23262F] px-1.5 py-0.5 rounded">
-                ESC
+                Esc
               </span>
             </div>
 
@@ -230,7 +227,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
                   {/* We group commands by category */}
                   {Array.from(new Set(filteredCommands.map((c) => c.category))).map((category) => (
                     <div key={category} className="mb-2">
-                      <div className="text-[10px] font-mono font-semibold text-gray-500 tracking-wider uppercase px-3 py-1.5">
+                      <div className="text-[10px] font-mono font-semibold text-gray-500 tracking-wider px-3 py-1.5">
                         {category}
                       </div>
                       <div className="space-y-0.5">
@@ -297,7 +294,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
                 <span>↵ Choose</span>
               </div>
               <div>
-                <span>DarkVector Search OS v1.2</span>
+                <span>DarkVector search</span>
               </div>
             </div>
           </motion.div>

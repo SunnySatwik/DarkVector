@@ -89,7 +89,7 @@ export default function Reports() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          Compliance & Threat Reports
+          Compliance & threat reports
         </h1>
         <p className="text-xs text-gray-400 mt-1">
           Export cryptographic logs summaries, SOC2 checklists, and automated incident foreword
@@ -104,13 +104,13 @@ export default function Reports() {
             <form onSubmit={handleCreateReport} className="space-y-4">
               <div className="flex items-center gap-2 border-b border-[#23262F]/40 pb-3">
                 <Sparkles className="w-4.5 h-4.5 text-purple-400" />
-                <h3 className="text-xs font-mono font-bold tracking-wider text-gray-200 uppercase">
-                  AI Automated Report Weaver
+                <h3 className="text-xs font-mono font-bold text-gray-200">
+                  AI automated report weaver
                 </h3>
               </div>
 
               <div className="space-y-2 text-xs">
-                <label className="font-semibold text-gray-300">Target Objective prompt</label>
+                <label className="font-semibold text-gray-300">Target objective prompt</label>
                 <textarea
                   value={promptValue}
                   onChange={(e) => setPromptValue(e.target.value)}
@@ -132,12 +132,12 @@ export default function Reports() {
                 {isGenerating ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>WEAVING AUDIT TEMPLATE...</span>
+                    <span>Weaving audit template...</span>
                   </>
                 ) : (
                   <>
                     <FileText className="w-3.5 h-3.5" />
-                    <span>DRAFT FORENSIC REPORT</span>
+                    <span>Draft forensic report</span>
                   </>
                 )}
               </Button>
@@ -151,8 +151,8 @@ export default function Reports() {
             <div className="p-4 border-b border-[#23262F]/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-400" />
-                <span className="font-mono text-xs font-bold text-gray-200 uppercase tracking-wider">
-                  Generated Security Audits
+                <span className="font-mono text-xs font-bold text-gray-200">
+                  Generated security audits
                 </span>
               </div>
               <Badge variant="default">{reports.length} files archived</Badge>
@@ -162,7 +162,7 @@ export default function Reports() {
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
-                  <TableHead>Report Name</TableHead>
+                  <TableHead>Report name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
