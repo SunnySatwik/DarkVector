@@ -1,11 +1,17 @@
 /**
  * InvestigationWorkspace
  *
- * The flagship three-column investigation environment.
+ * Premium three-column investigation environment.
  *
- *  Left   — Evidence timeline + event stream (224px)
- *  Center — Alert hero, process chain, evidence, related alerts (flex-1)
- *  Right  — Vector AI panel (288px)
+ *  Left   — Timeline + evidence log          (w-56, 224px)
+ *  Center — Incident hero, evidence, reasoning (flex-1, max-w-2xl centered)
+ *  Right  — Vector AI panel                   (w-64, 256px)
+ *
+ * Design principles:
+ * — Whitespace defines sections, not borders.
+ * — The incident title is the visual hero.
+ * — Evidence reads like a professional case file.
+ * — Vector feels integrated, not floating.
  */
 
 import { useState, useEffect } from "react";
@@ -17,12 +23,11 @@ import {
   X,
   Clock,
   ArrowLeft,
-  GitBranch,
   Fingerprint,
   Activity,
-  Layers,
   Target,
   Sparkles,
+  Layers,
 } from "lucide-react";
 import { Badge } from "../components/ui/DesignSystem";
 import { EventTimeline } from "../components/workspace/EventTimeline";
@@ -33,7 +38,6 @@ import { VectorPanel } from "../components/workspace/VectorPanel";
 import {
   severityBadgeVariant,
   severityDotClass,
-  severityBorderClass,
 } from "../lib/severity";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -46,13 +50,32 @@ interface InvestigationWorkspaceProps {
   onCloseWorkspace: () => void;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Animation helpers ────────────────────────────────────────────────────────
 
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 8 },
+const fadeIn = (delay = 0) => ({
+  initial: { opacity: 0, y: 6 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.26, delay, ease: [0.16, 1, 0.3, 1] as const },
+  transition: { duration: 0.24, delay, ease: [0.16, 1, 0.3, 1] as const },
 });
+
+// ─── Section label ────────────────────────────────────────────────────────────
+
+function SectionLabel({
+  icon: Icon,
+  children,
+}: {
+  icon?: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 mb-3">
+      {Icon && <Icon className="w-3.5 h-3.5 text-gray-500" />}
+      <h2 className="text-[11px] font-sans font-medium text-gray-500 tracking-wide">
+        {children}
+      </h2>
+    </div>
+  );
+}
 
 // ─── Root Component ───────────────────────────────────────────────────────────
 
@@ -99,22 +122,22 @@ export default function InvestigationWorkspace({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.45, ease: "easeInOut" }}
-      className="flex flex-col h-[calc(100vh-64px)] bg-bg overflow-hidden rounded-[22px] border border-border-custom/40"
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col h-[calc(100vh-64px)] bg-bg overflow-hidden"
     >
-      {/* ── Focus-mode header strip ──────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center justify-between px-6 py-3 bg-surface/40 border-b border-border-custom/40">
+      {/* ── Tab bar / breadcrumb ───────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center justify-between px-5 py-2.5 border-b border-border-custom/30 bg-surface/20">
         {/* Back + open tabs */}
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={onCloseWorkspace}
-            className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-200 transition-colors shrink-0 group cursor-pointer"
+            className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors shrink-0 group cursor-pointer"
           >
-            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+            <ArrowLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform duration-120" />
             Overview
           </button>
 
-          <span className="text-gray-700 text-sm">·</span>
+          <span className="text-gray-700 text-xs select-none">/</span>
 
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
             {openTabs.map((tab) => {
@@ -123,16 +146,16 @@ export default function InvestigationWorkspace({
                 <motion.div
                   key={tab.id}
                   layout
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] cursor-pointer shrink-0 transition-colors relative ${
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] cursor-pointer shrink-0 transition-colors duration-120 ${
                     isActive
-                      ? "bg-elevated border border-border-custom text-gray-200"
-                      : "text-gray-500 hover:text-gray-300 hover:bg-elevated/50"
+                      ? "bg-elevated border border-border-custom/60 text-gray-200"
+                      : "text-gray-500 hover:text-gray-300 hover:bg-elevated/30"
                   }`}
                   onClick={() => onSelectAlert(tab)}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${severityDotClass(tab.severity)} ${
-                      isActive ? "" : "opacity-60"
+                      isActive ? "" : "opacity-50"
                     }`}
                   />
                   <span className="font-mono">{tab.id}</span>
@@ -151,10 +174,10 @@ export default function InvestigationWorkspace({
           </div>
         </div>
 
-        {/* Status indicator */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Live status indicator */}
+        <div className="shrink-0">
           {quarantineStatus === "quarantined" ? (
-            <span className="flex items-center gap-1.5 text-[10px] text-red-400 font-medium font-sans">
+            <span className="flex items-center gap-1.5 text-[10px] text-red-400 font-sans">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
               Node isolated
             </span>
@@ -167,191 +190,215 @@ export default function InvestigationWorkspace({
         </div>
       </div>
 
-      {/* ── Three-column body ─────────────────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden min-h-0 bg-bg">
+      {/* ── Three-column body ──────────────────────────────────────────────── */}
+      <div className="flex-1 flex overflow-hidden min-h-0">
 
-        {/* LEFT — Evidence timeline + recent evidence */}
+        {/* LEFT — Timeline + Event log */}
         <motion.div
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.08, ease: "easeOut" }}
-          className="w-64 shrink-0 bg-surface/30 border-r border-border-custom/40 flex flex-col overflow-hidden hidden md:flex"
+          {...fadeIn(0.06)}
+          className="w-56 shrink-0 border-r border-border-custom/25 flex flex-col overflow-hidden hidden md:flex"
         >
-          <div className="flex-1 overflow-y-auto p-3.5 scrollbar-thin min-h-0 space-y-3.5">
-            <div className="flex items-center gap-2 mb-1.5">
+          {/* Timeline section */}
+          <div className="flex-1 overflow-y-auto p-4 scrollbar-thin min-h-0">
+            <div className="flex items-center gap-1.5 mb-3">
               <Activity className="w-3.5 h-3.5 text-gray-500" />
-              <p className="text-secondary-body font-sans font-medium text-gray-400">Timeline</p>
+              <h2 className="text-[11px] font-sans font-medium text-gray-500">Timeline</h2>
             </div>
             <EventTimeline alert={activeAlert} />
           </div>
 
-          <div className="border-t border-border-custom/40 p-3.5 overflow-y-auto max-h-[50%]">
-            <div className="flex items-center gap-2 mb-2">
-              <Fingerprint className="w-3.5 h-3.5 text-gray-500" />
-              <p className="text-secondary-body font-sans font-medium text-gray-400">Recent evidence</p>
+          {/* Event log section */}
+          <div className="border-t border-border-custom/25 p-4 overflow-y-auto max-h-[44%] scrollbar-thin">
+            <div className="flex items-center gap-1.5 mb-3">
+              <Layers className="w-3.5 h-3.5 text-gray-500" />
+              <h2 className="text-[11px] font-sans font-medium text-gray-500">Event log</h2>
             </div>
-            <EvidenceAttributes alert={activeAlert} />
+            <EventStream alert={activeAlert} />
           </div>
         </motion.div>
 
-        {/* CENTER — Document-style Incident Summary, Evidence list, AI Reasoning */}
+        {/* CENTER — Investigation document */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.16, ease: "easeOut" }}
-          className="flex-1 overflow-y-auto p-8 scrollbar-thin space-y-8 min-h-0 min-w-0"
+          {...fadeIn(0.14)}
+          className="flex-1 overflow-y-auto scrollbar-thin min-h-0 min-w-0"
         >
-          {/* 1. Incident Summary (What happened?) */}
-          <div className="space-y-3.5 pb-5 border-b border-border-custom/40">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-secondary-body text-gray-500 flex-wrap font-sans">
-                  <Badge variant={severityBadgeVariant(activeAlert.severity)}>
-                    {activeAlert.severity}
-                  </Badge>
-                  <span className="font-mono text-mono-small text-gray-500">{activeAlert.id}</span>
-                  <span className="text-gray-700">·</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {new Date(activeAlert.timestamp).toLocaleString([], {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-                <h1 className="text-page-title font-sans font-semibold text-gray-100 tracking-tight leading-snug">
-                  {activeAlert.type}
-                </h1>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-caption text-gray-500 font-sans">Risk score</p>
-                <p className="text-display font-mono font-semibold tabular-nums text-red-400 mt-0.5">{activeAlert.score}</p>
-              </div>
-            </div>
+          {/* Constrain content width for readability */}
+          <div className="max-w-2xl mx-auto px-8 py-8 space-y-8">
 
-            <p className="text-body text-gray-300 leading-relaxed font-sans max-w-3xl">
-              {activeAlert.description}
-            </p>
-
-            <div className="flex items-center gap-4 text-secondary-body pt-1 font-sans">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">Source node:</span>
-                <span className="font-mono text-mono-small text-blue-300 bg-blue-500/5 px-2 py-0.5 rounded border border-blue-500/10">
-                  {activeAlert.source}
+            {/* ── 1. Incident hero — What happened? ─────────────────────── */}
+            <section>
+              {/* Meta row */}
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <Badge variant={severityBadgeVariant(activeAlert.severity)}>
+                  {activeAlert.severity}
+                </Badge>
+                <span className="font-mono text-[10px] text-gray-500">{activeAlert.id}</span>
+                <span className="text-gray-700">·</span>
+                <span className="flex items-center gap-1 text-[10px] text-gray-500 font-sans">
+                  <Clock className="w-3 h-3" />
+                  {new Date(activeAlert.timestamp).toLocaleString([], {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
               </div>
-              {activeAlert.details.username && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">Affected user:</span>
-                  <span className="font-mono text-mono-small text-gray-300 bg-surface px-2 py-0.5 rounded border border-border-custom/40">
-                    {activeAlert.details.username}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* 2. Evidence (What evidence supports this?) */}
-          <div className="space-y-3.5 py-2 border-b border-border-custom/40 pb-5">
-            <div className="flex items-center gap-2">
-              <Fingerprint className="w-4 h-4 text-gray-400" />
-              <h2 className="text-card-title font-sans font-medium text-gray-200">Evidence attributes & process chain</h2>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-1.5">
-              <div className="space-y-2.5">
-                <p className="text-caption text-gray-500 font-sans">Process execution chain</p>
-                <ProcessTree alert={activeAlert} />
-              </div>
-              <div className="space-y-2.5">
-                <p className="text-caption text-gray-500 font-sans">Key metadata properties</p>
-                <EvidenceAttributes alert={activeAlert} />
-              </div>
-            </div>
-          </div>
+              {/* Hero title */}
+              <h1 className="text-[22px] font-sans font-semibold text-gray-100 tracking-tight leading-tight mb-3">
+                {activeAlert.type}
+              </h1>
 
-          {/* 3. AI Explanation (Why was it flagged?) */}
-          <div className="space-y-3.5 py-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-violet-400/80" />
-              <h2 className="text-card-title font-sans font-medium text-gray-200">AI analysis & reasoning</h2>
-            </div>
-            <div className="space-y-3 text-secondary-body font-sans text-gray-300 leading-relaxed max-w-3xl">
-              <p>
-                Vector has assessed the suspicious spawn indicators and correlated them against historical server configurations. The execution patterns match catalogued namespace manipulations and represent an active escape trajectory.
+              {/* Description */}
+              <p className="text-[13px] text-gray-400 leading-relaxed font-sans mb-4">
+                {activeAlert.description}
               </p>
 
-              {/* SHAP contributing factors */}
-              {activeAlert.details.shapFactors && activeAlert.details.shapFactors.length > 0 && (
-                <div className="space-y-2.5 pt-1.5">
-                  <p className="text-caption text-gray-500 font-sans">Risk attribution factors (SHAP)</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {activeAlert.details.shapFactors.map((f, i) => (
-                      <div key={i} className="space-y-1">
-                        <div className="flex justify-between text-caption text-gray-400">
-                          <span>{f.factor}</span>
-                          <span className="font-mono text-mono-small">{(f.impact * 100).toFixed(0)}% influence</span>
+              {/* Source/user inline */}
+              <div className="flex items-center gap-4 text-[11px] font-sans flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-600">Source</span>
+                  <code className="font-mono text-blue-300/80 bg-blue-500/5 px-1.5 py-0.5 rounded text-[10px]">
+                    {activeAlert.source}
+                  </code>
+                </div>
+                {activeAlert.details.username && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-gray-600">User</span>
+                    <code className="font-mono text-gray-400 bg-surface/60 px-1.5 py-0.5 rounded text-[10px]">
+                      {activeAlert.details.username}
+                    </code>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-gray-600">Score</span>
+                  <span className="font-mono text-red-400 text-[10px]">
+                    {activeAlert.score} / 100
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            {/* Divider */}
+            <div className="border-t border-border-custom/20" />
+
+            {/* ── 2. Evidence — What supports this? ─────────────────────── */}
+            <section className="space-y-5">
+              <SectionLabel icon={Fingerprint}>Evidence</SectionLabel>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-[10px] text-gray-600 font-sans mb-2.5">Process chain</p>
+                  <ProcessTree alert={activeAlert} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-600 font-sans mb-2.5">Key attributes</p>
+                  <EvidenceAttributes alert={activeAlert} />
+                </div>
+              </div>
+            </section>
+
+            {/* Divider */}
+            <div className="border-t border-border-custom/20" />
+
+            {/* ── 3. Reasoning — Why was it flagged? ────────────────────── */}
+            <section className="space-y-4">
+              <SectionLabel icon={Sparkles}>AI reasoning</SectionLabel>
+
+              <p className="text-[13px] text-gray-400 leading-relaxed font-sans">
+                Vector has assessed the suspicious spawn indicators and correlated them
+                against historical server configurations. The execution patterns match
+                catalogued namespace manipulations and represent an active escape trajectory.
+              </p>
+
+              {/* SHAP factors */}
+              {activeAlert.details.shapFactors &&
+                activeAlert.details.shapFactors.length > 0 && (
+                  <div className="space-y-2.5">
+                    <p className="text-[10px] text-gray-600 font-sans">Risk attribution (SHAP)</p>
+                    <div className="space-y-2">
+                      {activeAlert.details.shapFactors.map((f, i) => (
+                        <div key={i} className="space-y-1">
+                          <div className="flex justify-between items-baseline">
+                            <span className="text-[11px] text-gray-500 font-sans">{f.factor}</span>
+                            <span className="text-[10px] font-mono text-gray-600">
+                              {(f.impact * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          <div className="w-full h-px bg-border-custom/30 rounded-full overflow-hidden">
+                            <motion.div
+                              className="bg-violet-500/50 h-full rounded-full"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${f.impact * 100}%` }}
+                              transition={{ duration: 0.5, delay: i * 0.07, ease: "easeOut" }}
+                            />
+                          </div>
                         </div>
-                        <div className="w-full h-1 bg-surface border border-border-custom/40 rounded-full overflow-hidden">
-                          <div
-                            className="bg-violet-500/80 h-full rounded-full"
-                            style={{ width: `${f.impact * 100}%` }}
-                          />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Correlated vulnerability — inline, not in a card */}
+              <div className="flex items-baseline justify-between pt-1">
+                <div>
+                  <p className="text-[10px] text-gray-600 font-sans mb-0.5">
+                    Correlated vulnerability
+                  </p>
+                  <span className="text-[11px] font-mono text-blue-300/80">
+                    CVE-2022-0847 (Dirty Pipe)
+                  </span>
+                  <span className="text-[10px] text-gray-600 ml-2">
+                    — 85% match on privilege escalation trajectory
+                  </span>
+                </div>
+                <Badge variant="purple" className="shrink-0 ml-4">92% similarity</Badge>
+              </div>
+            </section>
+
+            {/* ── 4. Related incidents ───────────────────────────────────── */}
+            {relatedAlerts.length > 0 && (
+              <>
+                <div className="border-t border-border-custom/20" />
+                <section className="space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5 text-gray-500" />
+                    <h2 className="text-[11px] font-sans font-medium text-gray-500">Related incidents</h2>
+                    <span className="text-[10px] text-gray-700">· same category</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {relatedAlerts.map((related) => (
+                      <button
+                        key={related.id}
+                        onClick={() => onSelectAlert(related)}
+                        className="flex items-center justify-between px-3 py-2 rounded-lg border border-border-custom/25 hover:border-border-custom/50 hover:bg-elevated/30 transition-all duration-120 text-left cursor-pointer group"
+                      >
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-mono text-gray-500 block">
+                            {related.id}
+                          </span>
+                          <p className="text-[11px] text-gray-400 truncate font-sans mt-0.5">
+                            {related.type}
+                          </p>
                         </div>
-                      </div>
+                        <ChevronRight className="w-3 h-3 text-gray-600 shrink-0 ml-2 group-hover:text-gray-400 transition-colors" />
+                      </button>
                     ))}
                   </div>
-                </div>
-              )}
+                </section>
+              </>
+            )}
 
-              {/* Vulnerabilities Correlated */}
-              <div className="pt-1.5">
-                <p className="text-caption text-gray-500 font-sans mb-1.5">Correlated vulnerabilities</p>
-                <div className="bg-surface/50 border border-border-custom/40 rounded-lg p-2.5 flex justify-between items-center gap-4">
-                  <div>
-                    <span className="text-mono-large text-blue-300 font-mono">CVE-2022-0847 (Dirty Pipe)</span>
-                    <p className="text-caption text-gray-500 mt-0.5">85% match on privilege escalation trajectory</p>
-                  </div>
-                  <Badge variant="purple">92% similarity</Badge>
-                </div>
-              </div>
-            </div>
+            {/* Bottom breathing room */}
+            <div className="h-6" />
           </div>
-
-          {/* Related alerts */}
-          {relatedAlerts.length > 0 && (
-            <div className="border-t border-border-custom/40 pt-5 mt-7 space-y-2.5">
-              <div className="flex items-center gap-2">
-                <Target className="w-3.5 h-3.5 text-gray-500" />
-                <h3 className="text-caption font-semibold text-gray-400 font-sans">Related incidents</h3>
-                <span className="text-[10px] text-gray-600">· same category</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-sans">
-                {relatedAlerts.map((related) => (
-                  <button
-                    key={related.id}
-                    onClick={() => onSelectAlert(related)}
-                    className="flex items-center justify-between p-2.5 rounded-lg border border-border-custom/30 hover:border-gray-500/10 hover:bg-elevated/40 transition-all text-left cursor-pointer"
-                  >
-                    <div className="min-w-0">
-                      <span className="text-mono-small font-mono text-gray-500">{related.id}</span>
-                      <p className="text-secondary-body text-gray-300 truncate font-mono mt-0.5">{related.type}</p>
-                    </div>
-                    <ChevronRight className="w-3 h-3 text-gray-600 shrink-0 ml-2" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </motion.div>
 
-        {/* RIGHT — Vector AI actions & conversation */}
+        {/* RIGHT — Vector AI panel */}
         <motion.div
-          initial={{ opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.35, delay: 0.22, ease: "easeOut" }}
-          className="w-72 shrink-0 bg-surface/30 border-l border-border-custom/40 flex flex-col overflow-hidden hidden lg:flex"
+          {...fadeIn(0.22)}
+          className="w-64 shrink-0 border-l border-border-custom/25 flex flex-col overflow-hidden hidden lg:flex"
         >
           <VectorPanel
             alert={activeAlert}

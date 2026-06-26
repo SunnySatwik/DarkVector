@@ -1,8 +1,8 @@
 /**
  * ProcessTree
  *
- * Vertical indented process chain (parent → spawn → remote connection).
- * Rendered borderless for clean, text-focused layout.
+ * Compact indented process chain (parent → spawn → remote connection).
+ * Rendered as clean text rows without decorative panels.
  */
 
 import { CornerDownRight } from "lucide-react";
@@ -31,7 +31,7 @@ function buildNodes(alert: Alert): ProcessNode[] {
     ...(alert.details.ipAddress
       ? [
           {
-            label: `→ ${alert.details.ipAddress}:${alert.details.port || 443}`,
+            label: `${alert.details.ipAddress}:${alert.details.port || 443}`,
             role: "Remote connection",
             status: "error" as const,
           },
@@ -41,9 +41,9 @@ function buildNodes(alert: Alert): ProcessNode[] {
 }
 
 const NODE_STYLE: Record<ProcessNode["status"], string> = {
-  normal: "text-gray-300",
-  critical: "text-red-400 font-semibold",
-  error: "text-orange-400",
+  normal:   "text-gray-400",
+  critical: "text-red-400",
+  error:    "text-orange-400",
 };
 
 interface ProcessTreeProps {
@@ -54,22 +54,22 @@ export function ProcessTree({ alert }: ProcessTreeProps) {
   const nodes = buildNodes(alert);
 
   return (
-    <div className="space-y-3.5 pl-1 font-mono text-xs">
+    <div className="space-y-1.5 pl-0.5 font-mono">
       {nodes.map((node, i) => (
-        <div key={i} className="flex items-start gap-3">
-          <div className="flex flex-col items-center mt-1 shrink-0">
-            <CornerDownRight className="w-3.5 h-3.5 text-gray-600" />
-          </div>
+        <div key={i} className="flex items-start gap-2">
+          <CornerDownRight className="w-3 h-3 text-gray-700 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`truncate break-all ${NODE_STYLE[node.status]}`}>{node.label}</span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={`text-[11px] truncate break-all leading-tight ${NODE_STYLE[node.status]}`}>
+                {node.label}
+              </span>
               {node.highlight && (
-                <span className="text-[9px] font-sans px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 font-medium">
+                <span className="text-[9px] font-sans px-1 py-px rounded bg-red-500/8 text-red-400 border border-red-500/15">
                   Flagged
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-gray-500 block font-sans mt-0.5">{node.role}</span>
+            <span className="text-[10px] text-gray-600 block font-sans mt-0.5">{node.role}</span>
           </div>
         </div>
       ))}
