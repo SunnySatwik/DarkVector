@@ -12,7 +12,7 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
-import { Card, Button, Badge } from "../components/ui/DesignSystem";
+import { Card, Button, Badge, PageHeader, PanelHeader } from "../components/ui/DesignSystem";
 
 export default function Models() {
   const [numEstimators, setNumEstimators] = useState(128);
@@ -30,16 +30,10 @@ export default function Models() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          Model tuning center
-        </h1>
-        <p className="text-xs text-gray-400 mt-1">
-          Configure anomaly classification thresholds, tune RAG embeddings database, and control
-          prompt alignment parameters.
-        </p>
-      </div>
+      <PageHeader
+        title="Model tuning center"
+        subtitle="Configure anomaly classification thresholds, tune RAG embeddings database, and control prompt alignment parameters."
+      />
 
       {/* Inline stateful feedback instead of noisy window.alert */}
       <AnimatePresence>
@@ -73,12 +67,11 @@ export default function Models() {
         {/* Isolation Forest Parameters Configuration */}
         <div className="lg:col-span-7">
           <Card className="space-y-6">
-            <div className="flex items-center gap-2 border-b border-[#23262F]/40 pb-3">
-              <Cpu className="w-4.5 h-4.5 text-blue-400" />
-              <h3 className="text-xs font-mono font-bold text-gray-200">
-                Anomaly detection algorithm [isolation forest]
-              </h3>
-            </div>
+            <PanelHeader
+              icon={Cpu}
+              title="Anomaly detection algorithm [isolation forest]"
+              iconClassName="text-blue-400"
+            />
 
             <div className="space-y-5 text-xs">
               {/* Num Estimators */}
@@ -176,12 +169,11 @@ export default function Models() {
         <div className="lg:col-span-5 space-y-5">
           {/* Chroma DB Status */}
           <Card className="space-y-4">
-            <div className="flex items-center gap-2 border-b border-[#23262F]/40 pb-3">
-              <Database className="w-4.5 h-4.5 text-purple-400" />
-              <h3 className="text-xs font-mono font-bold text-gray-200">
-                Vector knowledge [ChromaDB]
-              </h3>
-            </div>
+            <PanelHeader
+              icon={Database}
+              title="Vector knowledge [ChromaDB]"
+              iconClassName="text-purple-400"
+            />
 
             <div className="space-y-3.5 text-xs">
               <div className="flex items-center justify-between font-mono text-[11px]">
@@ -212,12 +204,11 @@ export default function Models() {
 
           {/* Prompt Alignment Copilot customization */}
           <Card className="space-y-4">
-            <div className="flex items-center gap-2 border-b border-[#23262F]/40 pb-3">
-              <Sparkles className="w-4.5 h-4.5 text-purple-400" />
-              <h3 className="text-xs font-mono font-bold text-gray-200">
-                AI analyst personality
-              </h3>
-            </div>
+            <PanelHeader
+              icon={Sparkles}
+              title="AI analyst personality"
+              iconClassName="text-purple-400"
+            />
 
             <div className="space-y-3 text-xs">
               <p className="text-gray-400 text-[11px]">

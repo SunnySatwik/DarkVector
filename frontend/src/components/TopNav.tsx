@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Search, Bell, Sun, Moon } from "lucide-react";
 import { Workspace } from "../types";
 import NotificationPanel from "./NotificationPanel";
+import { AnimatePresence } from "motion/react";
 
 interface TopNavProps {
   onOpenSearch: () => void;
@@ -79,13 +80,17 @@ export default function TopNav({
             )}
           </button>
 
-          <NotificationPanel
-            isOpen={showNotifications}
-            onClose={() => setShowNotifications(false)}
-            notifications={notifications}
-            onMarkRead={onMarkRead}
-            onClearAll={onClearAll}
-          />
+          <AnimatePresence>
+            {showNotifications && (
+              <NotificationPanel
+                isOpen={showNotifications}
+                onClose={() => setShowNotifications(false)}
+                notifications={notifications}
+                onMarkRead={onMarkRead}
+                onClearAll={onClearAll}
+              />
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Theme Toggle */}

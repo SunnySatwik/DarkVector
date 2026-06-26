@@ -10,7 +10,7 @@ import {
   Shield,
   HelpCircle,
 } from "lucide-react";
-import { Card, Button, Badge, SectionHeader } from "../components/ui/DesignSystem";
+import { Card, Button, Badge, SectionHeader, PageHeader } from "../components/ui/DesignSystem";
 
 interface Node {
   id: string;
@@ -98,16 +98,10 @@ export default function ThreatGraph() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          Security threat graph
-        </h1>
-        <p className="text-xs text-gray-400 mt-1">
-          Interactive forensic topology mapper correlating container processes, socket paths, and
-          active C2 threat connections.
-        </p>
-      </div>
+      <PageHeader
+        title="Security threat graph"
+        subtitle="Interactive forensic topology mapper correlating container processes, socket paths, and active C2 threat connections."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* SVG Graph Canvas */}
@@ -300,7 +294,7 @@ export default function ThreatGraph() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.18 }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
               >
                 <Card className="space-y-4">
                   <div className="flex items-center justify-between border-b border-[#23262F]/40 pb-3">

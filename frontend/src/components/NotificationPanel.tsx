@@ -1,5 +1,5 @@
 import { BellOff, CheckCircle2, AlertTriangle, ShieldCheck, Trash2 } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface Notification {
   id: string;
@@ -25,15 +25,13 @@ export default function NotificationPanel({
   onMarkRead,
   onClearAll,
 }: NotificationPanelProps) {
-  if (!isOpen) return null;
-
   return (
     <motion.div
       id="notification-popover"
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 10, scale: 0.98 }}
-      transition={{ duration: 0.15 }}
+      exit={{ opacity: 0, y: 8, scale: 0.98 }}
+      transition={{ duration: 0.22, ease: "easeInOut" }}
       className="absolute right-0 top-12 w-80 bg-[#161A22] border border-[#23262F] rounded-xl shadow-2xl z-50 overflow-hidden"
     >
       {/* Header */}
@@ -70,11 +68,10 @@ export default function NotificationPanel({
             <div
               key={notif.id}
               onClick={() => onMarkRead(notif.id)}
-              className={`p-3 text-left transition-colors duration-100 cursor-pointer flex gap-3 ${
-                notif.read
-                  ? "bg-transparent hover:bg-black/20"
-                  : "bg-blue-500/5 hover:bg-blue-500/10"
-              }`}
+              className={`p-3 text-left transition-colors duration-100 cursor-pointer flex gap-3 ${notif.read
+                ? "bg-transparent hover:bg-black/20"
+                : "bg-blue-500/5 hover:bg-blue-500/10"
+                }`}
             >
               {/* Icon classification */}
               <div className="shrink-0 mt-0.5">

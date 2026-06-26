@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { MOCK_ALERTS } from "../mockData";
-import { Alert, Severity } from "../types";
+import { Alert } from "../types";
 import {
   Briefcase,
   AlertOctagon,
@@ -17,6 +17,8 @@ import {
   Activity,
   UserCheck,
 } from "lucide-react";
+import { PageHeader } from "../components/ui/DesignSystem";
+import { severityBadgeClass } from "../lib/severity";
 
 interface CaseItem {
   id: string;
@@ -75,31 +77,12 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
     setCases((prev) => prev.map((c) => (c.id === caseId ? { ...c, status: newStatus } : c)));
   };
 
-  const getSeverityColor = (sev: Severity) => {
-    switch (sev) {
-      case "critical":
-        return "bg-red-500/10 text-red-400 border border-red-500/20";
-      case "high":
-        return "bg-orange-500/10 text-orange-400 border border-orange-500/20";
-      case "medium":
-        return "bg-blue-500/10 text-blue-400 border border-blue-500/20";
-      default:
-        return "bg-green-500/10 text-green-400 border border-green-500/20";
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          Investigations board
-        </h1>
-        <p className="text-xs text-gray-400 mt-1">
-          Track, quarantine and resolve critical security cases powered by isolation forest tree
-          decisions.
-        </p>
-      </div>
+      <PageHeader
+        title="Investigations board"
+        subtitle="Track, quarantine and resolve critical security cases powered by isolation forest tree decisions."
+      />
 
       {/* Investigations Columns Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
@@ -156,7 +139,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
                             </h4>
                             <div className="flex items-center justify-between gap-2 mt-2">
                               <span
-                                className={`text-[8px] font-mono font-bold px-2 py-0.5 rounded ${getSeverityColor(c.alert.severity)}`}
+                                className={`text-[8px] font-mono font-bold px-2 py-0.5 rounded ${severityBadgeClass(c.alert.severity)}`}
                               >
                                 {c.alert.severity}
                               </span>

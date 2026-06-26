@@ -10,7 +10,7 @@ import {
   Check,
   Terminal,
 } from "lucide-react";
-import { Card, Button, Badge } from "../components/ui/DesignSystem";
+import { Card, Button, Badge, PageHeader } from "../components/ui/DesignSystem";
 
 interface Tactic {
   id: string;
@@ -81,16 +81,10 @@ export default function KnowledgeBase() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          MITRE ATT&CK Knowledge Base
-        </h1>
-        <p className="text-xs text-gray-400 mt-1">
-          Explore tactical detection signatures, reference security controls catalog, and fetch
-          verified terminal containment scripts.
-        </p>
-      </div>
+      <PageHeader
+        title="MITRE ATT&CK Knowledge Base"
+        subtitle="Explore tactical detection signatures, reference security controls catalog, and fetch verified terminal containment scripts."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Playbook List */}
@@ -161,7 +155,7 @@ export default function KnowledgeBase() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
               >
                 <Card className="space-y-4">
                   <div className="flex items-center justify-between border-b border-[#23262F]/40 pb-3">

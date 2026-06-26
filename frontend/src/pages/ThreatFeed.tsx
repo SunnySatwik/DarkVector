@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { MOCK_ALERTS } from "../mockData";
-import { Alert, Severity } from "../types";
+import { Alert } from "../types";
 import {
   ShieldAlert,
   Search,
@@ -14,9 +14,10 @@ import {
   Lock,
   ChevronDown,
   ChevronUp,
-  Sliders,
   ExternalLink,
 } from "lucide-react";
+import { PageHeader } from "../components/ui/DesignSystem";
+import { severityBadgeClass } from "../lib/severity";
 
 interface ThreatFeedProps {
   onSelectAlert: (alert: Alert) => void;
@@ -55,20 +56,7 @@ export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedP
     }
   };
 
-  const getSeverityBadge = (sev: Severity) => {
-    switch (sev) {
-      case "critical":
-        return "bg-red-500/10 text-red-400 border border-red-500/20";
-      case "high":
-        return "bg-orange-500/10 text-orange-400 border border-orange-500/20";
-      case "medium":
-        return "bg-blue-500/10 text-blue-400 border border-blue-500/20";
-      default:
-        return "bg-green-500/10 text-green-400 border border-green-500/20";
-    }
-  };
-
-  const handleExplainWithAi = (e: React.MouseEvent, alert: Alert) => {
+  const handleExplainWithAI = (e: React.MouseEvent, alert: Alert) => {
     e.stopPropagation();
     onSelectAlert(alert);
     onOpenAiPanel();
@@ -80,15 +68,10 @@ export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedP
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          Security Threat Feed
-        </h1>
-        <p className="text-xs text-gray-400 mt-1">
-          Chronological real-time forensic timeline of suspicious telemetry and host events.
-        </p>
-      </div>
+      <PageHeader
+        title="Security Threat Feed"
+        subtitle="Chronological real-time forensic timeline of suspicious telemetry and host events."
+      />
 
       {/* Filters & Search Toolbar */}
       <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -179,7 +162,7 @@ export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedP
 
                 <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
                   <span
-                    className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full uppercase ${getSeverityBadge(alert.severity)}`}
+                    className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full uppercase ${severityBadgeClass(alert.severity)}`}
                   >
                     {alert.severity}
                   </span>
@@ -196,7 +179,7 @@ export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedP
                   </button>
 
                   <button
-                    onClick={(e) => handleExplainWithAi(e, alert)}
+                    onClick={(e) => handleExplainWithAI(e, alert)}
                     className="flex items-center gap-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 font-mono text-[10px] px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                   >
                     <BrainCircuit className="w-3.5 h-3.5" />

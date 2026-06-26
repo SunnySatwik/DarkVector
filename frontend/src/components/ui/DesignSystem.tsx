@@ -28,7 +28,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
         }}
         className={joinClasses(
           "bg-[#111317] border border-[#23262F]/60 rounded-xl p-4 overflow-hidden relative",
-          hoverable && "hover:border-gray-500/20 hover:bg-[#13161c] transition-colors duration-250",
+          hoverable && "hover:border-gray-500/30 hover:bg-[#13161c] hover:-translate-y-[2px] hover:shadow-lg hover:shadow-black/40 transition-all duration-150 ease-out",
           className
         )}
         {...props}
@@ -43,15 +43,22 @@ Card.displayName = "Card";
 /* ==========================================================================
    2. TACTILE BUTTONS
    ========================================================================== */
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "success"
+  | "danger";
+
 interface ButtonProps extends HTMLMotionProps<"button"> {
-  variant?: "primary" | "secondary";
+  variant?: ButtonVariant;
   size?: "xs" | "sm" | "md" | "lg";
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ children, className, variant = "secondary", size = "sm", ...props }, ref) => {
     const baseStyle =
-      "font-mono font-medium rounded-lg inline-flex items-center justify-center gap-1.5 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.97]";
+      "font-mono font-medium rounded-lg inline-flex items-center justify-center gap-1.5 transition-all duration-120 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.97]";
 
     const variants = {
       primary:
@@ -111,6 +118,8 @@ export const Badge: React.FC<BadgeProps> = ({
     success: "bg-emerald-500/10 border-emerald-500/25 text-emerald-400",
     blue: "bg-sky-500/10 border-sky-500/25 text-sky-400",
     purple: "bg-purple-500/10 border-purple-500/25 text-purple-400",
+    ghost: "bg-transparent hover:bg-white/5 text-gray-300",
+    danger: "bg-red-600 hover:bg-red-700 text-white",
   };
 
   return (
@@ -304,3 +313,97 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
     </div>
   );
 };
+
+/* ==========================================================================
+   7. PAGE HEADER — h1 + optional subtitle used at the top of every page
+   ========================================================================== */
+interface PageHeaderProps {
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+  className?: string;
+}
+
+export const PageHeader: React.FC<PageHeaderProps> = ({
+  title,
+  subtitle,
+  action,
+  className,
+}) => {
+  return (
+    <div className={joinClasses("flex items-start justify-between", className)}>
+      <div>
+        <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="text-xs text-gray-400 mt-1 font-sans">{subtitle}</p>
+        )}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+};
+
+/* ==========================================================================
+   8. PANEL HEADER — icon + title row inside a card section
+   ========================================================================== */
+interface PanelHeaderProps {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  iconClassName?: string;
+  className?: string;
+}
+
+export const PanelHeader: React.FC<PanelHeaderProps> = ({
+  icon: Icon,
+  title,
+  iconClassName,
+  className,
+}) => {
+  return (
+    <div
+      className={joinClasses(
+        "flex items-center gap-2 border-b border-[#23262F]/40 pb-3 mb-4",
+        className
+      )}
+    >
+      <Icon
+        className={joinClasses("w-4 h-4 shrink-0", iconClassName ?? "text-blue-400")}
+      />
+      <h3 className="text-xs font-mono font-semibold text-gray-200">{title}</h3>
+    </div>
+  );
+};
+
+/* ==========================================================================
+   9. PREMIUM SHIMMERING SKELETON
+   ========================================================================== */
+interface SkeletonProps {
+  className?: string;
+  width?: string | number;
+  height?: string | number;
+  circle?: boolean;
+}
+
+export const Skeleton: React.FC<SkeletonProps> = ({
+  className,
+  width,
+  height,
+  circle = false,
+}) => {
+  return (
+    <div
+      className={joinClasses(
+        "shimmer rounded-md",
+        circle ? "rounded-full" : "",
+        className
+      )}
+      style={{
+        width: width !== undefined ? width : "100%",
+        height: height !== undefined ? height : "1rem",
+      }}
+    />
+  );
+};
+

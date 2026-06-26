@@ -26,6 +26,18 @@ export default function App() {
   const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [prevSidebarState, setPrevSidebarState] = useState<boolean>(false);
+
+  // Auto-collapse sidebar in investigation workspace (Focus Mode)
+  useEffect(() => {
+    if (activeWorkspaceAlert) {
+      setPrevSidebarState(isSidebarCollapsed);
+      setIsSidebarCollapsed(true);
+    } else {
+      setIsSidebarCollapsed(prevSidebarState);
+    }
+  }, [!!activeWorkspaceAlert]);
 
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace>(MOCK_WORKSPACES[0]);
 
@@ -183,14 +195,16 @@ export default function App() {
         notifications={notifications}
         onMarkRead={handleMarkRead}
         onClearAll={handleClearAll}
+        isSidebarCollapsed={isSidebarCollapsed}
+        onToggleSidebarCollapse={setIsSidebarCollapsed}
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activeWorkspaceAlert ? `workspace-${activeWorkspaceAlert.id}` : activeTab}
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className="w-full h-full"
           >
             {renderContent()}

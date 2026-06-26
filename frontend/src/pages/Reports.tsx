@@ -17,6 +17,8 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  PageHeader,
+  PanelHeader,
 } from "../components/ui/DesignSystem";
 
 interface SecurityReport {
@@ -86,28 +88,17 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          Compliance & threat reports
-        </h1>
-        <p className="text-xs text-gray-400 mt-1">
-          Export cryptographic logs summaries, SOC2 checklists, and automated incident foreword
-          assessments.
-        </p>
-      </div>
+      <PageHeader
+        title="Compliance & threat reports"
+        subtitle="Export cryptographic logs summaries, SOC2 checklists, and automated incident foreword assessments."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Generate Report Prompt */}
         <div className="lg:col-span-5">
           <Card className="flex flex-col justify-between min-h-[300px]">
             <form onSubmit={handleCreateReport} className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-[#23262F]/40 pb-3">
-                <Sparkles className="w-4.5 h-4.5 text-purple-400" />
-                <h3 className="text-xs font-mono font-bold text-gray-200">
-                  AI automated report weaver
-                </h3>
-              </div>
+              <PanelHeader icon={Sparkles} title="AI automated report weaver" iconClassName="text-purple-400" />
 
               <div className="space-y-2 text-xs">
                 <label className="font-semibold text-gray-300">Target objective prompt</label>
@@ -151,9 +142,7 @@ export default function Reports() {
             <div className="p-4 border-b border-[#23262F]/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-400" />
-                <span className="font-mono text-xs font-bold text-gray-200">
-                  Generated security audits
-                </span>
+                <span className="font-mono text-xs font-bold text-gray-200">Generated security audits</span>
               </div>
               <Badge variant="default">{reports.length} files archived</Badge>
             </div>

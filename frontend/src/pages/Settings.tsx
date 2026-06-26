@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Settings as SettingsIcon, Shield, Key, Bell, Sliders, CheckCircle2 } from "lucide-react";
+import { Card, Button, PageHeader, PanelHeader } from "../components/ui/DesignSystem";
 
 export default function Settings() {
   const [apiKey, setApiKey] = useState("dv_live_xxxxxxxxxxxxxxxxxxxxxxabcde12");
@@ -13,25 +14,14 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-          Platform settings
-        </h1>
-        <p className="text-xs text-gray-400 mt-1">
-          Manage API keys, define gRPC telemetries, and tune Slack/PagerDuty notification streams.
-        </p>
-      </div>
+      <PageHeader
+        title="Platform settings"
+        subtitle="Manage API keys, define gRPC telemetries, and tune Slack/PagerDuty notification streams."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Core parameters Settings */}
-        <div className="lg:col-span-8 bg-[#111317] border border-[#23262F] rounded-xl p-5 space-y-6">
-          <div className="flex items-center gap-2 border-b border-[#23262F] pb-3">
-            <Sliders className="w-4.5 h-4.5 text-blue-400" />
-            <h3 className="text-xs font-mono font-semibold text-gray-200">
-              Sensor telemetry configurations
-            </h3>
-          </div>
+        <Card className="lg:col-span-8 space-y-6">
+          <PanelHeader icon={Sliders} title="Sensor telemetry configurations" iconClassName="text-blue-400" />
 
           <div className="space-y-4 text-xs">
             {/* gRPC Input */}
@@ -101,24 +91,16 @@ export default function Settings() {
           </div>
 
           <div className="border-t border-[#23262F]/60 pt-4">
-            <button
-              onClick={handleSave}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold px-4 py-2.5 rounded-lg cursor-pointer transition-colors shadow shadow-blue-500/20"
-            >
+            <Button variant="primary" onClick={handleSave}>
               Save configurations
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
 
         {/* API Keys Settings */}
         <div className="lg:col-span-4 space-y-5">
-          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2 border-b border-[#23262F] pb-3">
-              <Key className="w-4.5 h-4.5 text-purple-400" />
-              <h3 className="text-xs font-mono font-semibold text-gray-200">
-                Platform access secrets
-              </h3>
-            </div>
+          <Card className="space-y-4">
+            <PanelHeader icon={Key} title="Platform access secrets" iconClassName="text-purple-400" />
 
             <div className="space-y-3.5 text-xs">
               <p className="text-gray-400 text-[11px]">
@@ -144,15 +126,10 @@ export default function Settings() {
                 />
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2 border-b border-[#23262F] pb-3">
-              <Shield className="w-4.5 h-4.5 text-purple-400" />
-              <h3 className="text-xs font-mono font-semibold text-gray-200">
-                Daemon firmware version
-              </h3>
-            </div>
+          <Card className="space-y-4">
+            <PanelHeader icon={Shield} title="Daemon firmware version" iconClassName="text-purple-400" />
 
             <div className="space-y-2 text-xs font-mono text-gray-400">
               <div className="flex justify-between">
@@ -170,7 +147,7 @@ export default function Settings() {
                 <span>148 sensors online</span>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

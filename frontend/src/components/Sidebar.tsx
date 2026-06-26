@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard,
   ShieldAlert,
@@ -28,6 +28,8 @@ interface SidebarProps {
   workspaces: Workspace[];
   activeWorkspace: Workspace;
   onSelectWorkspace: (ws: Workspace) => void;
+  isCollapsed: boolean;
+  onToggleCollapse: (collapsed: boolean) => void;
 }
 
 export default function Sidebar({
@@ -36,8 +38,9 @@ export default function Sidebar({
   workspaces,
   activeWorkspace,
   onSelectWorkspace,
+  isCollapsed,
+  onToggleCollapse,
 }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
 
   const menuItems = [
@@ -53,12 +56,12 @@ export default function Sidebar({
     <motion.aside
       id="main-sidebar"
       animate={{ width: isCollapsed ? 68 : 240 }}
-      transition={{ type: "spring", damping: 28, stiffness: 260 }}
+      transition={{ duration: 0.22, ease: "easeInOut" }}
       className="bg-[#111317] border-r border-[#23262F] flex flex-col justify-between h-screen shrink-0 relative z-30"
     >
       {/* Sidebar Toggle Button */}
       <motion.button
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        onClick={() => onToggleCollapse(!isCollapsed)}
         whileTap={{ scale: 0.94 }}
         className="absolute -right-3 top-12 bg-[#161A22] border border-[#23262F] text-gray-400 hover:text-gray-200 rounded-full p-1 cursor-pointer shadow-md transition-colors"
       >
@@ -86,20 +89,25 @@ export default function Sidebar({
                 />
               </svg>
             </div>
-            {!isCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex flex-col"
-              >
-                <span className="font-display font-bold text-sm tracking-wide text-gray-100 uppercase">
-                  DarkVector
-                </span>
-                <span className="text-[9px] font-mono font-medium text-blue-400 tracking-wider">
-                  AI security platform
-                </span>
-              </motion.div>
-            )}
+            <AnimatePresence mode="wait">
+              {!isCollapsed && (
+                <motion.div
+                  key="brand-text"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.12, ease: "easeInOut" }}
+                  className="flex flex-col shrink-0"
+                >
+                  <span className="font-display font-bold text-sm tracking-wide text-gray-100 uppercase">
+                    DarkVector
+                  </span>
+                  <span className="text-[9px] font-mono font-medium text-blue-400 tracking-wider">
+                    AI security platform
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -108,7 +116,7 @@ export default function Sidebar({
           {isCollapsed ? (
             <div className="flex justify-center">
               <button
-                onClick={() => setIsCollapsed(false)}
+                onClick={() => onToggleCollapse(false)}
                 className="p-2 rounded bg-black/40 border border-[#23262F] hover:bg-[#161A22] text-blue-400"
                 title={activeWorkspace.name}
               >
@@ -147,11 +155,10 @@ export default function Sidebar({
                         onSelectWorkspace(ws);
                         setShowWorkspaceDropdown(false);
                       }}
-                      className={`w-full flex flex-col p-2 text-left rounded-md transition-colors ${
-                        ws.id === activeWorkspace.id
+                      className={`w-full flex flex-col p-2 text-left rounded-md transition-colors ${ws.id === activeWorkspace.id
                           ? "bg-blue-500/10 text-blue-400"
                           : "text-gray-400 hover:bg-[#23262F]/60"
-                      }`}
+                        }`}
                     >
                       <span className="text-xs font-semibold">{ws.name}</span>
                       <span className="text-[9px] font-mono text-gray-500 mt-0.5">
@@ -176,18 +183,17 @@ export default function Sidebar({
                 id={`sidebar-item-${item.id}`}
                 onClick={() => onSelectTab(item.id)}
                 whileTap={{ scale: 0.985 }}
-                className={`w-full flex items-center justify-between rounded-lg p-2.5 text-left cursor-pointer relative transition-colors duration-200 ${
-                  isActive
+                className={`w-full flex items-center justify-between rounded-lg p-2.5 text-left cursor-pointer relative transition-colors duration-120 ${isActive
                     ? "text-blue-400 font-medium"
                     : "text-gray-400 hover:text-gray-200 hover:bg-[#161A22]/20"
-                }`}
+                  }`}
               >
                 {/* Gliding premium background indicator */}
                 {isActive && (
                   <motion.div
                     layoutId="sidebarActiveBackground"
                     className="absolute inset-0 bg-blue-500/10 rounded-lg border-l-2 border-blue-500 z-0"
-                    transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
                   />
                 )}
 
@@ -195,15 +201,20 @@ export default function Sidebar({
                   <Icon
                     className={`w-4 h-4 shrink-0 ${isActive ? "text-blue-400" : "text-gray-500"}`}
                   />
-                  {!isCollapsed && (
-                    <motion.span
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-xs font-sans tracking-wide"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
+                  <AnimatePresence mode="wait">
+                    {!isCollapsed && (
+                      <motion.span
+                        key="nav-label"
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -6 }}
+                        transition={{ duration: 0.1, ease: "easeInOut" }}
+                        className="text-xs font-sans tracking-wide shrink-0"
+                      >
+                        {item.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </div>
               </motion.button>
             );

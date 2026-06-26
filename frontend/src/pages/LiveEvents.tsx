@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Play, Pause, Trash2, Terminal, ShieldCheck, Cpu, Database, Search } from "lucide-react";
+import { PageHeader } from "../components/ui/DesignSystem";
 
 interface LogLine {
   id: string;
@@ -132,45 +133,36 @@ export default function LiveEvents() {
     }
   };
 
+  const toolbar = (
+    <div className="flex items-center gap-2.5">
+      <button
+        onClick={() => setIsPlaying(!isPlaying)}
+        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border cursor-pointer transition-colors ${
+          isPlaying
+            ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
+            : "bg-green-500/10 text-green-400 border-green-500/20 animate-pulse"
+        }`}
+      >
+        {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+        <span>{isPlaying ? "PAUSE STREAM" : "RESUME STREAM"}</span>
+      </button>
+      <button
+        onClick={() => setLogs([])}
+        className="flex items-center gap-1 bg-[#161A22] border border-[#23262F] hover:bg-[#23262F] text-gray-400 hover:text-gray-200 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold cursor-pointer transition-colors"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+        <span>CLEAR</span>
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-            Live Telemetry Terminal
-          </h1>
-          <p className="text-xs text-gray-400 mt-1">
-            Real-time stdout streams of container network interfaces, authentication states, and AI
-            model scores.
-          </p>
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex items-center gap-2.5">
-          {/* Play/Pause */}
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold border cursor-pointer transition-colors ${
-              isPlaying
-                ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
-                : "bg-green-500/10 text-green-400 border-green-500/20 animate-pulse"
-            }`}
-          >
-            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            <span>{isPlaying ? "PAUSE STREAM" : "RESUME STREAM"}</span>
-          </button>
-
-          {/* Clear */}
-          <button
-            onClick={() => setLogs([])}
-            className="flex items-center gap-1 bg-[#161A22] border border-[#23262F] hover:bg-[#23262F] text-gray-400 hover:text-gray-200 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold cursor-pointer transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>CLEAR</span>
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Live Telemetry Terminal"
+        subtitle="Real-time stdout streams of container network interfaces, authentication states, and AI model scores."
+        action={toolbar}
+      />
 
       {/* Terminal View */}
       <div className="bg-[#09090B] border border-[#23262F] rounded-xl overflow-hidden flex flex-col h-[520px]">

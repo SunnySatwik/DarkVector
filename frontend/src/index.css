@@ -80,3 +80,24 @@ body {
   box-shadow: 0 0 20px -5px rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.4);
 }
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(22, 26, 34, 0.5) 25%,
+    rgba(35, 38, 47, 0.8) 37%,
+    rgba(22, 26, 34, 0.5) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+

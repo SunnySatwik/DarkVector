@@ -24,6 +24,7 @@ import {
   TableCell,
   TabGroup,
   SectionHeader,
+  PageHeader,
 } from "../components/ui/DesignSystem";
 
 interface ThreatLog {
@@ -124,27 +125,16 @@ export default function ThreatExplorer() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight flex items-center gap-2">
-            Threat Explorer
-          </h1>
-          <p className="text-xs text-gray-400 mt-1">
-            Audit cluster namespaces, inspect raw runtime process tracing logs, and query historical
-            payload anomalies.
-          </p>
-        </div>
-        <Button
-          onClick={handleRefresh}
-          variant="secondary"
-          size="sm"
-          className="self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-          <span>Refresh Traces</span>
-        </Button>
-      </div>
+      <PageHeader
+        title="Threat Explorer"
+        subtitle="Audit cluster namespaces, inspect raw runtime process tracing logs, and query historical payload anomalies."
+        action={
+          <Button onClick={handleRefresh} variant="secondary" size="sm">
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span>Refresh Traces</span>
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Main Search and Log Table View */}
@@ -256,7 +246,7 @@ export default function ThreatExplorer() {
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 12 }}
-                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
               >
                 <Card className="space-y-4">
                   <div className="flex items-center justify-between border-b border-[#23262F]/40 pb-3">

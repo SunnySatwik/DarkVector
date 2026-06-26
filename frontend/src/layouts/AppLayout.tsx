@@ -17,6 +17,8 @@ interface AppLayoutProps {
   notifications: any[];
   onMarkRead: (id: string) => void;
   onClearAll: () => void;
+  isSidebarCollapsed: boolean;
+  onToggleSidebarCollapse: (collapsed: boolean) => void;
 }
 
 export default function AppLayout({
@@ -32,6 +34,8 @@ export default function AppLayout({
   notifications,
   onMarkRead,
   onClearAll,
+  isSidebarCollapsed,
+  onToggleSidebarCollapse,
 }: AppLayoutProps) {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg text-gray-100 select-none">
@@ -44,6 +48,8 @@ export default function AppLayout({
           workspaces={workspaces}
           activeWorkspace={activeWorkspace}
           onSelectWorkspace={onSelectWorkspace}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={onToggleSidebarCollapse}
         />
 
         {/* Main Panel Content (Top Nav + Main Canvas Grid) */}
