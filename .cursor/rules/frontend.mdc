@@ -1,0 +1,28 @@
+---
+description: Frontend engineering standards
+alwaysApply: true
+---
+
+Always follow React best practices.
+
+Use reusable components.
+
+Never duplicate UI.
+
+Never hardcode colors.
+
+Always use design tokens.
+
+Never fetch APIs directly inside components.
+
+Use services and hooks.
+
+Prefer composition over inheritance.
+
+Keep components under approximately 200 lines.
+
+Support loading, empty and error states.
+
+Accessibility is required.
+
+Prefer skeletons over loading spinners.

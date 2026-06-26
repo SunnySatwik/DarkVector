@@ -1,0 +1,30 @@
+---
+description: DarkVector project context
+alwaysApply: true
+---
+
+You are working on DarkVector, an AI-native cybersecurity investigation platform.
+
+Before making any implementation decisions, follow the documents inside /docs.
+
+Priority order:
+
+1. PRODUCT_BIBLE.md
+2. DESIGN_SYSTEM.md
+3. INFORMATION_ARCHITECTURE.md
+4. COMPONENT_LIBRARY.md
+5. MOTION_SYSTEM.md
+6. UX_WRITING_GUIDE.md
+7. FRONTEND_IMPLEMENTATION_GUIDE.md
+
+Never introduce features that contradict these documents.
+
+When uncertain, prefer simplicity.
+
+Never generate generic dashboard designs.
+
+DarkVector is inspired by Raycast, Cursor, Linear and Arc.
+
+DarkVector is NOT inspired by hacker aesthetics or enterprise government software.
+
+Always explain significant architectural decisions before implementing them.
