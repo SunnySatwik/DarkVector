@@ -513,30 +513,30 @@ function DashboardSkeleton() {
 
       {/* Main 2-column Grid Skeletons */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      {/* Active Investigations Skeleton */}
-      <div className="col-span-full rounded-xl border border-[#23262F]/40 bg-[#111317] p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Skeleton width={120} height={12} />
-            <Skeleton width={150} height={8} />
-          </div>
-          <Skeleton width={50} height={18} className="rounded-md" />
-        </div>
-        <div className="space-y-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-[#23262F]/30 bg-black/10">
-              <div className="flex items-center gap-3 flex-1">
-                <Skeleton circle width={16} height={16} className="shrink-0" />
-                <div className="space-y-1.5 flex-1">
-                  <Skeleton width={80} height={10} />
-                  <Skeleton width="70%" height={12} />
-                </div>
-              </div>
-              <Skeleton width={16} height={16} className="rounded-full shrink-0 ml-3" />
+        {/* Active Investigations Skeleton */}
+        <div className="col-span-full rounded-xl border border-[#23262F]/40 bg-[#111317] p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Skeleton width={120} height={12} />
+              <Skeleton width={150} height={8} />
             </div>
-          ))}
+            <Skeleton width={50} height={18} className="rounded-md" />
+          </div>
+          <div className="space-y-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-[#23262F]/30 bg-black/10">
+                <div className="flex items-center gap-3 flex-1">
+                  <Skeleton circle width={16} height={16} className="shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton width={80} height={10} />
+                    <Skeleton width="70%" height={12} />
+                  </div>
+                </div>
+                <Skeleton width={16} height={16} className="rounded-full shrink-0 ml-3" />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );
@@ -579,7 +579,7 @@ export default function Dashboard({
       />
 
       {/* AI summary + recent activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         {/* Vector AI summary — 2/3 */}
         <AiSummaryCard summary={AI_SUMMARY} onOpenAiPanel={onOpenAiPanel} />
 

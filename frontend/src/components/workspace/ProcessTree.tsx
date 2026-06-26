@@ -2,7 +2,7 @@
  * ProcessTree
  *
  * Vertical indented process chain (parent → spawn → remote connection).
- * Used in the center column of InvestigationWorkspace.
+ * Rendered borderless for clean, text-focused layout.
  */
 
 import { CornerDownRight } from "lucide-react";
@@ -41,9 +41,9 @@ function buildNodes(alert: Alert): ProcessNode[] {
 }
 
 const NODE_STYLE: Record<ProcessNode["status"], string> = {
-  normal: "border-[#23262F]/60 bg-[#161A22]/30 text-gray-300",
-  critical: "border-red-500/30 bg-red-500/5 text-red-300",
-  error: "border-orange-500/25 bg-orange-500/5 text-orange-300",
+  normal: "text-gray-300",
+  critical: "text-red-400 font-semibold",
+  error: "text-orange-400",
 };
 
 interface ProcessTreeProps {
@@ -54,20 +54,22 @@ export function ProcessTree({ alert }: ProcessTreeProps) {
   const nodes = buildNodes(alert);
 
   return (
-    <div className="space-y-1.5 pl-2">
+    <div className="space-y-3.5 pl-1 font-mono text-xs">
       {nodes.map((node, i) => (
-        <div key={i} className="flex items-start gap-2">
-          <div className="flex flex-col items-center mt-2 shrink-0">
-            {i > 0 && <div className="w-px h-3 bg-[#23262F] -mt-1 mb-0.5" />}
-            <CornerDownRight className="w-3 h-3 text-gray-600" />
+        <div key={i} className="flex items-start gap-3">
+          <div className="flex flex-col items-center mt-1 shrink-0">
+            <CornerDownRight className="w-3.5 h-3.5 text-gray-600" />
           </div>
-          <div
-            className={`flex-1 rounded-lg border px-3 py-2 text-xs ${NODE_STYLE[node.status]} ${
-              node.highlight ? "ring-1 ring-red-500/20" : ""
-            }`}
-          >
-            <span className="font-mono block truncate">{node.label}</span>
-            <span className="text-[10px] text-gray-500 mt-0.5 block">{node.role}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`truncate break-all ${NODE_STYLE[node.status]}`}>{node.label}</span>
+              {node.highlight && (
+                <span className="text-[9px] font-sans px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 font-medium">
+                  Flagged
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] text-gray-500 block font-sans mt-0.5">{node.role}</span>
           </div>
         </div>
       ))}

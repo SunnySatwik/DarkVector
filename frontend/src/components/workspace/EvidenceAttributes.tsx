@@ -1,8 +1,8 @@
 /**
  * EvidenceAttributes
  *
- * Key-value grid of forensic fields derived from an Alert.
- * Used in the center column of InvestigationWorkspace.
+ * Key-value list of forensic fields derived from an Alert.
+ * Rendered borderless with clean spacing.
  */
 
 import type { Alert } from "../../types";
@@ -31,7 +31,7 @@ function buildFields(alert: Alert): Field[] {
       : null,
     { label: "Anomaly score", value: `${alert.score}%` },
     alert.details.isolationForestScore !== undefined
-      ? { label: "Isolation Forest", value: String(alert.details.isolationForestScore) }
+      ? { label: "Outlier score", value: String(alert.details.isolationForestScore) }
       : null,
     { label: "SHA-256", value: "e3b0c44298fc1c149afbf4c8996fb924" },
   ].filter(Boolean) as Field[];
@@ -45,14 +45,11 @@ export function EvidenceAttributes({ alert }: EvidenceAttributesProps) {
   const fields = buildFields(alert);
 
   return (
-    <div className="grid grid-cols-1 gap-1.5">
+    <div className="divide-y divide-border-custom/30 text-xs font-sans">
       {fields.map((f, i) => (
-        <div
-          key={i}
-          className="flex items-start justify-between gap-4 px-3 py-2 rounded-lg bg-black/20 border border-[#23262F]/40"
-        >
-          <span className="text-[10px] text-gray-500 shrink-0">{f.label}</span>
-          <span className="text-[11px] text-gray-300 font-mono text-right break-all max-w-[220px]">
+        <div key={i} className="flex items-start justify-between py-2 gap-4">
+          <span className="text-[11px] text-gray-500 shrink-0">{f.label}</span>
+          <span className="text-[11px] text-gray-300 font-mono text-right break-all select-all">
             {f.value}
           </span>
         </div>
