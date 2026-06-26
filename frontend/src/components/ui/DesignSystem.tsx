@@ -1,7 +1,5 @@
 import React from "react";
-import { motion } from "motion/react";
-import { cn } from "../../lib/utils"; // wait, let's check if cn exists or if we should define a simple helper. Let's define a simple helper inside to avoid import issues.
-
+import { motion, type HTMLMotionProps } from "motion/react";
 // Simple class utility if lib/utils is missing or custom
 const joinClasses = (...classes: (string | undefined | null | boolean)[]) => {
   return classes.filter(Boolean).join(" ");
@@ -10,9 +8,9 @@ const joinClasses = (...classes: (string | undefined | null | boolean)[]) => {
 /* ==========================================================================
    1. PREMIUM CARD WITH SETTLE ANIMATION & SUBTLE HOVER
    ========================================================================== */
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardProps extends HTMLMotionProps<"div"> {
   children: React.ReactNode;
-  delay?: number; // staggered entry
+  delay?: number;
   hoverable?: boolean;
 }
 
@@ -45,10 +43,9 @@ Card.displayName = "Card";
 /* ==========================================================================
    2. TACTILE BUTTONS
    ========================================================================== */
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost" | "danger" | "success";
+interface ButtonProps extends HTMLMotionProps<"button"> {
+  variant?: "primary" | "secondary";
   size?: "xs" | "sm" | "md" | "lg";
-  children: React.ReactNode;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
