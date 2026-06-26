@@ -1,0 +1,82 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Space Grotesk", sans-serif;
+
+  /* Premium Cyberpunk Theme Colors */
+  --color-bg: #09090b;
+  --color-surface: #111317;
+  --color-elevated: #161a22;
+  --color-border-custom: #23262f;
+  --color-primary-blue: #3b82f6;
+  --color-secondary-purple: #8b5cf6;
+  --color-success-green: #10b981;
+  --color-warning-orange: #f59e0b;
+  --color-critical-red: #ef4444;
+
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-scanline: scanline 6s linear infinite;
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+/* Custom global styles to lock dark mode aesthetics and scrollbars */
+html,
+body {
+  background-color: #09090b;
+  color: #e2e8f0;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #09090b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #23262f;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}
+
+/* Sleek noise backdrop and scanning grid */
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(35, 38, 47, 0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(35, 38, 47, 0.15) 1px, transparent 1px);
+}
+
+.glow-card-blue:hover {
+  box-shadow: 0 0 20px -5px rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.glow-card-purple:hover {
+  box-shadow: 0 0 20px -5px rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.glow-card-red:hover {
+  box-shadow: 0 0 20px -5px rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+}

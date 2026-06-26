@@ -1,0 +1,48 @@
+{
+  "name": "darkvector-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist server.js",
+    "lint": "tsc --noEmit",
+    "format": "prettier --write .",
+    "check-format": "prettier --check ."
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "@tanstack/react-query": "^5.x",
+    "class-variance-authority": "^0.7.x",
+    "clsx": "^2.x",
+    "dotenv": "^17.x",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.x",
+    "react": "^19",
+    "react-dom": "^19",
+    "react-hook-form": "^7.x",
+    "react-markdown": "^10",
+    "react-router-dom": "^7",
+    "recharts": "^3",
+    "tailwind-merge": "^3.x",
+    "zod": "^4.x",
+    "zustand": "^5.x"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5",
+    "autoprefixer": "^10",
+    "esbuild": "^0.25",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.4",
+    "tailwindcss": "^4",
+    "tsx": "^4",
+    "typescript": "^5",
+    "vite": "^6"
+  }
+}
