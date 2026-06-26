@@ -146,17 +146,15 @@ export default function InvestigationWorkspace({
                 <motion.div
                   key={tab.id}
                   layout
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] cursor-pointer shrink-0 transition-colors duration-120 ${
-                    isActive
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] cursor-pointer shrink-0 transition-colors duration-120 ${isActive
                       ? "bg-elevated border border-border-custom/40 text-gray-200"
                       : "text-gray-500 hover:text-gray-300 hover:bg-elevated/30"
-                  }`}
+                    }`}
                   onClick={() => onSelectAlert(tab)}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${severityDotClass(tab.severity)} ${
-                      isActive ? "" : "opacity-50"
-                    }`}
+                    className={`w-1.5 h-1.5 rounded-full ${severityDotClass(tab.severity)} ${isActive ? "" : "opacity-50"
+                      }`}
                   />
                   <span className="font-mono">{tab.id}</span>
                   <button
@@ -314,7 +312,7 @@ export default function InvestigationWorkspace({
                     <div className="space-y-2">
                       {activeAlert.details.shapFactors.map((f, i) => (
                         <div key={i} className="space-y-1">
-                           <div className="flex justify-between items-baseline">
+                          <div className="flex justify-between items-baseline">
                             <span className="text-[11px] text-gray-500 font-sans">{f.factor}</span>
                             <span className="text-[10px] font-mono text-gray-600">
                               {(f.impact * 100).toFixed(0)}%

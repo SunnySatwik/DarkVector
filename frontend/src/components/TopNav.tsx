@@ -46,18 +46,20 @@ export default function TopNav({
       className="bg-[#111317]/80 backdrop-blur-md border-b border-[#23262F] px-6 h-16 flex items-center justify-between z-20 sticky top-0"
     >
       {/* Search Bar Trigger */}
-      <div className="flex-1 max-w-xl pr-4">
+      <div className="flex-1 max-w-lg pr-4">
         <button
           onClick={onOpenSearch}
-          className="w-full flex items-center gap-3 px-3 py-1.5 bg-[#09090B] border border-[#23262F] hover:border-blue-500/40 rounded-lg text-left text-gray-500 hover:text-gray-400 transition-colors cursor-pointer text-xs font-sans group"
+          className="w-full flex items-center gap-3 px-3 py-2 bg-[#09090B] border border-[#23262F] hover:border-blue-500/40 rounded-lg text-left transition-colors group"
         >
-          <Search className="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors" />
-          <span className="flex-1 truncate">
-            Search threat models, logs, and evidence...{" "}
-            <kbd className="font-mono text-[10px] bg-[#161A22] border border-[#23262F] px-1 py-0.2 rounded ml-1 text-gray-400">
-              ⌘K
-            </kbd>
+          <Search className="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors shrink-0" />
+
+          <span className="flex-1 truncate text-xs text-gray-500 group-hover:text-gray-400">
+            Search or ask Vector...
           </span>
+
+          <kbd className="shrink-0 font-mono text-[10px] bg-[#161A22] border border-[#23262F] px-1.5 py-0.5 rounded text-gray-400">
+            ⌘K
+          </kbd>
         </button>
       </div>
 
@@ -67,9 +69,8 @@ export default function TopNav({
         <div className="relative" ref={notificationButtonRef}>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className={`p-2 bg-[#161A22] border rounded-lg text-gray-400 hover:text-gray-200 cursor-pointer transition-colors shrink-0 flex items-center justify-center ${
-              showNotifications ? "border-blue-500/60" : "border-[#23262F]"
-            }`}
+            className={`p-2 bg-[#161A22] border rounded-lg text-gray-400 hover:text-gray-200 cursor-pointer transition-colors shrink-0 flex items-center justify-center ${showNotifications ? "border-blue-500/60" : "border-[#23262F]"
+              }`}
             title="Notifications"
           >
             <Bell className="w-3.5 h-3.5" />

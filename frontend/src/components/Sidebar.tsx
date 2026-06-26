@@ -44,7 +44,7 @@ export default function Sidebar({
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
 
   const menuItems = [
-    { id: "dashboard", label: "Overview", icon: LayoutDashboard },
+    { id: "dashboard", label: "Mission Control", icon: LayoutDashboard },
     { id: "investigations", label: "Investigate", icon: LogAlert },
     { id: "graph", label: "Graph", icon: Network },
     { id: "reports", label: "Reports", icon: FileText },
@@ -156,8 +156,8 @@ export default function Sidebar({
                         setShowWorkspaceDropdown(false);
                       }}
                       className={`w-full flex flex-col p-2 text-left rounded-md transition-colors ${ws.id === activeWorkspace.id
-                          ? "bg-blue-500/10 text-blue-400"
-                          : "text-gray-400 hover:bg-[#23262F]/60"
+                        ? "bg-blue-500/10 text-blue-400"
+                        : "text-gray-400 hover:bg-[#23262F]/60"
                         }`}
                     >
                       <span className="text-secondary-body font-medium">{ws.name}</span>
@@ -184,8 +184,8 @@ export default function Sidebar({
                 onClick={() => onSelectTab(item.id)}
                 whileTap={{ scale: 0.985 }}
                 className={`w-full flex items-center justify-between rounded-lg p-2.5 text-left cursor-pointer relative transition-colors duration-120 ${isActive
-                    ? "text-blue-400 font-medium"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-[#161A22]/20"
+                  ? "text-blue-400 font-medium"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-[#161A22]/20"
                   }`}
               >
                 {/* Gliding premium background indicator */}
