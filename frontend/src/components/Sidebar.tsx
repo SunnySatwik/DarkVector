@@ -99,10 +99,10 @@ export default function Sidebar({
                   transition={{ duration: 0.12, ease: "easeInOut" }}
                   className="flex flex-col shrink-0"
                 >
-                  <span className="font-display font-bold text-sm tracking-wide text-gray-100 uppercase">
+                  <span className="font-sans font-semibold text-sm tracking-wide text-gray-100">
                     DarkVector
                   </span>
-                  <span className="text-[9px] font-mono font-medium text-blue-400 tracking-wider">
+                  <span className="text-caption font-mono font-medium text-primary-blue/80 tracking-wider">
                     AI security platform
                   </span>
                 </motion.div>
@@ -132,10 +132,10 @@ export default function Sidebar({
                 <div className="flex items-center gap-2 min-w-0">
                   <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                   <div className="min-w-0">
-                    <div className="text-[10px] font-mono font-semibold text-gray-500 tracking-wider">
+                    <div className="text-caption font-mono text-gray-500">
                       Workspace
                     </div>
-                    <div className="text-xs font-semibold text-gray-300 truncate group-hover:text-white transition-colors">
+                    <div className="text-secondary-body font-sans font-medium text-gray-300 truncate group-hover:text-white transition-colors">
                       {activeWorkspace.name}
                     </div>
                   </div>
@@ -160,9 +160,9 @@ export default function Sidebar({
                           : "text-gray-400 hover:bg-[#23262F]/60"
                         }`}
                     >
-                      <span className="text-xs font-semibold">{ws.name}</span>
-                      <span className="text-[9px] font-mono text-gray-500 mt-0.5">
-                        {ws.region} • {ws.sensorsActive} sensors
+                      <span className="text-secondary-body font-medium">{ws.name}</span>
+                      <span className="text-caption font-mono text-gray-500 mt-0.5">
+                        {ws.region} · {ws.sensorsActive} sensors
                       </span>
                     </button>
                   ))}
@@ -209,7 +209,7 @@ export default function Sidebar({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -6 }}
                         transition={{ duration: 0.1, ease: "easeInOut" }}
-                        className="text-xs font-sans tracking-wide shrink-0"
+                        className="text-secondary-body font-sans font-medium tracking-wide shrink-0"
                       >
                         {item.label}
                       </motion.span>

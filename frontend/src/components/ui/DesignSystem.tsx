@@ -27,8 +27,8 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
           ease: [0.16, 1, 0.3, 1], // premium custom cubic-bezier
         }}
         className={joinClasses(
-          "bg-surface border border-border-custom/60 rounded-2xl p-4 overflow-hidden relative",
-          hoverable && "hover:border-gray-500/20 hover:bg-elevated hover:-translate-y-[2px] hover:shadow-lg hover:shadow-black/40 transition-all duration-150 ease-out",
+          "bg-surface border border-border-custom/40 rounded-xl p-3.5 overflow-hidden relative",
+          hoverable && "hover:border-gray-500/10 hover:bg-elevated hover:-translate-y-[1px] hover:shadow-md hover:shadow-black/30 transition-all duration-150 ease-out",
           className
         )}
         {...props}
@@ -58,7 +58,7 @@ interface ButtonProps extends HTMLMotionProps<"button"> {
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ children, className, variant = "secondary", size = "sm", ...props }, ref) => {
     const baseStyle =
-      "font-mono font-medium rounded-lg inline-flex items-center justify-center gap-1.5 transition-all duration-120 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.97]";
+      "font-sans font-medium rounded-lg inline-flex items-center justify-center gap-1.5 transition-all duration-120 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.97]";
 
     const variants = {
       primary:
@@ -107,7 +107,7 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   const baseStyle =
-    "text-[10px] font-sans font-semibold px-1.5 py-0.5 rounded-md border inline-flex items-center select-none";
+    "text-caption font-sans font-medium px-1.5 py-0.5 rounded-md border inline-flex items-center select-none";
 
   const variants = {
     default: "bg-[#161A22] border-[#23262F]/80 text-gray-400",
@@ -299,15 +299,15 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   return (
     <div
       className={joinClasses(
-        "flex items-center justify-between pb-3 border-b border-border-custom/40 mb-4",
+        "flex items-center justify-between pb-2.5 border-b border-border-custom/40 mb-3",
         className
       )}
     >
       <div>
-        <h2 className="text-xs font-mono font-bold text-gray-400">
+        <h2 className="text-section-heading font-sans font-medium text-gray-200 tracking-tight">
           {title}
         </h2>
-        {subtitle && <p className="text-[10px] text-gray-500 mt-0.5 font-sans">{subtitle}</p>}
+        {subtitle && <p className="text-secondary-body text-gray-400 mt-0.5 font-sans">{subtitle}</p>}
       </div>
       {action && <div>{action}</div>}
     </div>
@@ -333,11 +333,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <div className={joinClasses("flex items-start justify-between", className)}>
       <div>
-        <h1 className="text-xl font-display font-bold text-gray-100 tracking-tight">
+        <h1 className="text-page-title font-sans font-semibold text-gray-100 tracking-tight">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-xs text-gray-400 mt-1 font-sans">{subtitle}</p>
+          <p className="text-secondary-body text-gray-400 mt-1 font-sans">{subtitle}</p>
         )}
       </div>
       {action && <div className="shrink-0">{action}</div>}
@@ -364,14 +364,14 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   return (
     <div
       className={joinClasses(
-        "flex items-center gap-2 border-b border-border-custom/40 pb-3 mb-4",
+        "flex items-center gap-2 border-b border-border-custom/40 pb-2.5 mb-3.5",
         className
       )}
     >
       <Icon
-        className={joinClasses("w-4 h-4 shrink-0", iconClassName ?? "text-blue-400")}
+        className={joinClasses("w-3.5 h-3.5 shrink-0", iconClassName ?? "text-blue-400")}
       />
-      <h3 className="text-xs font-mono font-semibold text-gray-200">{title}</h3>
+      <h3 className="text-card-title font-sans font-medium text-gray-200">{title}</h3>
     </div>
   );
 };

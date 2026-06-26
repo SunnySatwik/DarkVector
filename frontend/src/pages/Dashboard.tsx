@@ -1,5 +1,5 @@
 /**
- * Mission Control — Overview Page
+ * Mission Control - Overview Page
  *
  * This page answers one question: "What needs my attention right now?"
  * Internal name: Mission Control
@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { MOCK_ALERTS, MOCK_USER_RISKS } from "../mockData";
+import { MOCK_ALERTS } from "../mockData";
 import { Alert } from "../types";
 import {
   ShieldAlert,
@@ -34,8 +34,6 @@ interface DashboardProps {
   isRefreshing: boolean;
 }
 
-// ─── Static mock data for the Overview sections ──────────────────────────────
-
 const ACTIVE_INVESTIGATIONS = [
   {
     id: "INV-042",
@@ -47,7 +45,7 @@ const ACTIVE_INVESTIGATIONS = [
   },
   {
     id: "INV-041",
-    title: "Multi-source DB dump — finance cluster",
+    title: "Multi-source DB dump - finance cluster",
     alert: MOCK_ALERTS[1],
     updatedAt: "28 min ago",
     status: "active" as const,
@@ -80,7 +78,7 @@ const RECENT_ACTIVITY = [
   {
     id: "act-4",
     icon: Activity,
-    text: "Sensor heartbeat OK — 148 nodes reporting",
+    text: "Sensor heartbeat OK - 148 nodes reporting",
     time: "1h ago",
     color: "text-blue-400",
   },
@@ -102,8 +100,6 @@ const SUGGESTED_ACTION = {
   alert: MOCK_ALERTS[0],
 };
 
-// ─── Severity color helpers ───────────────────────────────────────────────────
-
 function severityVariant(
   s: string
 ): "critical" | "high" | "medium" | "low" | "default" {
@@ -117,18 +113,14 @@ function severityDot(s: string) {
   if (s === "critical") return "bg-red-500";
   if (s === "high") return "bg-orange-500";
   if (s === "medium") return "bg-yellow-500";
-  return "bg-blue-400";
+  return "bg-primary-blue";
 }
-
-// ─── Small animation helper ───────────────────────────────────────────────────
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.28, delay, ease: [0.16, 1, 0.3, 1] as const },
 });
-
-// ─── AI Summary with typewriter reveal ───────────────────────────────────────
 
 function AiSummaryCard({
   summary,
@@ -137,29 +129,28 @@ function AiSummaryCard({
   summary: string;
   onOpenAiPanel: () => void;
 }) {
-  // Render inline bold markdown
   const parts = summary.split(/(\*\*[^*]+\*\*)/g);
   return (
     <Card delay={0.18} className="col-span-full lg:col-span-2">
       <div className="flex items-start gap-3 mb-3">
-        <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0 mt-0.5">
-          <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+        <div className="w-7 h-7 rounded-lg bg-secondary-purple/10 border border-secondary-purple/20 flex items-center justify-center shrink-0 mt-0.5">
+          <Sparkles className="w-3.5 h-3.5 text-secondary-purple" />
         </div>
         <div>
-          <p className="text-xs font-semibold text-gray-100">
+          <p className="text-card-title font-medium text-gray-200 font-sans">
             Vector says
           </p>
-          <p className="text-[10px] text-gray-500 mt-0.5">
+          <p className="text-caption text-gray-500 mt-0.5 font-sans">
             AI-generated situational summary · updated just now
           </p>
         </div>
       </div>
 
-      <p className="text-[13px] leading-relaxed text-gray-300 font-sans">
+      <p className="text-body leading-relaxed text-gray-300 font-sans">
         {parts.map((part, i) => {
           if (part.startsWith("**") && part.endsWith("**")) {
             return (
-              <strong key={i} className="text-gray-100 font-semibold">
+              <strong key={i} className="text-gray-100 font-semibold font-sans">
                 {part.slice(2, -2)}
               </strong>
             );
@@ -170,7 +161,7 @@ function AiSummaryCard({
 
       <button
         onClick={onOpenAiPanel}
-        className="mt-4 flex items-center gap-1.5 text-[11px] text-violet-400 hover:text-violet-300 transition-colors font-medium group"
+        className="mt-4 flex items-center gap-1.5 text-caption text-secondary-purple hover:text-secondary-purple/80 transition-colors font-medium cursor-pointer group"
       >
         Open full analysis
         <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
@@ -178,8 +169,6 @@ function AiSummaryCard({
     </Card>
   );
 }
-
-// ─── Priority Alert Banner ────────────────────────────────────────────────────
 
 function PriorityAlert({
   alert,
@@ -191,12 +180,11 @@ function PriorityAlert({
   return (
     <motion.div
       {...fadeUp(0.06)}
-      className="relative overflow-hidden rounded-xl border border-red-500/20 bg-gradient-to-r from-red-950/30 via-[#111317] to-[#111317] p-5"
+      className="relative overflow-hidden rounded-xl border border-red-500/15 bg-red-950/5 p-3.5"
     >
-      {/* Subtle left accent */}
-      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-red-500 via-red-400 to-transparent rounded-full" />
+      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-red-500/80 via-red-500/40 to-transparent" />
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0 mt-0.5">
             <FlameKindling className="w-4 h-4 text-red-400" />
@@ -204,32 +192,30 @@ function PriorityAlert({
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Badge variant="critical">Critical</Badge>
-              <span className="text-[10px] text-gray-500 font-mono">
+              <span className="text-mono-small text-gray-500 font-mono">
                 {alert.id}
               </span>
-              <span className="text-[10px] text-gray-600">·</span>
-              <span className="text-[10px] text-gray-500">
+              <span className="text-gray-700">·</span>
+              <span className="text-mono-small text-gray-500 font-mono">
                 {new Date(alert.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
               </span>
             </div>
-            <h3 className="text-sm font-semibold text-gray-100 leading-snug">
+            <h3 className="text-card-title font-semibold text-gray-100 leading-snug font-sans">
               {alert.type}
             </h3>
-            <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+            <p className="text-body text-gray-400 mt-1 leading-relaxed font-sans">
               {alert.description}
             </p>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-[10px] font-mono text-gray-500">
-                Source:
-              </span>
-              <span className="text-[10px] font-mono text-blue-400 bg-blue-500/8 border border-blue-500/15 px-1.5 py-0.5 rounded">
+            <div className="flex items-center gap-1.5 mt-2 font-sans">
+              <span className="text-caption text-gray-500">Source node:</span>
+              <span className="text-mono-small font-mono text-primary-blue bg-primary-blue/5 border border-primary-blue/15 px-1.5 py-0.5 rounded">
                 {alert.source}
               </span>
-              <span className="text-[10px] text-gray-600">·</span>
-              <span className="text-[10px] text-gray-500">
+              <span className="text-gray-700">·</span>
+              <span className="text-caption text-gray-500 font-mono">
                 Confidence {alert.score}%
               </span>
             </div>
@@ -237,10 +223,10 @@ function PriorityAlert({
         </div>
 
         <Button
-          variant="primary"
+          variant="danger"
           size="sm"
           onClick={() => onInvestigate(alert)}
-          className="shrink-0 whitespace-nowrap"
+          className="shrink-0 whitespace-nowrap self-end md:self-center"
         >
           Investigate
           <ChevronRight className="w-3.5 h-3.5" />
@@ -249,8 +235,6 @@ function PriorityAlert({
     </motion.div>
   );
 }
-
-// ─── Active Investigations List ───────────────────────────────────────────────
 
 function ActiveInvestigations({
   investigations,
@@ -263,14 +247,14 @@ function ActiveInvestigations({
     <Card delay={0.1} hoverable={false} className="col-span-full">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-xs font-semibold text-gray-200">
+          <p className="text-card-title font-medium text-gray-200 font-sans">
             Active investigations
           </p>
-          <p className="text-[10px] text-gray-500 mt-0.5">
+          <p className="text-caption text-gray-500 mt-0.5 font-sans">
             Cases you're currently working
           </p>
         </div>
-        <span className="text-[10px] font-mono text-gray-500 bg-[#161A22] border border-[#23262F]/80 px-2 py-0.5 rounded-md">
+        <span className="text-mono-small font-mono text-gray-500 bg-elevated border border-border-custom/40 px-2 py-0.5 rounded-md">
           {investigations.length} open
         </span>
       </div>
@@ -281,7 +265,7 @@ function ActiveInvestigations({
             key={inv.id}
             {...fadeUp(0.12 + i * 0.05)}
             onClick={() => onOpen(inv.alert)}
-            className="group flex items-center justify-between p-3 rounded-lg border border-[#23262F]/60 bg-black/20 hover:bg-[#161A22]/60 hover:border-gray-600/30 cursor-pointer transition-all duration-200"
+            className="group flex items-center justify-between p-2.5 px-3 rounded-lg border border-border-custom/30 bg-surface/20 hover:bg-elevated/40 hover:border-gray-500/10 cursor-pointer transition-all duration-200"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div
@@ -289,19 +273,19 @@ function ActiveInvestigations({
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-gray-500">
+                  <span className="text-mono-small font-mono text-gray-500">
                     {inv.id}
                   </span>
                   <Badge variant={severityVariant(inv.alert.severity)}>
                     {inv.alert.severity}
                   </Badge>
                 </div>
-                <p className="text-xs text-gray-200 font-medium mt-0.5 truncate">
+                <p className="text-body text-gray-200 font-medium mt-0.5 truncate font-sans">
                   {inv.title}
                 </p>
-                <div className="flex items-center gap-1.5 mt-1">
+                <div className="flex items-center gap-1.5 mt-1 font-sans">
                   <Clock className="w-2.5 h-2.5 text-gray-600" />
-                  <span className="text-[10px] text-gray-500">
+                  <span className="text-caption text-gray-500 font-mono">
                     Updated {inv.updatedAt}
                   </span>
                 </div>
@@ -315,15 +299,13 @@ function ActiveInvestigations({
         ))}
       </div>
 
-      <button className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 text-[11px] text-gray-500 hover:text-gray-300 transition-colors rounded-lg hover:bg-[#161A22]/40 group">
+      <button className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 text-caption text-gray-500 hover:text-gray-300 transition-colors rounded-lg hover:bg-elevated/40 cursor-pointer group font-sans font-medium">
         View all cases
-        <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
       </button>
     </Card>
   );
 }
-
-// ─── Recent Activity Feed ─────────────────────────────────────────────────────
 
 function RecentActivity({
   items,
@@ -333,8 +315,8 @@ function RecentActivity({
   return (
     <Card delay={0.14} hoverable={false}>
       <div className="mb-4">
-        <p className="text-xs font-semibold text-gray-200">Recent activity</p>
-        <p className="text-[10px] text-gray-500 mt-0.5">
+        <p className="text-card-title font-medium text-gray-200 font-sans">Recent activity</p>
+        <p className="text-caption text-gray-500 mt-0.5 font-sans">
           Latest events across your environment
         </p>
       </div>
@@ -346,13 +328,13 @@ function RecentActivity({
             <motion.div
               key={item.id}
               {...fadeUp(0.16 + i * 0.04)}
-              className="flex items-start gap-3 py-2.5 border-b border-[#23262F]/30 last:border-0"
+              className="flex items-start gap-3 py-2 border-b border-border-custom/20 last:border-0"
             >
               <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${item.color}`} />
-              <p className="text-[11px] text-gray-300 leading-relaxed flex-1">
+              <p className="text-secondary-body text-gray-300 leading-relaxed flex-1 font-sans">
                 {item.text}
               </p>
-              <span className="text-[10px] text-gray-600 shrink-0 whitespace-nowrap">
+              <span className="text-mono-small text-gray-500 shrink-0 font-mono whitespace-nowrap">
                 {item.time}
               </span>
             </motion.div>
@@ -362,8 +344,6 @@ function RecentActivity({
     </Card>
   );
 }
-
-// ─── Suggested Next Action ────────────────────────────────────────────────────
 
 function SuggestedAction({
   action,
@@ -382,32 +362,32 @@ function SuggestedAction({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-xl border border-[#23262F]/60 bg-gradient-to-br from-blue-950/20 via-[#111317] to-[#111317] p-4 col-span-full"
+          className="rounded-xl border border-border-custom/40 bg-surface/30 p-3.5 col-span-full"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                <Zap className="w-3.5 h-3.5 text-blue-400" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-primary-blue/5 border border-primary-blue/15 flex items-center justify-center shrink-0 mt-0.5">
+                <Zap className="w-3.5 h-3.5 text-primary-blue" />
               </div>
-              <div>
+              <div className="font-sans min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-blue-400 font-medium">
+                  <span className="text-caption font-medium tracking-wide text-primary-blue">
                     Suggested action
                   </span>
                 </div>
-                <p className="text-xs font-semibold text-gray-100 mt-0.5">
+                <p className="text-body font-semibold text-gray-100 mt-0.5">
                   {action.label}
                 </p>
-                <p className="text-[11px] text-gray-400 mt-0.5">
+                <p className="text-secondary-body text-gray-400 mt-0.5 leading-relaxed">
                   {action.description}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0 ml-4">
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
               <button
                 onClick={() => setDismissed(true)}
-                className="text-[11px] text-gray-500 hover:text-gray-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-[#161A22]/60"
+                className="text-caption text-gray-500 hover:text-gray-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-elevated/60 cursor-pointer font-sans font-medium"
               >
                 Dismiss
               </button>
@@ -427,8 +407,6 @@ function SuggestedAction({
   );
 }
 
-// ─── Page Header ──────────────────────────────────────────────────────────────
-
 function PageHeader() {
   const hour = new Date().getHours();
   const greeting =
@@ -440,11 +418,11 @@ function PageHeader() {
   const criticalCount = openAlerts.filter((a) => a.severity === "critical").length;
 
   return (
-    <motion.div {...fadeUp(0)} className="mb-8">
+    <motion.div {...fadeUp(0)} className="mb-6 font-sans">
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-[11px] text-gray-500 mb-1">{greeting}</p>
-          <h1 className="text-2xl font-semibold text-gray-100 tracking-tight">
+          <p className="text-secondary-body text-gray-500 mb-1">{greeting}</p>
+          <h1 className="text-page-title font-semibold text-gray-100 tracking-tight">
             What needs attention
           </h1>
         </div>
@@ -454,10 +432,10 @@ function PageHeader() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1, duration: 0.2 }}
-            className="flex items-center gap-2 bg-red-500/8 border border-red-500/20 px-3 py-2 rounded-xl"
+            className="flex items-center gap-2 bg-red-500/5 border border-red-500/10 px-3 py-1.5 rounded-xl"
           >
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-xs text-red-400 font-medium">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-caption text-red-400 font-medium">
               {criticalCount} critical alert{criticalCount !== 1 ? "s" : ""} open
             </span>
           </motion.div>
@@ -467,18 +445,15 @@ function PageHeader() {
   );
 }
 
-// ─── Loading Skeleton ──────────────────────────────────────────────────────────
 function DashboardSkeleton() {
   return (
-    <div className="max-w-5xl mx-auto px-1 py-2 pb-16 space-y-6">
-      {/* PageHeader Skeleton */}
-      <div className="mb-8">
+    <div className="max-w-5xl mx-auto px-1 py-2 pb-16 space-y-5">
+      <div className="mb-6">
         <Skeleton width={80} height={10} className="mb-2" />
         <Skeleton width={220} height={26} />
       </div>
 
-      {/* SuggestedAction Skeleton */}
-      <div className="rounded-xl border border-[#23262F]/40 bg-[#111317] p-4 flex items-center justify-between">
+      <div className="rounded-xl border border-border-custom/40 bg-surface/30 p-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3 w-2/3">
           <Skeleton circle width={28} height={28} className="shrink-0" />
           <div className="space-y-1.5 flex-1">
@@ -490,10 +465,9 @@ function DashboardSkeleton() {
         <Skeleton width={100} height={28} className="shrink-0 rounded-lg" />
       </div>
 
-      {/* PriorityAlert Spotlight Skeleton */}
       <div className="space-y-2">
         <Skeleton width={90} height={10} />
-        <div className="rounded-xl border border-[#23262F]/40 bg-[#111317] p-5 flex items-start justify-between">
+        <div className="rounded-xl border border-border-custom/40 bg-surface/30 p-4 flex items-start justify-between">
           <div className="space-y-3 flex-1 max-w-2xl pr-4">
             <div className="flex items-center gap-2">
               <Skeleton width={60} height={18} className="rounded-md" />
@@ -511,10 +485,8 @@ function DashboardSkeleton() {
         </div>
       </div>
 
-      {/* Main 2-column Grid Skeletons */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Active Investigations Skeleton */}
-        <div className="col-span-full rounded-xl border border-[#23262F]/40 bg-[#111317] p-4 space-y-4">
+        <div className="col-span-full rounded-xl border border-border-custom/40 bg-surface/30 p-3.5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <Skeleton width={120} height={12} />
@@ -524,7 +496,7 @@ function DashboardSkeleton() {
           </div>
           <div className="space-y-2">
             {[1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-[#23262F]/30 bg-black/10">
+              <div key={i} className="flex items-center justify-between p-2.5 rounded-lg border border-border-custom/30 bg-black/10">
                 <div className="flex items-center gap-3 flex-1">
                   <Skeleton circle width={16} height={16} className="shrink-0" />
                   <div className="space-y-1.5 flex-1">
@@ -542,8 +514,6 @@ function DashboardSkeleton() {
   );
 }
 
-// ─── Root Component ───────────────────────────────────────────────────────────
-
 export default function Dashboard({
   onSelectAlert,
   onOpenAiPanel,
@@ -556,17 +526,16 @@ export default function Dashboard({
   }
 
   return (
-    // Mission Control — internal name for the Overview page
-    <div className="max-w-5xl mx-auto px-1 py-2 pb-16 space-y-6">
+    <div className="max-w-5xl mx-auto px-1 py-2 pb-16 space-y-5">
       {/* Greeting + status header */}
       <PageHeader />
 
-      {/* Suggested action banner — dismissible */}
+      {/* Suggested action banner - dismissible */}
       <SuggestedAction action={SUGGESTED_ACTION} onTrigger={onSelectAlert} />
 
       {/* Highest-priority alert spotlight */}
-      <div>
-        <p className="text-[10px] font-mono text-gray-600 mb-2 uppercase tracking-widest">
+      <div className="space-y-2">
+        <p className="text-caption font-semibold tracking-wider text-gray-500 uppercase font-sans">
           Highest priority
         </p>
         <PriorityAlert alert={topAlert} onInvestigate={onSelectAlert} />
@@ -580,10 +549,10 @@ export default function Dashboard({
 
       {/* AI summary + recent activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-        {/* Vector AI summary — 2/3 */}
+        {/* Vector AI summary - 2/3 */}
         <AiSummaryCard summary={AI_SUMMARY} onOpenAiPanel={onOpenAiPanel} />
 
-        {/* Recent activity — 1/3 */}
+        {/* Recent activity - 1/3 */}
         <RecentActivity items={RECENT_ACTIVITY} />
       </div>
     </div>

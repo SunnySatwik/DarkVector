@@ -74,8 +74,8 @@ export default function Models() {
               {/* Num Estimators */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-300">Search depth (trees)</span>
-                  <span className="font-mono text-blue-400 font-bold">{numEstimators} trees</span>
+                  <span className="font-medium text-gray-300">Search depth (trees)</span>
+                  <span className="font-mono text-mono-large text-primary-blue font-medium">{numEstimators} trees</span>
                 </div>
                 <input
                   type="range"
@@ -86,7 +86,7 @@ export default function Models() {
                   onChange={(e) => setNumEstimators(Number(e.target.value))}
                   className="w-full accent-blue-500 bg-gray-950 h-1 rounded-full appearance-none cursor-pointer"
                 />
-                <p className="text-[10px] text-gray-500 font-sans">
+                <p className="text-caption text-gray-500 font-sans">
                   Controls the size of the random tree ensemble. More trees improve accuracy but increase search time.
                 </p>
               </div>
@@ -94,8 +94,8 @@ export default function Models() {
               {/* Contamination Index */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-300">Expected outlier rate</span>
-                  <span className="font-mono text-blue-400 font-bold">
+                  <span className="font-medium text-gray-300">Expected outlier rate</span>
+                  <span className="font-mono text-mono-large text-primary-blue font-medium">
                     {(contamination * 100).toFixed(1)}%
                   </span>
                 </div>
@@ -108,22 +108,22 @@ export default function Models() {
                   onChange={(e) => setContamination(Number(e.target.value))}
                   className="w-full accent-blue-500 bg-gray-950 h-1 rounded-full appearance-none cursor-pointer"
                 />
-                <p className="text-[10px] text-gray-500 font-sans">
+                <p className="text-caption text-gray-500 font-sans">
                   The estimated percentage of unusual events expected in your network data.
                 </p>
               </div>
 
               {/* Sampling method */}
               <div className="space-y-2">
-                <span className="font-semibold text-gray-300">Sampling method</span>
+                <span className="font-medium text-gray-300">Sampling method</span>
                 <div className="grid grid-cols-2 gap-3 mt-1.5 font-sans">
-                  <button className="bg-blue-500/5 border border-blue-500/20 text-blue-400 p-2.5 rounded-lg text-left select-none">
-                    <div className="font-bold text-[10px]">Auto sample sizing</div>
-                    <div className="text-[9px] text-gray-500 mt-0.5">Use optimal sample splits</div>
+                  <button className="bg-blue-500/5 border border-blue-500/25 text-blue-400/90 p-2.5 rounded-lg text-left select-none">
+                    <div className="font-medium text-caption">Auto sample sizing</div>
+                    <div className="text-caption text-gray-500 mt-0.5">Use optimal sample splits</div>
                   </button>
                   <button className="bg-black/20 border border-border-custom/60 text-gray-400 hover:text-gray-200 p-2.5 rounded-lg text-left select-none">
-                    <div className="font-bold text-[10px]">Manual sampling</div>
-                    <div className="text-[9px] text-gray-500 mt-0.5">
+                    <div className="font-medium text-caption">Manual sampling</div>
+                    <div className="text-caption text-gray-500 mt-0.5">
                       Explicitly define sub-dataset sizes
                     </div>
                   </button>
@@ -136,7 +136,6 @@ export default function Models() {
                 onClick={triggerRetrain}
                 variant="primary"
                 disabled={trainingState === "training"}
-                className="font-bold text-xs"
               >
                 {trainingState === "training" ? (
                   <>
@@ -169,25 +168,25 @@ export default function Models() {
               iconClassName="text-purple-400"
             />
 
-            <div className="space-y-3.5 text-xs">
-              <div className="flex items-center justify-between font-mono text-[11px]">
+            <div className="space-y-3.5 text-body">
+              <div className="flex items-center justify-between text-secondary-body">
                 <span className="text-gray-400 font-sans">Embedding model:</span>
-                <span className="text-gray-200">text-embedding-004</span>
+                <span className="text-gray-200 font-mono text-mono-large">text-embedding-004</span>
               </div>
-              <div className="flex items-center justify-between font-mono text-[11px]">
+              <div className="flex items-center justify-between text-secondary-body">
                 <span className="text-gray-400 font-sans">Indexed security events:</span>
-                <span className="text-gray-200">1.48M logs</span>
+                <span className="text-gray-200 font-mono text-mono-large">1.48M logs</span>
               </div>
-              <div className="flex items-center justify-between font-mono text-[11px]">
+              <div className="flex items-center justify-between text-secondary-body">
                 <span className="text-gray-400 font-sans">Average search speed:</span>
-                <span className="text-emerald-400">1.8ms</span>
+                <span className="text-emerald-400 font-mono text-mono-large">1.8ms</span>
               </div>
 
               {/* Progress bar mapping size */}
               <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+                <div className="flex items-center justify-between text-caption text-gray-400">
                   <span>Used space</span>
-                  <span className="text-purple-400 font-bold">42% (2.1 GB)</span>
+                  <span className="text-purple-400/90 font-mono font-medium">42% (2.1 GB)</span>
                 </div>
                 <div className="w-full bg-[#09090B] h-1.5 rounded-full overflow-hidden">
                   <div className="bg-purple-500 h-full rounded-full" style={{ width: "42%" }} />
@@ -204,12 +203,12 @@ export default function Models() {
               iconClassName="text-purple-400"
             />
 
-            <div className="space-y-3 text-xs">
-              <p className="text-gray-400 text-[11px] font-sans">
+            <div className="space-y-3 text-body">
+              <p className="text-gray-400 text-secondary-body font-sans">
                 Customize the communication and analysis style of Vector.
               </p>
 
-              <div className="grid grid-cols-1 gap-2 mt-2 font-mono text-[11px]">
+              <div className="grid grid-cols-1 gap-2 mt-2">
                 <button
                   onClick={() => setAiPersona("objective-copilot")}
                   className={`p-2.5 rounded-lg text-left border flex items-center justify-between cursor-pointer select-none transition-all duration-150 ${
@@ -219,8 +218,8 @@ export default function Models() {
                   }`}
                 >
                   <div className="font-sans">
-                    <div className="font-mono font-bold text-[10px]">Objective helper</div>
-                    <div className="text-[9px] text-gray-500 mt-0.5 font-sans">
+                    <div className="font-mono font-medium text-caption text-gray-200">Objective helper</div>
+                    <div className="text-caption text-gray-500 mt-0.5 font-sans">
                       Provides factual, step-by-step descriptions
                     </div>
                   </div>
@@ -238,8 +237,8 @@ export default function Models() {
                   }`}
                 >
                   <div className="font-sans">
-                    <div className="font-mono font-bold text-[10px]">Response advisor</div>
-                    <div className="text-[9px] text-gray-500 mt-0.5 font-sans">
+                    <div className="font-mono font-medium text-caption text-gray-200">Response advisor</div>
+                    <div className="text-caption text-gray-500 mt-0.5 font-sans">
                       Prioritizes containment plans and commands
                     </div>
                   </div>

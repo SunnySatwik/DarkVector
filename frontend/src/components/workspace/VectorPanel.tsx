@@ -102,35 +102,35 @@ export function VectorPanel({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3.5 border-b border-border-custom/40 shrink-0">
+      <div className="px-3.5 py-3 border-b border-border-custom/40 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-violet-400" />
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-gray-200 font-sans">Vector</p>
-            <p className="text-[9px] text-gray-500">AI security partner</p>
+            <p className="text-secondary-body font-medium text-gray-200 font-sans">Vector</p>
+            <p className="text-caption text-gray-500">AI security partner</p>
           </div>
         </div>
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 scrollbar-thin space-y-6">
+      <div className="flex-1 overflow-y-auto min-h-0 px-3.5 py-3.5 scrollbar-thin space-y-5">
         
         {/* Recommended Actions */}
-        <div className="space-y-3">
-          <p className="text-[10px] text-gray-500 font-sans font-semibold uppercase tracking-wider">Recommended actions</p>
+        <div className="space-y-2.5">
+          <p className="text-caption text-gray-500 font-sans">Recommended actions</p>
           
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {/* Isolate */}
-            <div className="rounded-xl bg-black/10 border border-border-custom/40 p-3 space-y-2">
+            <div className="rounded-lg bg-surface/40 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Unplug className="w-3.5 h-3.5 text-red-400" />
-                  <span className="text-[11px] font-medium text-gray-200">Isolate node</span>
+                  <Unplug className="w-3.5 h-3.5 text-red-400/90" />
+                  <span className="text-secondary-body font-medium text-gray-200">Isolate node</span>
                 </div>
                 <span
-                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                  className={`text-mono-small font-mono px-1.5 py-0.5 rounded border ${
                     quarantineStatus === "quarantined"
                       ? "text-red-400 bg-red-500/8 border-red-500/20"
                       : quarantineStatus === "quarantining"
@@ -145,9 +145,9 @@ export function VectorPanel({
                       : "Ready"}
                 </span>
               </div>
-              <p className="text-[10px] text-gray-500 leading-snug">
+              <p className="text-caption text-gray-500 leading-snug">
                 Applies a Kubernetes NetworkPolicy to block all egress from{" "}
-                <code className="text-gray-400 text-[9px] font-mono">{alert.source}</code>.
+                <code className="text-gray-400 text-mono-small font-mono">{alert.source}</code>.
               </p>
               {quarantineStatus === "quarantining" && (
                 <div className="w-full h-1 bg-black/40 rounded-full overflow-hidden">
@@ -160,7 +160,7 @@ export function VectorPanel({
               <button
                 onClick={onIsolate}
                 disabled={quarantineStatus !== "active"}
-                className="w-full text-[10px] font-medium py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors cursor-pointer"
+                className="w-full text-caption font-medium py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors cursor-pointer"
               >
                 {quarantineStatus === "quarantined"
                   ? "Node isolated"
@@ -172,14 +172,14 @@ export function VectorPanel({
 
             {/* Block IP */}
             {alert.details.ipAddress && (
-              <div className="rounded-xl bg-black/10 border border-border-custom/40 p-3 space-y-2">
+              <div className="rounded-lg bg-surface/40 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Shield className="w-3.5 h-3.5 text-blue-400" />
-                    <span className="text-[11px] font-medium text-gray-200">Block IP</span>
+                    <Shield className="w-3.5 h-3.5 text-blue-400/90" />
+                    <span className="text-secondary-body font-medium text-gray-200">Block IP</span>
                   </div>
                   <span
-                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                    className={`text-mono-small font-mono px-1.5 py-0.5 rounded border ${
                       isBlockApplied
                         ? "text-emerald-400 bg-emerald-500/8 border-emerald-500/20"
                         : "text-gray-500 bg-black/30 border-border-custom/40"
@@ -188,15 +188,15 @@ export function VectorPanel({
                     {isBlockApplied ? "Active" : "Ready"}
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-500 leading-snug">
+                <p className="text-caption text-gray-500 leading-snug">
                   Firewall block for{" "}
-                  <code className="text-gray-400 text-[9px] font-mono">{alert.details.ipAddress}</code> on
-                  port <code className="text-gray-400 text-[9px] font-mono">{alert.details.port || 443}</code>.
+                  <code className="text-gray-400 text-mono-small font-mono">{alert.details.ipAddress}</code> on
+                  port <code className="text-gray-400 text-mono-small font-mono">{alert.details.port || 443}</code>.
                 </p>
                 <button
                   onClick={onBlockIp}
                   disabled={isBlockApplied}
-                  className="w-full text-[10px] font-medium py-1.5 rounded-lg bg-blue-600/80 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors cursor-pointer"
+                  className="w-full text-caption font-medium py-1.5 rounded-lg bg-blue-600/80 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors cursor-pointer"
                 >
                   {isBlockApplied ? "Shield deployed" : "Commit egress block"}
                 </button>
@@ -206,22 +206,22 @@ export function VectorPanel({
         </div>
 
         {/* Conversation */}
-        <div className="space-y-3 pt-2">
-          <p className="text-[10px] text-gray-500 font-sans font-semibold uppercase tracking-wider">Conversation</p>
-          <div className="space-y-3">
+        <div className="space-y-2.5 pt-1.5">
+          <p className="text-caption text-gray-500 font-sans">Conversation</p>
+          <div className="space-y-3.5">
             {chatMessages.map((msg, i) => (
               <div
                 key={i}
                 className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
               >
-                <span className="text-[9px] text-gray-600 mb-1 px-1">
+                <span className="text-mono-small text-gray-500 mb-1 px-1">
                   {msg.sender === "ai" ? "Vector" : "You"} · {msg.time}
                 </span>
                 <div
-                  className={`max-w-[95%] rounded-2xl px-3 py-2 text-[11px] leading-relaxed border ${
+                  className={`max-w-[95%] rounded-xl px-3 py-2 text-secondary-body leading-relaxed border ${
                     msg.sender === "user"
-                      ? "bg-blue-500/8 border-blue-500/15 text-gray-300"
-                      : "bg-surface border-border-custom/40 text-gray-300"
+                      ? "bg-primary-blue/10 border-primary-blue/20 text-gray-300"
+                      : "bg-surface border-border-custom/30 text-gray-300"
                   }`}
                 >
                   <div className="prose prose-invert prose-xs max-w-none [&_p]:my-0 [&_strong]:text-gray-200 font-sans">
@@ -233,8 +233,8 @@ export function VectorPanel({
 
             {isResponding && (
               <div className="flex flex-col items-start">
-                <span className="text-[9px] text-gray-600 mb-1 px-1">Vector</span>
-                <div className="bg-surface border border-border-custom/40 rounded-2xl px-3 py-2 flex items-center gap-1">
+                <span className="text-mono-small text-gray-500 mb-1 px-1">Vector</span>
+                <div className="bg-surface border border-border-custom/30 rounded-xl px-3 py-2 flex items-center gap-1">
                   {[0, 75, 150].map((delay) => (
                     <span
                       key={delay}
@@ -253,14 +253,14 @@ export function VectorPanel({
       {/* Chat input */}
       <form
         onSubmit={handleSend}
-        className="px-4 py-3 border-t border-border-custom/40 flex items-center gap-2 shrink-0 bg-surface/50"
+        className="px-3.5 py-3 border-t border-border-custom/40 flex items-center gap-2 shrink-0 bg-surface/50"
       >
         <input
           type="text"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           placeholder="Ask Vector anything…"
-          className="flex-1 bg-surface border border-border-custom/60 focus:border-violet-500/50 focus:outline-none rounded-lg px-3 py-1.5 text-[11px] text-gray-200 placeholder-gray-600 transition-colors"
+          className="flex-1 bg-surface border border-border-custom/40 focus:border-violet-500/40 focus:outline-none rounded-lg px-3 py-1.5 text-secondary-body text-gray-200 placeholder-gray-600 transition-colors"
         />
         <button
           type="submit"

@@ -100,15 +100,15 @@ export default function Reports() {
             <form onSubmit={handleCreateReport} className="space-y-4">
               <PanelHeader icon={Sparkles} title="Draft report with AI" iconClassName="text-purple-400" />
 
-              <div className="space-y-2 text-xs">
-                <label className="font-semibold text-gray-300 font-sans">Report description</label>
+              <div className="space-y-2 text-secondary-body">
+                <label className="font-medium text-gray-300 font-sans">Report description</label>
                 <textarea
                   value={promptValue}
                   onChange={(e) => setPromptValue(e.target.value)}
                   placeholder="e.g., Incident report for suspicious database downloads on srv-db-01..."
-                  className="w-full h-24 bg-[#09090B] border border-border-custom rounded-lg p-2.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors font-mono resize-none"
+                  className="w-full h-24 bg-[#09090B] border border-border-custom/40 rounded-lg p-2.5 text-secondary-body text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/40 transition-colors font-mono resize-none"
                 />
-                <p className="text-[10px] text-gray-500 font-sans">
+                <p className="text-caption text-gray-500 font-sans">
                   Vector will compile evidence and format a draft report.
                 </p>
               </div>
@@ -117,7 +117,7 @@ export default function Reports() {
                 type="submit"
                 variant="primary"
                 disabled={isGenerating || !promptValue.trim()}
-                className="w-full font-bold text-xs py-2.5 flex items-center justify-center gap-2"
+                className="w-full justify-center py-2"
               >
                 {isGenerating ? (
                   <>
@@ -138,10 +138,10 @@ export default function Reports() {
         {/* Existing Reports List */}
         <div className="lg:col-span-7">
           <Card className="p-0">
-            <div className="p-4 border-b border-border-custom/40 flex items-center justify-between">
+            <div className="p-3.5 border-b border-border-custom/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-400" />
-                <span className="font-sans text-xs font-bold text-gray-200">Recent reports</span>
+                <FileText className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-card-title font-sans font-medium text-gray-200">Recent reports</span>
               </div>
               <Badge variant="default">{reports.length} reports</Badge>
             </div>
@@ -159,10 +159,10 @@ export default function Reports() {
               <tbody>
                 {reports.map((rep) => (
                   <TableRow key={rep.id}>
-                    <TableCell className="font-mono text-gray-400">{rep.id}</TableCell>
+                    <TableCell className="font-mono text-mono-small text-gray-400">{rep.id}</TableCell>
                     <TableCell>
-                      <div className="font-sans font-medium text-gray-200">{rep.title}</div>
-                      <div className="text-[10px] text-gray-500 font-mono mt-0.5">
+                      <div className="font-sans font-medium text-secondary-body text-gray-200">{rep.title}</div>
+                      <div className="text-caption text-gray-500 font-mono mt-0.5">
                         {rep.date} • Created by {rep.author}
                       </div>
                     </TableCell>
