@@ -6,16 +6,21 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-display: "Space Grotesk", sans-serif;
 
-  /* Premium Cyberpunk Theme Colors */
-  --color-bg: #09090b;
-  --color-surface: #111317;
-  --color-elevated: #161a22;
-  --color-border-custom: #23262f;
-  --color-primary-blue: #3b82f6;
-  --color-secondary-purple: #8b5cf6;
+  /* Premium Grayscale/Calm Theme Colors */
+  --color-bg: #090b11;
+  --color-surface: #11141b;
+  --color-elevated: #171c26;
+  --color-border-custom: #232833;
+  --color-primary-blue: #4c8dff;
+  --color-secondary-purple: #7b61ff;
   --color-success-green: #10b981;
   --color-warning-orange: #f59e0b;
-  --color-critical-red: #ef4444;
+  --color-critical-red: #ff5a5f;
+
+  /* Soft Border Radius Rules */
+  --radius-lg: 10px;
+  --radius-2xl: 18px;
+  --radius-3xl: 24px;
 
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-scanline: scanline 6s linear infinite;

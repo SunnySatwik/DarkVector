@@ -37,7 +37,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
   const [cases, setCases] = useState<CaseItem[]>([
     {
       id: "CASE-402",
-      title: "Pod-escape vector tracing inside Kubernetes kube-system namespace",
+      title: "Container escape inside Kubernetes cluster",
       assignedAnalyst: "sunnysatwik95",
       status: "triage",
       alert: MOCK_ALERTS[0],
@@ -45,7 +45,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
     },
     {
       id: "CASE-398",
-      title: "Anomalous multi-gigabyte egress dump from central finance databases",
+      title: "Large database download from central finance databases",
       assignedAnalyst: "m_chen@enterprise.com",
       status: "review",
       alert: MOCK_ALERTS[1],
@@ -53,7 +53,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
     },
     {
       id: "CASE-391",
-      title: "Impossible physical velocity authentication bypass analysis",
+      title: "Suspicious login with physical velocity anomaly",
       assignedAnalyst: "sunnysatwik95",
       status: "quarantine",
       alert: MOCK_ALERTS[2],
@@ -80,8 +80,8 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Investigations board"
-        subtitle="Track, quarantine and resolve critical security cases powered by isolation forest tree decisions."
+        title="Investigations"
+        subtitle="Track, review, and resolve active security incidents in your environment."
       />
 
       {/* Investigations Columns Layout */}
@@ -93,7 +93,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
             {(["triage", "review", "quarantine", "resolved"] as const).map((colStatus) => {
               const colCases = cases.filter((c) => c.status === colStatus);
               const columnNames = {
-                triage: { label: "Triage feed", color: "border-red-500/30 text-red-400" },
+                triage: { label: "Incoming alerts", color: "border-red-500/30 text-red-400" },
                 review: { label: "Under review", color: "border-purple-500/30 text-purple-400" },
                 quarantine: { label: "Contained", color: "border-orange-500/30 text-orange-400" },
                 resolved: { label: "Resolved", color: "border-green-500/30 text-green-400" },
@@ -174,11 +174,10 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
               <div className="bg-black/20 border border-[#23262F]/50 rounded-lg p-4 space-y-2">
                 <div className="font-semibold text-gray-200 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-red-400" />
-                  <span>Isolation forest threshold</span>
+                  <span>Anomaly threshold</span>
                 </div>
                 <p className="text-[11px] text-gray-500">
-                  Configure automated gRPC container quarantine triggers when model outputs exceed
-                  target scores.
+                  Automatically isolate containers when their anomaly score exceeds this threshold.
                 </p>
                 <div className="flex items-center gap-2">
                   <input
@@ -188,16 +187,15 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
                     defaultValue="85"
                     className="flex-1 accent-purple-500 bg-gray-900"
                   />
-                  <span className="font-mono text-purple-400 font-bold">0.850</span>
+                  <span className="font-mono text-purple-400 font-bold">85%</span>
                 </div>
               </div>
 
               <div className="bg-black/20 border border-[#23262F]/50 rounded-lg p-4 flex flex-col justify-between">
                 <div>
-                  <div className="font-semibold text-gray-200">Active node quarantine</div>
+                  <div className="font-semibold text-gray-200">Manual containment</div>
                   <p className="text-[11px] text-gray-500 mt-1">
-                    Terminate all ongoing ingress/egress connections to compromised nodes instantly
-                    via API daemon.
+                    Immediately isolate the container and block all incoming and outgoing connections.
                   </p>
                 </div>
                 <button
@@ -206,7 +204,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
                   }
                   className="bg-orange-600/10 hover:bg-orange-600/20 border border-orange-500/30 text-orange-400 rounded-lg py-2 text-xs font-mono font-bold mt-2 cursor-pointer transition-colors"
                 >
-                  Quarantine node [{selectedCase.alert.source.slice(0, 12)}]
+                  Isolate host [{selectedCase.alert.source.slice(0, 12)}]
                 </button>
               </div>
             </div>
@@ -220,7 +218,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
               <div className="flex items-center gap-2">
                 <Briefcase className="w-4.5 h-4.5 text-purple-400" />
                 <h3 className="text-xs font-mono font-semibold text-gray-200">
-                  Forensic examiner case file
+                  Case details
                 </h3>
               </div>
               <span className="text-[10px] font-mono text-gray-400 bg-black/40 border border-[#23262F] px-2 py-0.5 rounded">
@@ -231,7 +229,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
             {/* Case core metadata */}
             <div className="space-y-4">
               <div>
-                <span className="text-[10px] font-mono text-gray-500">Investigation scope</span>
+                <span className="text-[10px] font-mono text-gray-500">Case title</span>
                 <h2 className="text-sm font-semibold text-gray-100 mt-0.5">{selectedCase.title}</h2>
               </div>
 
@@ -255,14 +253,14 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
               {/* Assignee & Alert Details */}
               <div className="grid grid-cols-2 gap-4 bg-black/20 border border-[#23262F]/50 rounded-lg p-4 text-[11px] font-mono">
                 <div>
-                  <span className="text-gray-500">Assigned analyst:</span>
+                  <span className="text-gray-500">Assigned to:</span>
                   <div className="flex items-center gap-2 text-gray-300 font-semibold mt-1">
                     <UserCheck className="w-3.5 h-3.5 text-purple-400" />
                     <span>@{selectedCase.assignedAnalyst}</span>
                   </div>
                 </div>
                 <div>
-                  <span className="text-gray-500">Incident target:</span>
+                  <span className="text-gray-500">Affected host:</span>
                   <div className="flex items-center gap-2 text-gray-300 mt-1">
                     <Activity className="w-3.5 h-3.5 text-blue-400" />
                     <span className="truncate max-w-[120px]">{selectedCase.alert.source}</span>
@@ -273,7 +271,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
               {/* Forensic Lineage Diagram */}
               <div className="space-y-2">
                 <span className="text-[10px] font-mono text-gray-500">
-                  Process ancestor trace lineage
+                  Process tree
                 </span>
                 <div className="bg-[#09090B] border border-[#23262F] rounded-lg p-4 font-mono text-[11px] text-gray-400 space-y-2">
                   <div className="flex items-center gap-2">
@@ -302,7 +300,7 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
               <div className="bg-[#161A22]/30 border border-[#23262F] rounded-lg p-4">
                 <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 mb-2">
                   <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Model report: SHAP gain breakdown</span>
+                  <span>Why this was flagged</span>
                 </div>
                 <div className="space-y-2 text-[10px] font-mono">
                   {selectedCase.alert.details.shapFactors?.map((sh, idx) => (
@@ -325,12 +323,12 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
                 className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-bold rounded-lg transition-all shadow shadow-purple-500/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 animate-pulse" />
-                <span>Launch immersive workspace</span>
+                <span>Open case</span>
               </button>
             )}
             <div className="text-center">
               <span className="text-[10px] font-mono text-gray-500">
-                ChromaDB correlates this case with APT-29 Docker-escape playbooks.
+                Vector identified similarities with known Docker container escape behavior.
               </span>
             </div>
           </div>

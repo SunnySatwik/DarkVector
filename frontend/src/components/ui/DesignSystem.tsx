@@ -27,8 +27,8 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
           ease: [0.16, 1, 0.3, 1], // premium custom cubic-bezier
         }}
         className={joinClasses(
-          "bg-[#111317] border border-[#23262F]/60 rounded-xl p-4 overflow-hidden relative",
-          hoverable && "hover:border-gray-500/30 hover:bg-[#13161c] hover:-translate-y-[2px] hover:shadow-lg hover:shadow-black/40 transition-all duration-150 ease-out",
+          "bg-surface border border-border-custom/60 rounded-2xl p-4 overflow-hidden relative",
+          hoverable && "hover:border-gray-500/20 hover:bg-elevated hover:-translate-y-[2px] hover:shadow-lg hover:shadow-black/40 transition-all duration-150 ease-out",
           className
         )}
         {...props}
@@ -64,8 +64,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       primary:
         "bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-500/10 border border-blue-500/30",
       secondary:
-        "bg-[#161A22] hover:bg-[#1e232f] border border-[#23262F]/80 text-gray-300 hover:text-white",
-      ghost: "hover:bg-[#161A22]/40 text-gray-400 hover:text-gray-200 border border-transparent",
+        "bg-elevated hover:bg-surface border border-border-custom/80 text-gray-300 hover:text-white",
+      ghost: "hover:bg-elevated/45 text-gray-400 hover:text-gray-200 border border-transparent",
       danger:
         "bg-red-950/40 hover:bg-red-900/30 border border-red-500/30 text-red-400 hover:text-red-300",
       success:
@@ -153,7 +153,7 @@ export const TableHeader: React.FC<React.HTMLAttributes<HTMLTableSectionElement>
 }) => {
   return (
     <thead
-      className={joinClasses("border-b border-[#23262F]/40 bg-black/10", className)}
+      className={joinClasses("border-b border-border-custom/40 bg-black/10", className)}
       {...props}
     >
       {children}
@@ -169,7 +169,7 @@ export const TableRow: React.FC<React.HTMLAttributes<HTMLTableRowElement>> = ({
   return (
     <tr
       className={joinClasses(
-        "border-b border-[#23262F]/30 hover:bg-[#161A22]/20 transition-colors duration-150",
+        "border-b border-border-custom/30 hover:bg-elevated/20 transition-colors duration-150",
         className
       )}
       {...props}
@@ -239,7 +239,7 @@ export const TabGroup: React.FC<TabGroupProps> = ({
   return (
     <div
       className={joinClasses(
-        "flex p-0.5 bg-black/40 border border-[#23262F]/60 rounded-lg shrink-0",
+        "flex p-0.5 bg-black/40 border border-border-custom/60 rounded-lg shrink-0",
         className
       )}
     >
@@ -258,7 +258,7 @@ export const TabGroup: React.FC<TabGroupProps> = ({
             {isActive && (
               <motion.div
                 layoutId={layoutId}
-                className="absolute inset-0 bg-[#161A22] border border-[#23262F]/60 rounded-md z-0"
+                className="absolute inset-0 bg-elevated border border-border-custom/60 rounded-md z-0"
                 transition={{ type: "spring", damping: 28, stiffness: 350 }}
               />
             )}
@@ -299,7 +299,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   return (
     <div
       className={joinClasses(
-        "flex items-center justify-between pb-3 border-b border-[#23262F]/40 mb-4",
+        "flex items-center justify-between pb-3 border-b border-border-custom/40 mb-4",
         className
       )}
     >
@@ -364,7 +364,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   return (
     <div
       className={joinClasses(
-        "flex items-center gap-2 border-b border-[#23262F]/40 pb-3 mb-4",
+        "flex items-center gap-2 border-b border-border-custom/40 pb-3 mb-4",
         className
       )}
     >

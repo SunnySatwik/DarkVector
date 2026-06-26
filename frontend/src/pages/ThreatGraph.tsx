@@ -99,8 +99,8 @@ export default function ThreatGraph() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Security threat graph"
-        subtitle="Interactive forensic topology mapper correlating container processes, socket paths, and active C2 threat connections."
+        title="Threat graph"
+        subtitle="Visualize relationships between container processes, socket files, and active network connections in an interactive evidence map."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -111,7 +111,7 @@ export default function ThreatGraph() {
               <div className="flex items-center gap-2">
                 <Network className="w-4 h-4 text-blue-400" />
                 <span className="font-mono text-xs font-bold text-gray-200">
-                  Threat propagation vector map
+                  Evidence map
                 </span>
               </div>
               <div className="flex gap-2">
@@ -363,7 +363,7 @@ export default function ThreatGraph() {
               <Card className="text-center py-12 text-gray-500">
                 <HelpCircle className="w-8 h-8 text-gray-600 mx-auto mb-2" />
                 <p className="text-xs font-mono">
-                  Select a topology element on the map canvas to trigger forensic inspection.
+                  Select a node on the map to view details.
                 </p>
               </Card>
             )}

@@ -94,11 +94,11 @@ const RECENT_ACTIVITY = [
 ];
 
 const AI_SUMMARY =
-  "Two critical incidents demand immediate attention. A container shell escape on **srv-k8s-api-01** has active C2 communication to a known malicious IP (194.26.135.84). Simultaneously, an anomalous 4.8 GB database dump is ongoing from the finance cluster. Recommend isolating `srv-k8s-api-01` and pausing egress on `db-finance-postgres` before the exfiltration window closes.";
+  "Two critical incidents demand immediate attention. A container shell escape on **srv-k8s-api-01** has active connections to a known malicious address (194.26.135.84). Simultaneously, an unusual 4.8 GB database download is ongoing from the finance cluster. Recommend isolating `srv-k8s-api-01` and pausing database traffic before the data transfer finishes.";
 
 const SUGGESTED_ACTION = {
   label: "Isolate srv-k8s-api-01",
-  description: "Apply network quarantine to block active C2 channel",
+  description: "Apply network quarantine to block active connections to malicious hosts",
   alert: MOCK_ALERTS[0],
 };
 
@@ -260,7 +260,7 @@ function ActiveInvestigations({
   onOpen: (a: Alert) => void;
 }) {
   return (
-    <Card delay={0.1} hoverable={false} className="col-span-full lg:col-span-2">
+    <Card delay={0.1} hoverable={false} className="col-span-full">
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-xs font-semibold text-gray-200">
@@ -427,57 +427,6 @@ function SuggestedAction({
   );
 }
 
-// ─── User Risk Snapshot ───────────────────────────────────────────────────────
-
-function RiskUsers() {
-  const topRisks = MOCK_USER_RISKS.slice(0, 3);
-  return (
-    <Card delay={0.22} hoverable={false}>
-      <div className="mb-4">
-        <p className="text-xs font-semibold text-gray-200">High-risk users</p>
-        <p className="text-[10px] text-gray-500 mt-0.5">
-          Accounts requiring attention
-        </p>
-      </div>
-      <div className="space-y-3">
-        {topRisks.map((user, i) => (
-          <motion.div
-            key={user.username}
-            {...fadeUp(0.24 + i * 0.04)}
-            className="flex items-center gap-3"
-          >
-            <img
-              src={user.avatar}
-              alt={user.username}
-              className="w-7 h-7 rounded-full object-cover border border-[#23262F]/60 shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-medium text-gray-200 truncate">
-                {user.username.split("@")[0].replace("_", " ")}
-              </p>
-              <p className="text-[10px] text-gray-500 truncate">{user.role}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <span
-                className={`text-xs font-bold ${
-                  user.riskScore >= 80
-                    ? "text-red-400"
-                    : user.riskScore >= 60
-                      ? "text-orange-400"
-                      : "text-yellow-400"
-                }`}
-              >
-                {user.riskScore}
-              </span>
-              <p className="text-[9px] text-gray-600 mt-0.5">risk</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
 // ─── Page Header ──────────────────────────────────────────────────────────────
 
 function PageHeader() {
@@ -564,53 +513,30 @@ function DashboardSkeleton() {
 
       {/* Main 2-column Grid Skeletons */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Active Investigations Skeleton */}
-        <div className="col-span-full lg:col-span-2 rounded-xl border border-[#23262F]/40 bg-[#111317] p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Skeleton width={120} height={12} />
-              <Skeleton width={150} height={8} />
-            </div>
-            <Skeleton width={50} height={18} className="rounded-md" />
-          </div>
-          <div className="space-y-2">
-            {[1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-[#23262F]/30 bg-black/10">
-                <div className="flex items-center gap-3 flex-1">
-                  <Skeleton circle width={16} height={16} className="shrink-0" />
-                  <div className="space-y-1.5 flex-1">
-                    <Skeleton width={80} height={10} />
-                    <Skeleton width="70%" height={12} />
-                  </div>
-                </div>
-                <Skeleton width={16} height={16} className="rounded-full shrink-0 ml-3" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Risk Users Skeleton */}
-        <div className="rounded-xl border border-[#23262F]/40 bg-[#111317] p-4 space-y-4">
+      {/* Active Investigations Skeleton */}
+      <div className="col-span-full rounded-xl border border-[#23262F]/40 bg-[#111317] p-4 space-y-4">
+        <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <Skeleton width={100} height={12} />
-            <Skeleton width={130} height={8} />
+            <Skeleton width={120} height={12} />
+            <Skeleton width={150} height={8} />
           </div>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3">
-                <Skeleton circle width={28} height={28} className="shrink-0" />
-                <div className="flex-1 space-y-1.5 min-w-0">
-                  <Skeleton width="50%" height={11} />
-                  <Skeleton width="30%" height={8} />
-                </div>
-                <div className="w-8 flex flex-col items-end gap-1 shrink-0">
-                  <Skeleton width={20} height={12} />
-                  <Skeleton width={25} height={8} />
+          <Skeleton width={50} height={18} className="rounded-md" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-[#23262F]/30 bg-black/10">
+              <div className="flex items-center gap-3 flex-1">
+                <Skeleton circle width={16} height={16} className="shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton width={80} height={10} />
+                  <Skeleton width="70%" height={12} />
                 </div>
               </div>
-            ))}
-          </div>
+              <Skeleton width={16} height={16} className="rounded-full shrink-0 ml-3" />
+            </div>
+          ))}
         </div>
+      </div>
       </div>
     </div>
   );
@@ -646,17 +572,11 @@ export default function Dashboard({
         <PriorityAlert alert={topAlert} onInvestigate={onSelectAlert} />
       </div>
 
-      {/* Main two-column grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Active investigations — takes 2/3 width */}
-        <ActiveInvestigations
-          investigations={ACTIVE_INVESTIGATIONS}
-          onOpen={onSelectAlert}
-        />
-
-        {/* High-risk users — takes 1/3 width */}
-        <RiskUsers />
-      </div>
+      {/* Active investigations */}
+      <ActiveInvestigations
+        investigations={ACTIVE_INVESTIGATIONS}
+        onOpen={onSelectAlert}
+      />
 
       {/* AI summary + recent activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

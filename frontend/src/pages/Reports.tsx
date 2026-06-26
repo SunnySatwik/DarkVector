@@ -40,7 +40,7 @@ export default function Reports() {
     setReports([
       {
         id: "REP-912",
-        title: "Q2 Kubernetes SOC2 compliance readiness report",
+        title: "Q2 security compliance report",
         type: "compliance",
         date: "2026-06-20",
         status: "signed",
@@ -48,7 +48,7 @@ export default function Reports() {
       },
       {
         id: "REP-842",
-        title: "Incident writeup: srv-k8s-api-01 containerd shell escape",
+        title: "Incident report: Unauthorized shell access on API server",
         type: "incident",
         date: "2026-06-25",
         status: "draft",
@@ -56,7 +56,7 @@ export default function Reports() {
       },
       {
         id: "REP-810",
-        title: "Weekly threat vector exposure assessment - Week 25",
+        title: "Weekly exposure check - Week 25",
         type: "weekly",
         date: "2026-06-22",
         status: "signed",
@@ -89,8 +89,8 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Compliance & threat reports"
-        subtitle="Export cryptographic logs summaries, SOC2 checklists, and automated incident foreword assessments."
+        title="Reports"
+        subtitle="View, search, or generate incident summaries and compliance reports."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -98,19 +98,18 @@ export default function Reports() {
         <div className="lg:col-span-5">
           <Card className="flex flex-col justify-between min-h-[300px]">
             <form onSubmit={handleCreateReport} className="space-y-4">
-              <PanelHeader icon={Sparkles} title="AI automated report weaver" iconClassName="text-purple-400" />
+              <PanelHeader icon={Sparkles} title="Draft report with AI" iconClassName="text-purple-400" />
 
               <div className="space-y-2 text-xs">
-                <label className="font-semibold text-gray-300">Target objective prompt</label>
+                <label className="font-semibold text-gray-300 font-sans">Report description</label>
                 <textarea
                   value={promptValue}
                   onChange={(e) => setPromptValue(e.target.value)}
-                  placeholder="e.g., Draft a HIPAA exposure audit focusing on unusual network egress logs from last 24h..."
-                  className="w-full h-24 bg-[#09090B] border border-[#23262F]/80 rounded-lg p-2.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors font-mono resize-none"
+                  placeholder="e.g., Incident report for suspicious database downloads on srv-db-01..."
+                  className="w-full h-24 bg-[#09090B] border border-border-custom rounded-lg p-2.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors font-mono resize-none"
                 />
                 <p className="text-[10px] text-gray-500 font-sans">
-                  Our model maps active audit controls against the ChromaDB threat collections to
-                  populate templates.
+                  Vector will compile evidence and format a draft report.
                 </p>
               </div>
 
@@ -123,12 +122,12 @@ export default function Reports() {
                 {isGenerating ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Weaving audit template...</span>
+                    <span>Drafting report...</span>
                   </>
                 ) : (
                   <>
                     <FileText className="w-3.5 h-3.5" />
-                    <span>Draft forensic report</span>
+                    <span>Draft report</span>
                   </>
                 )}
               </Button>
@@ -139,12 +138,12 @@ export default function Reports() {
         {/* Existing Reports List */}
         <div className="lg:col-span-7">
           <Card className="p-0">
-            <div className="p-4 border-b border-[#23262F]/40 flex items-center justify-between">
+            <div className="p-4 border-b border-border-custom/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-400" />
-                <span className="font-mono text-xs font-bold text-gray-200">Generated security audits</span>
+                <span className="font-sans text-xs font-bold text-gray-200">Recent reports</span>
               </div>
-              <Badge variant="default">{reports.length} files archived</Badge>
+              <Badge variant="default">{reports.length} reports</Badge>
             </div>
 
             <Table>
@@ -169,6 +168,7 @@ export default function Reports() {
                     </TableCell>
                     <TableCell>
                       <Badge
+                        className="capitalize"
                         variant={
                           rep.type === "incident"
                             ? "critical"
@@ -181,12 +181,12 @@ export default function Reports() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={rep.status === "signed" ? "success" : "default"}>
+                      <Badge className="capitalize" variant={rep.status === "signed" ? "success" : "default"}>
                         {rep.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="xs" title="Download Audit PDF">
+                      <Button variant="ghost" size="xs" title="Download report PDF">
                         <Download className="w-3.5 h-3.5" />
                       </Button>
                     </TableCell>

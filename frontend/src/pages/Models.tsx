@@ -31,11 +31,10 @@ export default function Models() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Model tuning center"
-        subtitle="Configure anomaly classification thresholds, tune RAG embeddings database, and control prompt alignment parameters."
+        title="Models"
+        subtitle="Manage outlier detection algorithms and tune Vector's AI knowledge base."
       />
 
-      {/* Inline stateful feedback instead of noisy window.alert */}
       <AnimatePresence>
         {trainingState === "success" && (
           <motion.div
@@ -48,9 +47,7 @@ export default function Models() {
             <div className="flex items-center gap-2.5 text-xs text-emerald-400 font-mono">
               <CheckCircle className="w-4 h-4 shrink-0" />
               <span>
-                <strong>Tuning completed!</strong> DV-Isolation Forest successfully converged across
-                active Kubernetes datasets (Estimators: {numEstimators}, Contamination:{" "}
-                {(contamination * 100).toFixed(1)}%).
+                <strong>Model training complete.</strong> Outlier detection model successfully updated.
               </span>
             </div>
             <button
@@ -64,12 +61,12 @@ export default function Models() {
       </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Isolation Forest Parameters Configuration */}
+        {/* Outlier Detection Settings */}
         <div className="lg:col-span-7">
           <Card className="space-y-6">
             <PanelHeader
               icon={Cpu}
-              title="Anomaly detection algorithm [isolation forest]"
+              title="Outlier detection (Isolation forest)"
               iconClassName="text-blue-400"
             />
 
@@ -77,8 +74,8 @@ export default function Models() {
               {/* Num Estimators */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-300">Number of estimators (trees)</span>
-                  <span className="font-mono text-blue-400 font-bold">{numEstimators} Trees</span>
+                  <span className="font-semibold text-gray-300">Search depth (trees)</span>
+                  <span className="font-mono text-blue-400 font-bold">{numEstimators} trees</span>
                 </div>
                 <input
                   type="range"
@@ -90,15 +87,14 @@ export default function Models() {
                   className="w-full accent-blue-500 bg-gray-950 h-1 rounded-full appearance-none cursor-pointer"
                 />
                 <p className="text-[10px] text-gray-500 font-sans">
-                  Controls the size of the random tree ensemble. Higher values increase score
-                  accuracy but add latency.
+                  Controls the size of the random tree ensemble. More trees improve accuracy but increase search time.
                 </p>
               </div>
 
               {/* Contamination Index */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-300">Contamination ratio</span>
+                  <span className="font-semibold text-gray-300">Expected outlier rate</span>
                   <span className="font-mono text-blue-400 font-bold">
                     {(contamination * 100).toFixed(1)}%
                   </span>
@@ -113,30 +109,29 @@ export default function Models() {
                   className="w-full accent-blue-500 bg-gray-950 h-1 rounded-full appearance-none cursor-pointer"
                 />
                 <p className="text-[10px] text-gray-500 font-sans">
-                  Specifies the proportion of outliers/anomalies expected in the baseline network
-                  datasets.
+                  The estimated percentage of unusual events expected in your network data.
                 </p>
               </div>
 
-              {/* Max Samples selector */}
+              {/* Sampling method */}
               <div className="space-y-2">
-                <span className="font-semibold text-gray-300">Bootstrap sampling method</span>
-                <div className="grid grid-cols-2 gap-3 mt-1.5">
-                  <button className="bg-blue-500/5 border border-blue-500/20 text-blue-400 p-2.5 rounded-lg text-left font-mono select-none">
-                    <div className="font-bold text-[10px]">Auto max samples</div>
+                <span className="font-semibold text-gray-300">Sampling method</span>
+                <div className="grid grid-cols-2 gap-3 mt-1.5 font-sans">
+                  <button className="bg-blue-500/5 border border-blue-500/20 text-blue-400 p-2.5 rounded-lg text-left select-none">
+                    <div className="font-bold text-[10px]">Auto sample sizing</div>
                     <div className="text-[9px] text-gray-500 mt-0.5">Use optimal sample splits</div>
                   </button>
-                  <button className="bg-black/20 border border-[#23262F]/60 text-gray-400 hover:text-gray-200 p-2.5 rounded-lg text-left font-mono select-none">
-                    <div className="font-bold text-[10px]">Force bootstrap</div>
+                  <button className="bg-black/20 border border-border-custom/60 text-gray-400 hover:text-gray-200 p-2.5 rounded-lg text-left select-none">
+                    <div className="font-bold text-[10px]">Manual sampling</div>
                     <div className="text-[9px] text-gray-500 mt-0.5">
-                      Iterate sub-datasets explicitly
+                      Explicitly define sub-dataset sizes
                     </div>
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-[#23262F]/40 pt-4 flex gap-3">
+            <div className="border-t border-border-custom/40 pt-4 flex gap-3">
               <Button
                 onClick={triggerRetrain}
                 variant="primary"
@@ -146,10 +141,10 @@ export default function Models() {
                 {trainingState === "training" ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Training forest...</span>
+                    <span>Training model...</span>
                   </>
                 ) : (
-                  <span>Retrain outlier forest</span>
+                  <span>Retrain outlier detector</span>
                 )}
               </Button>
               <Button
@@ -165,13 +160,12 @@ export default function Models() {
           </Card>
         </div>
 
-        {/* ChromaDB Vector Storage Configuration */}
+        {/* AI Knowledge Base status */}
         <div className="lg:col-span-5 space-y-5">
-          {/* Chroma DB Status */}
           <Card className="space-y-4">
             <PanelHeader
               icon={Database}
-              title="Vector knowledge [ChromaDB]"
+              title="AI knowledge base (Chroma)"
               iconClassName="text-purple-400"
             />
 
@@ -181,18 +175,18 @@ export default function Models() {
                 <span className="text-gray-200">text-embedding-004</span>
               </div>
               <div className="flex items-center justify-between font-mono text-[11px]">
-                <span className="text-gray-400 font-sans">Indexed threat vectors:</span>
-                <span className="text-gray-200">1,489,102 vectors</span>
+                <span className="text-gray-400 font-sans">Indexed security events:</span>
+                <span className="text-gray-200">1.48M logs</span>
               </div>
               <div className="flex items-center justify-between font-mono text-[11px]">
-                <span className="text-gray-400 font-sans">Average search latency:</span>
-                <span className="text-emerald-400">1.8 ms</span>
+                <span className="text-gray-400 font-sans">Average search speed:</span>
+                <span className="text-emerald-400">1.8ms</span>
               </div>
 
               {/* Progress bar mapping size */}
               <div className="space-y-1.5 pt-1">
                 <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
-                  <span>ChromaDB storage pool</span>
+                  <span>Used space</span>
                   <span className="text-purple-400 font-bold">42% (2.1 GB)</span>
                 </div>
                 <div className="w-full bg-[#09090B] h-1.5 rounded-full overflow-hidden">
@@ -202,17 +196,17 @@ export default function Models() {
             </div>
           </Card>
 
-          {/* Prompt Alignment Copilot customization */}
+          {/* AI assistant style customization */}
           <Card className="space-y-4">
             <PanelHeader
               icon={Sparkles}
-              title="AI analyst personality"
+              title="AI assistant style"
               iconClassName="text-purple-400"
             />
 
             <div className="space-y-3 text-xs">
-              <p className="text-gray-400 text-[11px]">
-                Customize the communication and analysis philosophy of your DarkVector Copilot.
+              <p className="text-gray-400 text-[11px] font-sans">
+                Customize the communication and analysis style of Vector.
               </p>
 
               <div className="grid grid-cols-1 gap-2 mt-2 font-mono text-[11px]">
@@ -221,13 +215,13 @@ export default function Models() {
                   className={`p-2.5 rounded-lg text-left border flex items-center justify-between cursor-pointer select-none transition-all duration-150 ${
                     aiPersona === "objective-copilot"
                       ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
-                      : "bg-black/20 border-[#23262F]/60 text-gray-500 hover:text-gray-300"
+                      : "bg-black/20 border-border-custom/60 text-gray-500 hover:text-gray-300"
                   }`}
                 >
-                  <div>
-                    <div className="font-bold text-[10px]">Objective co-pilot</div>
+                  <div className="font-sans">
+                    <div className="font-mono font-bold text-[10px]">Objective helper</div>
                     <div className="text-[9px] text-gray-500 mt-0.5 font-sans">
-                      Objective, forensic-level descriptions
+                      Provides factual, step-by-step descriptions
                     </div>
                   </div>
                   {aiPersona === "objective-copilot" && (
@@ -240,13 +234,13 @@ export default function Models() {
                   className={`p-2.5 rounded-lg text-left border flex items-center justify-between cursor-pointer select-none transition-all duration-150 ${
                     aiPersona === "remediation-expert"
                       ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
-                      : "bg-black/20 border-[#23262F]/60 text-gray-500 hover:text-gray-300"
+                      : "bg-black/20 border-border-custom/60 text-gray-500 hover:text-gray-300"
                   }`}
                 >
-                  <div>
-                    <div className="font-bold text-[10px]">Remediation advocate</div>
+                  <div className="font-sans">
+                    <div className="font-mono font-bold text-[10px]">Response advisor</div>
                     <div className="text-[9px] text-gray-500 mt-0.5 font-sans">
-                      Prioritizes YAML scripts and containment
+                      Prioritizes containment plans and commands
                     </div>
                   </div>
                   {aiPersona === "remediation-expert" && (
