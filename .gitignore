@@ -1,0 +1,141 @@
+# ======================================================
+# DarkVector - Root .gitignore
+# ======================================================
+
+############################
+# Python
+############################
+
+backend/.venv/
+backend/venv/
+backend/__pycache__/
+backend/**/*.py[cod]
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.coverage
+backend/htmlcov/
+
+############################
+# Environment Variables
+############################
+
+backend/.env
+frontend/.env
+.env
+.env.*
+
+!.env.example
+
+############################
+# Node
+############################
+
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+############################
+# Logs
+############################
+
+*.log
+logs/
+backend/logs/
+
+############################
+# IDE
+############################
+
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+
+.idea/
+*.swp
+*.swo
+
+############################
+# OS Files
+############################
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+############################
+# Python Build
+############################
+
+*.egg-info/
+build/
+dist/
+pip-wheel-metadata/
+
+############################
+# Database
+############################
+
+*.db
+*.sqlite
+*.sqlite3
+
+############################
+# ML Artifacts
+############################
+
+backend/models/
+backend/outputs/
+backend/checkpoints/
+backend/cache/
+backend/temp/
+
+############################
+# Large Datasets
+############################
+
+backend/dataset/raw/
+backend/dataset/processed/
+
+# Keep folder structure
+!backend/dataset/raw/.gitkeep
+!backend/dataset/processed/.gitkeep
+
+############################
+# Uploaded Files
+############################
+
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+############################
+# Coverage
+############################
+
+.coverage
+coverage.xml
+
+############################
+# Secrets
+############################
+
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+############################
+# Jupyter
+############################
+
+.ipynb_checkpoints/
+
+############################
+# Temporary
+############################
+
+*.tmp
+*.temp
+*.bak
+*.old
