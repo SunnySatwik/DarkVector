@@ -4,10 +4,10 @@ import joblib
 import numpy as np
 import shap
 
-from ml.models.security_event import FeatureContribution
+from app.schemas.analyze import FeatureContribution
 
 
-class ShapExplainer:
+class Explainer:
     """
     Computes SHAP (SHapley Additive exPlanations) values for the Isolation Forest model
     to explain the key features driving an anomaly score.
@@ -52,11 +52,11 @@ class ShapExplainer:
                 [
                     FeatureContribution(
                         feature=feature_names[i],
-                        impact=round(float(row[i]), 4),
-                        percentage=31.4
+                        impact=round(float(abs(row[i])), 4),
+                        direction="increase" if row[i] >= 0 else "decrease",
                     )
                     for i in indices
                 ]
             )
 
-        return explanations
+        return explanations[0]

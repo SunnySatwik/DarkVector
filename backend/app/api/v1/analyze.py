@@ -16,4 +16,4 @@ def analyze(request: AnalyzeRequest):
 
     event = request.model_dump()
 
-    return service.analyze(event)
+    return service.analyze(event)

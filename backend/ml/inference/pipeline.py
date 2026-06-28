@@ -1,4 +1,4 @@
-from ml.inference.risk_scorer import RiskScorer
+from app.ml.risk_scorer import RiskScorer
 from ml.models.security_event import SecurityEvent
 
 

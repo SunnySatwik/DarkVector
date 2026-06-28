@@ -1,19 +1,17 @@
 from pathlib import Path
-import joblib
 import json
 
+import joblib
+
+
 class ModelLoader:
-    """
-    Handles loading the pre-trained Isolation Forest anomaly detection model,
-    the preprocessing pipeline, and the model metadata from disk.
-    """
 
     def __init__(self):
-        """
-        Initializes the ModelLoader and loads the required model, preprocessor,
-        and metadata files from the models directory.
-        """
-        model_dir = Path(__file__).resolve().parents[2] / "models"
+
+        model_dir = (
+            Path(__file__).resolve().parents[2]
+            / "models"
+        )
 
         self.model = joblib.load(
             model_dir / "isolation_forest.joblib"
@@ -23,5 +21,22 @@ class ModelLoader:
             model_dir / "preprocessor.joblib"
         )
 
-        with open(model_dir / "model_metadata.json") as f:
-            self.metadata = json.load(f)
+        metadata_path = (
+            model_dir / "model_metadata.json"
+        )
+
+        if metadata_path.exists():
+
+            with open(metadata_path, "r") as f:
+
+                self.metadata = json.load(f)
+
+        else:
+
+            self.metadata = {
+                "model_version": "unknown",
+                "trained_at": None,
+                "dataset": None,
+                "feature_count": None,
+                "event_count": None,
+            }

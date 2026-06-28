@@ -1,5 +1,5 @@
 from ml.datasets.kdd_loader import KDDLoader
-from ml.inference.explainer import ShapExplainer
+from app.ml.explainer import ShapExplainer
 from ml.preprocessing.preprocessor import DataPreprocessor
 
 loader = KDDLoader()

@@ -1,5 +1,5 @@
 from ml.datasets.kdd_loader import KDDLoader
-from ml.inference.risk_scorer import RiskScorer
+from app.ml.risk_scorer import RiskScorer
 from ml.models.isolation_forest_model import IsolationForestModel
 from ml.preprocessing.preprocessor import DataPreprocessor
 
