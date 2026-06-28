@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.schemas.analyze import AnalyzeRequest
+from app.schemas.analyze import AnalyzeRequest, AnalysisResponse
 from app.services.inference_service import InferenceService
 
 router = APIRouter(
@@ -11,9 +11,9 @@ router = APIRouter(
 service = InferenceService()
 
 
-@router.post("/")
+@router.post("/", response_model=AnalysisResponse)
 def analyze(request: AnalyzeRequest):
 
     event = request.model_dump()
 
-    return service.analyze(event)
+    return service.analyze(event)

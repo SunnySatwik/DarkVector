@@ -1,7 +1,23 @@
 class FeatureMapper:
+    """
+    Utility class to map high-level security domain objects (Alerts) 
+    into the 41-feature network connection representation (KDD Cup 99 schema)
+    expected by the backend Isolation Forest anomaly detection model.
+    """
 
     @staticmethod
     def from_alert(alert: dict) -> dict:
+        """
+        Translates a domain Alert dictionary into a 41-feature KDD network connection record.
+        This isolates ML-specific schema expectations from the frontend client.
+
+        Args:
+            alert (dict): The domain Alert object containing type, category, and details.
+
+        Returns:
+            dict: A dictionary containing all 41 KDD network features with values mapped
+                  to simulate the alert's specific threat type.
+        """
         # Base default KDD record with normal baseline values
         kdd = {
             "duration": 0,

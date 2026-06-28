@@ -2,18 +2,27 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-
 @dataclass
 class RiskAssessment:
+    """
+    Represents the output of a risk assessment.
+    """
     risk_score: float
     severity: str
     is_anomaly: bool
 
 
 class RiskScorer:
+    """
+    Calibrates raw machine learning anomaly scores into human-readable risk scores,
+    severities, and anomaly classifications using pre-calculated training distribution percentiles.
+    """
 
     def __init__(self):
-
+        """
+        Initializes the RiskScorer by loading the score distribution percentiles
+        from the model metadata file.
+        """
         metadata_path = (
             Path(__file__).resolve().parents[2]
             / "models"
@@ -25,8 +34,16 @@ class RiskScorer:
 
         self.dist = metadata["score_distribution"]
 
-    def severity(self, risk):
+    def severity(self, risk: float) -> str:
+        """
+        Maps a calibrated risk score to a qualitative severity level.
 
+        Args:
+            risk (float): The calibrated risk score (0-100).
+
+        Returns:
+            str: The severity category (e.g., 'Critical', 'High', 'Medium', 'Low', 'Informational').
+        """
         if risk >= 90:
             return "Critical"
 
@@ -41,8 +58,17 @@ class RiskScorer:
 
         return "Informational"
 
-    def from_score(self, score):
+    def from_score(self, score: float) -> RiskAssessment:
+        """
+        Converts a raw model decision function score into a RiskAssessment object
+        by evaluating it against score distribution percentiles.
 
+        Args:
+            score (float): The raw decision function score from the Isolation Forest model.
+
+        Returns:
+            RiskAssessment: The calibrated risk score, severity, and anomaly classification.
+        """
         d = self.dist
 
         if score <= d["p1"]:

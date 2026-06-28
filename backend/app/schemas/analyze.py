@@ -21,3 +21,9 @@ class AnalyzeRequest(BaseModel):
     category: str
     description: str
     details: Optional[AlertDetails] = None
+
+class AnalysisResponse(BaseModel):
+    anomaly_score: float
+    risk_score: float
+    severity: str
+    is_anomaly: bool
