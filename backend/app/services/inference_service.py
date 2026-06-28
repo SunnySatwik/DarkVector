@@ -2,6 +2,7 @@ import pandas as pd
 
 from ml.inference.model_loader import ModelLoader
 from ml.inference.risk_scorer import RiskScorer
+from app.ml.feature_mapper import FeatureMapper
 
 
 class InferenceService:
@@ -23,11 +24,11 @@ class InferenceService:
             index=event_df.index,
         )
         
-    def analyze(self, event):
+    def analyze(self, alert_data: dict):
 
-        event_df = pd.DataFrame([event])
+        kdd_event = FeatureMapper.from_alert(alert_data)
 
-        event_df = pd.DataFrame([event])
+        event_df = pd.DataFrame([kdd_event])
 
         features = self.preprocess(event_df)
 
@@ -40,4 +41,4 @@ class InferenceService:
             "risk_score": float(risk.risk_score),
             "severity": str(risk.severity),
             "is_anomaly": bool(risk.is_anomaly),
-        }
+        }

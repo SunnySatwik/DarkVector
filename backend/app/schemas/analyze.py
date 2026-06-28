@@ -1,80 +1,23 @@
 from pydantic import BaseModel
+from typing import Optional
 
+class AlertDetails(BaseModel):
+    ipAddress: Optional[str] = None
+    userAgent: Optional[str] = None
+    processPath: Optional[str] = None
+    parentProcess: Optional[str] = None
+    commandLine: Optional[str] = None
+    port: Optional[int] = None
+    bytesTransferred: Optional[int] = None
+    username: Optional[str] = None
+    isolationForestScore: Optional[float] = None
 
 class AnalyzeRequest(BaseModel):
-
-    duration: int
-    protocol_type: str
-    service: str
-    flag: str
-
-    src_bytes: int
-    dst_bytes: int
-
-    land: int
-    wrong_fragment: int
-    urgent: int
-
-    hot: int
-
-    num_failed_logins: int
-
-    logged_in: int
-
-    num_compromised: int
-
-    root_shell: int
-
-    su_attempted: int
-
-    num_root: int
-
-    num_file_creations: int
-
-    num_shells: int
-
-    num_access_files: int
-
-    num_outbound_cmds: int
-
-    is_host_login: int
-
-    is_guest_login: int
-
-    count: int
-
-    srv_count: int
-
-    serror_rate: float
-
-    srv_serror_rate: float
-
-    rerror_rate: float
-
-    srv_rerror_rate: float
-
-    same_srv_rate: float
-
-    diff_srv_rate: float
-
-    srv_diff_host_rate: float
-
-    dst_host_count: int
-
-    dst_host_srv_count: int
-
-    dst_host_same_srv_rate: float
-
-    dst_host_diff_srv_rate: float
-
-    dst_host_same_src_port_rate: float
-
-    dst_host_srv_diff_host_rate: float
-
-    dst_host_serror_rate: float
-
-    dst_host_srv_serror_rate: float
-
-    dst_host_rerror_rate: float
-
-    dst_host_srv_rerror_rate: float
+    id: str
+    timestamp: str
+    source: str
+    type: str
+    severity: str
+    category: str
+    description: str
+    details: Optional[AlertDetails] = None

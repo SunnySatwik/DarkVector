@@ -1,0 +1,1 @@
+from app.services.inference_service import InferenceService

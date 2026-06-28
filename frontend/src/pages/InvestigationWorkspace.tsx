@@ -29,7 +29,8 @@ import {
   Sparkles,
   Layers,
 } from "lucide-react";
-import { Badge } from "../components/ui/DesignSystem";
+import { Badge, Skeleton } from "../components/ui/DesignSystem";
+import { useAnalysis } from "../hooks/useAnalysis";
 import { EventTimeline } from "../components/workspace/EventTimeline";
 import { EventStream } from "../components/workspace/EventStream";
 import { ProcessTree } from "../components/workspace/ProcessTree";
@@ -91,6 +92,16 @@ export default function InvestigationWorkspace({
   >("active");
   const [quarantineProgress, setQuarantineProgress] = useState(0);
   const [isBlockApplied, setIsBlockApplied] = useState(false);
+
+  const { data: analysisData, isPending, isError, refetch } = useAnalysis(activeAlert);
+
+  const displayAlert = analysisData
+    ? {
+        ...activeAlert,
+        score: analysisData.risk_score,
+        severity: analysisData.severity.toLowerCase() as any,
+      }
+    : activeAlert;
 
   // Reset remediation state when the active alert changes
   useEffect(() => {
@@ -202,7 +213,7 @@ export default function InvestigationWorkspace({
               <Activity className="w-3.5 h-3.5 text-gray-500" />
               <h2 className="text-[11px] font-sans font-medium text-gray-500">Timeline</h2>
             </div>
-            <EventTimeline alert={activeAlert} />
+            <EventTimeline alert={displayAlert} />
           </div>
 
           {/* Event log section */}
@@ -211,7 +222,7 @@ export default function InvestigationWorkspace({
               <Layers className="w-3.5 h-3.5 text-gray-500" />
               <h2 className="text-[11px] font-sans font-medium text-gray-500">Event log</h2>
             </div>
-            <EventStream alert={activeAlert} />
+            <EventStream alert={displayAlert} />
           </div>
         </motion.div>
 
@@ -226,15 +237,19 @@ export default function InvestigationWorkspace({
             {/* ── 1. Incident hero — What happened? ─────────────────────── */}
             <section className="space-y-4">
               {/* Meta row */}
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <Badge variant={severityBadgeVariant(activeAlert.severity)}>
-                  {activeAlert.severity}
-                </Badge>
-                <span className="font-mono text-[10px] text-gray-500">{activeAlert.id}</span>
+              <div className="flex items-center gap-2 mb-2 flex-wrap h-[18px]">
+                {isPending ? (
+                  <Skeleton width={48} height={16} className="rounded-md animate-pulse-slow" />
+                ) : (
+                  <Badge variant={severityBadgeVariant(displayAlert.severity)}>
+                    {displayAlert.severity}
+                  </Badge>
+                )}
+                <span className="font-mono text-[10px] text-gray-500">{displayAlert.id}</span>
                 <span className="text-gray-700">·</span>
                 <span className="flex items-center gap-1 text-[10px] text-gray-500 font-sans">
                   <Clock className="w-3 h-3" />
-                  {new Date(activeAlert.timestamp).toLocaleString([], {
+                  {new Date(displayAlert.timestamp).toLocaleString([], {
                     month: "short",
                     day: "numeric",
                     hour: "2-digit",
@@ -245,12 +260,12 @@ export default function InvestigationWorkspace({
 
               {/* Hero title */}
               <h1 className="text-[22px] font-sans font-semibold text-gray-100 tracking-tight leading-tight mb-3">
-                {activeAlert.type}
+                {displayAlert.type}
               </h1>
 
               {/* Description */}
               <p className="text-[13px] text-gray-400 leading-relaxed font-sans mb-4 max-w-[72ch]">
-                {activeAlert.description}
+                {displayAlert.description}
               </p>
 
               {/* Source/user inline */}
@@ -258,22 +273,26 @@ export default function InvestigationWorkspace({
                 <div className="flex items-center gap-1.5">
                   <span className="text-gray-600">Source</span>
                   <code className="font-mono text-blue-300/80 bg-blue-500/5 px-1.5 py-0.5 rounded text-[10px]">
-                    {activeAlert.source}
+                    {displayAlert.source}
                   </code>
                 </div>
-                {activeAlert.details.username && (
+                {displayAlert.details.username && (
                   <div className="flex items-center gap-1.5">
                     <span className="text-gray-600">User</span>
                     <code className="font-mono text-gray-400 bg-surface/60 px-1.5 py-0.5 rounded text-[10px]">
-                      {activeAlert.details.username}
+                      {displayAlert.details.username}
                     </code>
                   </div>
                 )}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 h-[14px]">
                   <span className="text-gray-600">Score</span>
-                  <span className="font-mono text-red-400 text-[10px]">
-                    {activeAlert.score} / 100
-                  </span>
+                  {isPending ? (
+                    <Skeleton width={40} height={12} className="rounded animate-pulse-slow" />
+                  ) : (
+                    <span className="font-mono text-red-400 text-[10px]">
+                      {displayAlert.score} / 100
+                    </span>
+                  )}
                 </div>
               </div>
             </section>
@@ -285,11 +304,11 @@ export default function InvestigationWorkspace({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <p className="text-[10px] text-gray-600 font-sans mb-2.5">Process chain</p>
-                  <ProcessTree alert={activeAlert} />
+                  <ProcessTree alert={displayAlert} />
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-600 font-sans mb-2.5">Key attributes</p>
-                  <EvidenceAttributes alert={activeAlert} />
+                  <EvidenceAttributes alert={displayAlert} />
                 </div>
               </div>
             </section>
@@ -298,19 +317,37 @@ export default function InvestigationWorkspace({
             <section className="border-t border-border-custom/12 pt-6 mt-6 space-y-4">
               <SectionLabel icon={Sparkles}>AI reasoning</SectionLabel>
 
-              <p className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
-                Vector has assessed the suspicious spawn indicators and correlated them
-                against historical server configurations. The execution patterns match
-                catalogued namespace manipulations and represent an active escape trajectory.
-              </p>
+              {isPending ? (
+                <div className="space-y-2 max-w-[72ch] py-1 h-[54px] flex flex-col justify-center">
+                  <Skeleton width="100%" height={12} className="animate-pulse-slow" />
+                  <Skeleton width="95%" height={12} className="animate-pulse-slow" />
+                  <Skeleton width="60%" height={12} className="animate-pulse-slow" />
+                </div>
+              ) : isError ? (
+                <div className="text-[13px] text-red-400/90 font-sans flex items-center gap-2 h-[54px]">
+                  <span>Failed to load analysis.</span>
+                  <button
+                    onClick={() => refetch()}
+                    className="text-violet-400 hover:text-violet-300 underline cursor-pointer font-medium"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
+                  Vector has assessed the suspicious spawn indicators and correlated them
+                  against historical server configurations. The execution patterns match
+                  catalogued namespace manipulations and represent an active escape trajectory.
+                </p>
+              )}
 
               {/* SHAP factors */}
-              {activeAlert.details.shapFactors &&
-                activeAlert.details.shapFactors.length > 0 && (
+              {displayAlert.details.shapFactors &&
+                displayAlert.details.shapFactors.length > 0 && (
                   <div className="space-y-2.5">
                     <p className="text-[10px] text-gray-600 font-sans">Risk attribution (SHAP)</p>
                     <div className="space-y-2">
-                      {activeAlert.details.shapFactors.map((f, i) => (
+                      {displayAlert.details.shapFactors.map((f, i) => (
                         <div key={i} className="space-y-1">
                           <div className="flex justify-between items-baseline">
                             <span className="text-[11px] text-gray-500 font-sans">{f.factor}</span>
@@ -390,12 +427,15 @@ export default function InvestigationWorkspace({
           className="hidden lg:flex flex-col shrink-0 grow-0 lg:w-[25%] xl:w-[26%] 2xl:w-[26%] border-l border-border-custom/15 overflow-hidden"
         >
           <VectorPanel
-            alert={activeAlert}
+            alert={displayAlert}
             quarantineStatus={quarantineStatus}
             quarantineProgress={quarantineProgress}
             isBlockApplied={isBlockApplied}
             onIsolate={handleIsolate}
             onBlockIp={() => setIsBlockApplied(true)}
+            isAnalysisPending={isPending}
+            isAnalysisError={isError}
+            onRetryAnalysis={refetch}
           />
         </motion.div>
       </div>

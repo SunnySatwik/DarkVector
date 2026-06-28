@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Alert } from "../../types";
+import { Skeleton } from "../ui/DesignSystem";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,9 @@ export interface VectorPanelProps {
   isBlockApplied: boolean;
   onIsolate: () => void;
   onBlockIp: () => void;
+  isAnalysisPending?: boolean;
+  isAnalysisError?: boolean;
+  onRetryAnalysis?: () => void;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -61,6 +65,9 @@ export function VectorPanel({
   isBlockApplied,
   onIsolate,
   onBlockIp,
+  isAnalysisPending = false,
+  isAnalysisError = false,
+  onRetryAnalysis,
 }: VectorPanelProps) {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<
@@ -189,15 +196,21 @@ export function VectorPanel({
         {/* 1. Summary — What happened? */}
         <div className="space-y-2">
           <SectionLabel>Summary</SectionLabel>
-          <motion.p
-            key={alert.id + "-summary"}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
-            className="text-[13px] text-gray-300 leading-relaxed font-sans"
-          >
-            {alert.source} triggered {summaryText}
-          </motion.p>
+          {isAnalysisPending ? (
+            <div className="h-[18px] flex items-center">
+              <Skeleton width="100%" height={12} className="animate-pulse-slow" />
+            </div>
+          ) : (
+            <motion.p
+              key={alert.id + "-summary"}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="text-[13px] text-gray-300 leading-relaxed font-sans"
+            >
+              {alert.source} triggered {summaryText}
+            </motion.p>
+          )}
         </div>
 
         {/* 2. Evidence — What supports this? */}
@@ -252,9 +265,13 @@ export function VectorPanel({
               <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
                 Score
               </span>
-              <span className="text-[11px] font-mono text-red-400">
-                {alert.score} / 100
-              </span>
+              {isAnalysisPending ? (
+                <Skeleton width={40} height={11} className="rounded animate-pulse-slow mt-0.5" />
+              ) : (
+                <span className="text-[11px] font-mono text-red-400">
+                  {alert.score} / 100
+                </span>
+              )}
             </div>
           </motion.div>
         </div>
@@ -262,48 +279,68 @@ export function VectorPanel({
         {/* 3. Reasoning — Why was it flagged? */}
         <div className="space-y-2">
           <SectionLabel>Reasoning</SectionLabel>
-          <motion.div
-            key={alert.id + "-reasoning"}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, delay: 0.08, ease: "easeOut" }}
-            className="space-y-2.5"
-          >
-            <p className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
-              <ReactMarkdown>{reasoningText}</ReactMarkdown>
-            </p>
-
-            {/* SHAP bar chart — compact */}
-            {alert.details.shapFactors &&
-              alert.details.shapFactors.length > 0 && (
-                <div className="space-y-1.5 pt-1">
-                  {alert.details.shapFactors.slice(0, 3).map((f, i) => (
-                    <div key={i} className="space-y-0.5">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[11px] text-gray-500 font-sans truncate pr-2">
-                          {f.factor}
-                        </span>
-                        <span className="text-[10px] font-mono text-gray-500 shrink-0">
-                          {(f.impact * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="w-full h-0.5 bg-border-custom/25 rounded-full overflow-hidden">
-                        <motion.div
-                          className="bg-violet-400/60 h-full rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${f.impact * 100}%` }}
-                          transition={{
-                            duration: 0.4,
-                            delay: i * 0.06,
-                            ease: "easeOut",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          {isAnalysisPending ? (
+            <div className="space-y-2 py-1 h-[54px] flex flex-col justify-center">
+              <Skeleton width="100%" height={12} className="animate-pulse-slow" />
+              <Skeleton width="95%" height={12} className="animate-pulse-slow" />
+              <Skeleton width="60%" height={12} className="animate-pulse-slow" />
+            </div>
+          ) : isAnalysisError ? (
+            <div className="text-[12px] text-red-400/90 font-sans flex items-center gap-2 h-[54px]">
+              <span>Failed to load analysis.</span>
+              {onRetryAnalysis && (
+                <button
+                  onClick={onRetryAnalysis}
+                  className="text-violet-400 hover:text-violet-300 underline cursor-pointer font-medium"
+                >
+                  Retry
+                </button>
               )}
-          </motion.div>
+            </div>
+          ) : (
+            <motion.div
+              key={alert.id + "-reasoning"}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, delay: 0.08, ease: "easeOut" }}
+              className="space-y-2.5"
+            >
+              <p className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
+                <ReactMarkdown>{reasoningText}</ReactMarkdown>
+              </p>
+
+              {/* SHAP bar chart — compact */}
+              {alert.details.shapFactors &&
+                alert.details.shapFactors.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    {alert.details.shapFactors.slice(0, 3).map((f, i) => (
+                      <div key={i} className="space-y-0.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] text-gray-500 font-sans truncate pr-2">
+                            {f.factor}
+                          </span>
+                          <span className="text-[10px] font-mono text-gray-500 shrink-0">
+                            {(f.impact * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="w-full h-0.5 bg-border-custom/25 rounded-full overflow-hidden">
+                          <motion.div
+                            className="bg-violet-400/60 h-full rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${f.impact * 100}%` }}
+                            transition={{
+                              duration: 0.4,
+                              delay: i * 0.06,
+                              ease: "easeOut",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+            </motion.div>
+          )}
         </div>
 
         {/* 4. Recommended actions — ghost buttons, not CTAs */}

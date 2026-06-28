@@ -33,6 +33,7 @@ import {
   FlameKindling,
 } from "lucide-react";
 import { Badge, Skeleton } from "../components/ui/DesignSystem";
+import { useAnalysis } from "../hooks/useAnalysis";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -191,9 +192,11 @@ function PageHeader() {
 function PriorityInvestigation({
   alert,
   onInvestigate,
+  isPending = false,
 }: {
   alert: Alert;
   onInvestigate: (a: Alert) => void;
+  isPending?: boolean;
 }) {
   return (
     <motion.section {...fadeUp(0.06)}>
@@ -216,8 +219,12 @@ function PriorityInvestigation({
 
             <div className="min-w-0">
               {/* Meta row */}
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="critical">Critical</Badge>
+              <div className="flex items-center gap-2 mb-2 h-[18px]">
+                {isPending ? (
+                  <Skeleton width={48} height={16} className="rounded-md animate-pulse-slow" />
+                ) : (
+                  <Badge variant={severityVariant(alert.severity)}>{alert.severity}</Badge>
+                )}
                 <span className="text-[10px] font-mono text-gray-500">{alert.id}</span>
                 <span className="text-gray-700">·</span>
                 <span className="flex items-center gap-1 text-[10px] font-mono text-gray-500">
@@ -247,9 +254,13 @@ function PriorityInvestigation({
                     {alert.source}
                   </code>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 h-[14px]">
                   <span className="text-[10px] text-gray-600 font-sans">Score</span>
-                  <span className="text-[10px] font-mono text-red-400">{alert.score} / 100</span>
+                  {isPending ? (
+                    <Skeleton width={40} height={12} className="rounded animate-pulse-slow" />
+                  ) : (
+                    <span className="text-[10px] font-mono text-red-400">{alert.score} / 100</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -488,6 +499,16 @@ export default function Dashboard({
 }: DashboardProps) {
   const topAlert = MOCK_ALERTS.find((a) => a.severity === "critical") ?? MOCK_ALERTS[0];
 
+  const { data: analysisData, isPending } = useAnalysis(topAlert);
+
+  const displayAlert = analysisData
+    ? {
+        ...topAlert,
+        score: analysisData.risk_score,
+        severity: analysisData.severity.toLowerCase() as any,
+      }
+    : topAlert;
+
   if (isRefreshing) {
     return <DashboardSkeleton />;
   }
@@ -498,7 +519,7 @@ export default function Dashboard({
       <PageHeader />
 
       {/* 1 — Current highest priority investigation */}
-      <PriorityInvestigation alert={topAlert} onInvestigate={onSelectAlert} />
+      <PriorityInvestigation alert={displayAlert} onInvestigate={onSelectAlert} isPending={isPending} />
 
       {/* Thin section divider */}
       <div className="border-t border-border-custom/12" />
