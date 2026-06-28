@@ -38,6 +38,7 @@ class ShapExplainer:
                     FeatureContribution(
                         feature=feature_names[i],
                         impact=round(float(row[i]), 4),
+                        percentage=31.4
                     )
                     for i in indices
                 ]

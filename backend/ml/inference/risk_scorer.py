@@ -1,5 +1,7 @@
+import json
 from dataclasses import dataclass
-import numpy as np
+from pathlib import Path
+
 
 @dataclass
 class RiskAssessment:
@@ -10,36 +12,62 @@ class RiskAssessment:
 
 class RiskScorer:
 
-    @staticmethod
-    def severity(score):
+    def __init__(self):
 
-        if score >= 90:
+        metadata_path = (
+            Path(__file__).resolve().parents[2]
+            / "models"
+            / "model_metadata.json"
+        )
+
+        with open(metadata_path, "r") as f:
+            metadata = json.load(f)
+
+        self.dist = metadata["score_distribution"]
+
+    def severity(self, risk):
+
+        if risk >= 90:
             return "Critical"
-        elif score >= 75:
+
+        if risk >= 75:
             return "High"
-        elif score >= 50:
+
+        if risk >= 50:
             return "Medium"
-        elif score >= 25:
+
+        if risk >= 25:
             return "Low"
 
         return "Informational"
 
-    @staticmethod
-    def from_score(anomaly_score: float):
+    def from_score(self, score):
 
-        # decision_function is roughly [-0.2, 0.2]
-        normalized = max(
-            0,
-            min(
-                1,
-                (0.15 - anomaly_score) / 0.30,
-            ),
-        )
+        d = self.dist
 
-        risk = round(normalized * 100, 1)
+        if score <= d["p1"]:
+            risk = 100
+
+        elif score <= d["p5"]:
+            risk = 95
+
+        elif score <= d["p10"]:
+            risk = 90
+
+        elif score <= d["p25"]:
+            risk = 75
+
+        elif score <= d["median"]:
+            risk = 50
+
+        elif score <= d["p75"]:
+            risk = 25
+
+        else:
+            risk = 10
 
         return RiskAssessment(
-            risk_score=risk,
-            severity=RiskScorer.severity(risk),
-            is_anomaly=risk >= 75,
+            risk_score=float(risk),
+            severity=self.severity(risk),
+            is_anomaly=bool(risk >= 75),
         )
