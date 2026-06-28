@@ -1,8 +1,8 @@
 import logging
 import pandas as pd
 
-from ml.inference.model_loader import ModelLoader
-from ml.inference.risk_scorer import RiskScorer
+from app.ml.model_loader import ModelLoader
+from app.ml.risk_scorer import RiskScorer
 from app.ml.feature_mapper import FeatureMapper
 
 # Initialize logger for analysis service
