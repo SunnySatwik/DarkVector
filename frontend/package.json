@@ -14,7 +14,9 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
-    "@tanstack/react-query": "^5.x",
+    "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-query-devtools": "^5.101.2",
+    "axios": "^1.18.1",
     "class-variance-authority": "^0.7.x",
     "clsx": "^2.x",
     "dotenv": "^17.x",
@@ -28,7 +30,7 @@
     "recharts": "^3",
     "tailwind-merge": "^3.x",
     "zod": "^4.x",
-    "zustand": "^5.x"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.14",
