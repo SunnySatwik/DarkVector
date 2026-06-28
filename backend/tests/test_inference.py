@@ -25,7 +25,7 @@ def test_analyze_service():
     res = service.analyze(request.model_dump())
     
     # Validate response schema
-    response = AnalysisResponse(**res)
+    response = AnalysisResponse(**res.model_dump())
     
     # Assertions
     assert isinstance(response.anomaly_score, float)

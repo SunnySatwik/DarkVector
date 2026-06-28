@@ -344,9 +344,8 @@ function ActiveInvestigations({
           >
             <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${severityDot(inv.alert.severity)} ${
-                  inv.status === "active" ? "animate-pulse" : ""
-                }`}
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${severityDot(inv.alert.severity)} ${inv.status === "active" ? "animate-pulse" : ""
+                  }`}
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
@@ -503,10 +502,10 @@ export default function Dashboard({
 
   const displayAlert = analysisData
     ? {
-        ...topAlert,
-        score: analysisData.risk_score,
-        severity: analysisData.severity.toLowerCase() as any,
-      }
+      ...topAlert,
+      score: analysisData.analysis.risk_score,
+      severity: analysisData.analysis.severity.toLowerCase() as any,
+    }
     : topAlert;
 
   if (isRefreshing) {

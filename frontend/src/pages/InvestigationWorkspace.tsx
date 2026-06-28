@@ -97,10 +97,10 @@ export default function InvestigationWorkspace({
 
   const displayAlert = analysisData
     ? {
-        ...activeAlert,
-        score: analysisData.risk_score,
-        severity: analysisData.severity.toLowerCase() as any,
-      }
+      ...activeAlert,
+      score: analysisData.analysis.risk_score,
+      severity: analysisData.analysis.severity.toLowerCase() as any,
+    }
     : activeAlert;
 
   // Reset remediation state when the active alert changes
@@ -158,8 +158,8 @@ export default function InvestigationWorkspace({
                   key={tab.id}
                   layout
                   className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] cursor-pointer shrink-0 transition-colors duration-120 ${isActive
-                      ? "bg-elevated border border-border-custom/40 text-gray-200"
-                      : "text-gray-500 hover:text-gray-300 hover:bg-elevated/30"
+                    ? "bg-elevated border border-border-custom/40 text-gray-200"
+                    : "text-gray-500 hover:text-gray-300 hover:bg-elevated/30"
                     }`}
                   onClick={() => onSelectAlert(tab)}
                 >

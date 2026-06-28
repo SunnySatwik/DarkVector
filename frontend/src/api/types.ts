@@ -19,9 +19,32 @@ export interface AnalyzeRequest {
   };
 }
 
-export interface AnalyzeResponse {
-  anomaly_score: number;
+export interface TopFactor {
+  feature: string;
+  impact: number;
+  direction: string;
+}
+
+export interface AnalysisResult {
   risk_score: number;
+  anomaly_score: number;
   severity: string;
+  confidence: number;
   is_anomaly: boolean;
+}
+
+export interface Explanation {
+  summary: string;
+  top_factors: TopFactor[];
+}
+
+export interface Metadata {
+  model_version: string;
+  analysis_time_ms: number;
+}
+
+export interface AnalyzeResponse {
+  analysis: AnalysisResult;
+  explanation: Explanation;
+  metadata: Metadata;
 }

@@ -17,10 +17,11 @@ import CommandPalette from "./components/CommandPalette";
 import AiAnalystPanel from "./components/AiAnalystPanel";
 import { Alert, Workspace } from "./types";
 import { MOCK_WORKSPACES, MOCK_ALERTS } from "./mockData";
-
+import { useAnalysis } from "./hooks/useAnalysis";
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(MOCK_ALERTS[0]); // default to first critical alert
+  const { data: analysisData } = useAnalysis(selectedAlert);
   const [activeWorkspaceAlert, setActiveWorkspaceAlert] = useState<Alert | null>(null);
   const [openWorkspaceAlerts, setOpenWorkspaceAlerts] = useState<Alert[]>([]);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(false);
@@ -223,6 +224,7 @@ export default function App() {
         isOpen={isAiPanelOpen}
         onClose={() => setIsAiPanelOpen(false)}
         selectedAlert={selectedAlert}
+        analysis={analysisData ?? null}
         onIsolateNode={(nodeId) => {
           alert(
             `CRITICAL CONTAINMENT DISPATCHED:\n- Container isolation flag successfully written for [ ${nodeId} ]\n- Network interfaces suspended via gRPC agent daemon.`

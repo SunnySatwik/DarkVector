@@ -14,11 +14,13 @@ import {
   ShieldX,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { AnalyzeResponse } from "../api/types";
 
 interface AiAnalystPanelProps {
   isOpen: boolean;
   onClose: () => void;
   selectedAlert: Alert | null;
+  analysis: AnalyzeResponse | null;
   onIsolateNode?: (nodeId: string) => void;
 }
 
@@ -33,6 +35,7 @@ export default function AiAnalystPanel({
   isOpen,
   onClose,
   selectedAlert,
+  analysis,
   onIsolateNode,
 }: AiAnalystPanelProps) {
   const [activeModel, setActiveModel] = useState("Gemini-2.5-Security");
@@ -218,7 +221,7 @@ Would you like me to audit the historical execution tree of this node?`;
                   Explainable ML Analytics
                 </span>
                 <span className="text-[10px] font-mono text-red-400 bg-red-400/10 px-1.5 py-0.2 rounded border border-red-500/20">
-                  Anomaly Score: {(selectedAlert.score / 100).toFixed(3)}
+                  Anomaly Score: {analysis?.analysis.anomaly_score.toFixed(3) ?? "--"}
                 </span>
               </div>
 
@@ -301,11 +304,10 @@ Would you like me to audit the historical execution tree of this node?`;
                 </div>
 
                 <div
-                  className={`max-w-[92%] rounded-xl px-3 py-2 text-xs font-sans leading-relaxed border ${
-                    msg.sender === "user"
-                      ? "bg-blue-500/10 border-blue-500/30 text-gray-100"
-                      : "bg-[#161A22] border-[#23262F] text-gray-300"
-                  }`}
+                  className={`max-w-[92%] rounded-xl px-3 py-2 text-xs font-sans leading-relaxed border ${msg.sender === "user"
+                    ? "bg-blue-500/10 border-blue-500/30 text-gray-100"
+                    : "bg-[#161A22] border-[#23262F] text-gray-300"
+                    }`}
                 >
                   {/* Markdown inside AI response */}
                   <div className="markdown-body prose prose-invert prose-xs max-w-none">
