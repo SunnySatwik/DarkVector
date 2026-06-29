@@ -40,6 +40,7 @@ class Investigation(Base):
     risk_score: Mapped[float] = mapped_column(Float, nullable=False)
     confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    alert_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     analysis_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

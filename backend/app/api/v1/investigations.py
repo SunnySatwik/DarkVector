@@ -1,4 +1,4 @@
-from app.schemas.analyze import AnalysisResponse
+from app.schemas.analyze import AnalysisResponse, AnalyzeRequest
 from app.schemas.investigation import InvestigationDetailResponse
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -54,6 +54,9 @@ def get_investigation(
     return InvestigationDetailResponse(
         investigation=InvestigationResponse.model_validate(
             investigation
+        ),
+        alert=AnalyzeRequest.model_validate(
+            investigation.alert_json
         ),
         analysis=AnalysisResponse.model_validate(
             investigation.analysis_json

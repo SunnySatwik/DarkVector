@@ -74,17 +74,3 @@ class InvestigationRepository:
 
         db.delete(investigation)
         db.commit()
-    @staticmethod
-    def get_by_investigation_id(
-        db: Session,
-        investigation_id: str,
-    ) -> Investigation | None:
-
-        stmt = (
-            select(Investigation)
-            .where(
-                Investigation.investigation_id == investigation_id
-            )
-        )
-
-        return db.scalar(stmt)

@@ -6,7 +6,7 @@ from app.models.investigation import (
     InvestigationSeverity,
     InvestigationStatus,
 )
-from app.schemas.analyze import AnalysisResponse
+from app.schemas.analyze import AnalysisResponse, AnalyzeRequest
 
 class InvestigationResponse(BaseModel):
     investigation_id: str
@@ -36,4 +36,5 @@ class UpdateInvestigationRequest(BaseModel):
 
 class InvestigationDetailResponse(BaseModel):
     investigation: InvestigationResponse
+    alert: AnalyzeRequest
     analysis: AnalysisResponse

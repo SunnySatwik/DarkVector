@@ -48,3 +48,35 @@ export interface AnalyzeResponse {
   explanation: Explanation;
   metadata: Metadata;
 }
+
+export interface Investigation {
+  investigation_id: string;
+
+  alert_id: string;
+
+  title: string;
+
+  status: string;
+
+  severity: string;
+
+  risk_score: number;
+
+  confidence: number;
+
+  summary: string;
+
+  created_at: string;
+
+  updated_at: string;
+}
+
+export interface InvestigationListResponse {
+  investigations: Investigation[];
+}
+
+export interface InvestigationDetail {
+  investigation: Investigation;
+
+  analysis: AnalyzeResponse;
+}

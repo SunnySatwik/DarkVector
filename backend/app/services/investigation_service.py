@@ -54,6 +54,7 @@ class InvestigationService:
             risk_score=analysis.analysis.risk_score,
             confidence=analysis.analysis.confidence,
             summary=analysis.explanation.summary,
+            alert_json=alert,
             analysis_json=analysis.model_dump(mode="json"),
         )
 
