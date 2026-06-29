@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-
+from fastapi import HTTPException
 from app.dependencies.database import get_db
 from app.schemas.investigation import (
     InvestigationListResponse,
@@ -28,4 +28,26 @@ def list_investigations(
             InvestigationResponse.model_validate(inv)
             for inv in investigations
         ]
+    )
+@router.get(
+    "/{investigation_id}",
+    response_model=InvestigationResponse,
+)
+def get_investigation(
+    investigation_id: str,
+    db: Session = Depends(get_db),
+):
+    investigation = InvestigationService.get_investigation(
+        db,
+        investigation_id,
+    )
+
+    if investigation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Investigation not found",
+        )
+
+    return InvestigationResponse.model_validate(
+        investigation
     )

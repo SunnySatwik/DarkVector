@@ -71,3 +71,16 @@ class InvestigationService:
         """
 
         return InvestigationRepository.list_all(db)
+    @staticmethod
+    def get_investigation(
+        db: Session,
+        investigation_id: str,
+    ) -> Investigation | None:
+        """
+        Retrieve a single investigation by its public ID.
+        """
+
+        return InvestigationRepository.get_by_investigation_id(
+            db,
+            investigation_id,
+        )
