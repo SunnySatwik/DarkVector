@@ -4,10 +4,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1.events import router as event_router
 from app.api.v1.analyze import router as analyze_router
-
+from app.api.v1.investigations import (
+    router as investigation_router,
+)
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
+)
+
+app.include_router(
+    investigation_router,
+    prefix="/api/v1",
 )
 
 # Configure CORS

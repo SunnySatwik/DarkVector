@@ -3,6 +3,7 @@ from app.database.session import engine
 
 # Import models
 from app.models.event import Event
+from app.models.investigation import Investigation
 
 
 def init_db():

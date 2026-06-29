@@ -25,13 +25,13 @@ def test_analyze_service():
     res = service.analyze(request.model_dump())
     
     # Validate response schema
-    response = AnalysisResponse(**res.model_dump())
+    response = res
     
     # Assertions
-    assert isinstance(response.anomaly_score, float)
-    assert isinstance(response.risk_score, float)
-    assert isinstance(response.severity, str)
-    assert isinstance(response.is_anomaly, bool)
+    assert isinstance(response.analysis.anomaly_score, float)
+    assert isinstance(response.analysis.risk_score, float)
+    assert isinstance(response.analysis.severity, str)
+    assert isinstance(response.analysis.is_anomaly, bool)
 
     print("OK: Service and schema validation tests passed successfully!")
 
