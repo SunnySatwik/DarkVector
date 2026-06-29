@@ -1,10 +1,13 @@
+from app.schemas.analyze import AnalysisResponse
+from app.schemas.investigation import InvestigationDetailResponse
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.dependencies.database import get_db
 from app.schemas.investigation import (
-    InvestigationListResponse,
     InvestigationResponse,
+    InvestigationListResponse,
+    InvestigationDetailResponse,
 )
 from app.services.investigation_service import InvestigationService
 
@@ -31,7 +34,7 @@ def list_investigations(
     )
 @router.get(
     "/{investigation_id}",
-    response_model=InvestigationResponse,
+    response_model=InvestigationDetailResponse,
 )
 def get_investigation(
     investigation_id: str,
@@ -48,6 +51,11 @@ def get_investigation(
             detail="Investigation not found",
         )
 
-    return InvestigationResponse.model_validate(
-        investigation
+    return InvestigationDetailResponse(
+        investigation=InvestigationResponse.model_validate(
+            investigation
+        ),
+        analysis=AnalysisResponse.model_validate(
+            investigation.analysis_json
+        ),
     )
