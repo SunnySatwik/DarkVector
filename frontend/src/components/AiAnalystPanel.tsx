@@ -47,15 +47,33 @@ export default function AiAnalystPanel({
   // Initialize chat when alert changes
   useEffect(() => {
     if (selectedAlert) {
-      setMessages([
-        {
-          sender: "ai",
-          text: `### 🔍 DarkVector Vector AI Analysis: Incident ${selectedAlert.id}
+      if (!analysis) {
+        setMessages([
+          {
+            sender: "ai",
+            text: `### 🔍 Analyzing event ${selectedAlert.id}...
   
-I have analyzed the threat log originating from \`${selectedAlert.source}\`. The event has an **Isolation Forest anomaly score of ${(selectedAlert.score / 100).toFixed(3)}**, which strongly correlates with typical **malicious post-compromise activity**.
+Please wait while Vector computes the explainability metrics and containment recommendations.`,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+      } else {
+        const shapText = analysis.explanation.top_factors
+          ?.map((f) => `- **${f.feature}** accounts for **${(f.impact * 100).toFixed(0)}%** of the decision deviation.`)
+          .join("\n") || "- Lack of baseline behavioral data.";
+
+        setMessages([
+          {
+            sender: "ai",
+            text: `### 🔍 DarkVector Vector AI Analysis: Incident ${selectedAlert.id}
+  
+I have analyzed the threat log originating from \`${selectedAlert.source}\`. The event has an **Isolation Forest anomaly score of ${analysis.analysis.anomaly_score?.toFixed(3) ?? "--"}** and a **calibrated risk score of ${analysis.analysis.risk_score ?? "--"}**, which strongly correlates with typical **malicious post-compromise activity**.
   
 #### Key Indicators (SHAP Explainer):
-${selectedAlert.details.shapFactors?.map((f) => `- **${f.factor}** accounts for **${(f.impact * 100).toFixed(0)}%** of the decision deviation.`).join("\n") || "- Lack of baseline behavioral data."}
+${shapText}
+  
+#### Summary:
+${analysis.explanation.summary}
   
 #### Reconstructed Adversary Path:
 1. Spawning of atypical shell binaries via unverified parent container layer (\`${selectedAlert.details.parentProcess || "system-d"}\`).
@@ -65,9 +83,10 @@ ${selectedAlert.details.shapFactors?.map((f) => `- **${f.factor}** accounts for 
 - [ ] **Quarantine host node / container network** to stop command-and-control communication.
 - [ ] **Revoke credentials** associated with active process.
 - [ ] **Rebuild image state** with strict read-only root filesystems.`,
-          timestamp: new Date().toLocaleTimeString(),
-        },
-      ]);
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+      }
     } else {
       setMessages([
         {
@@ -84,7 +103,7 @@ Welcome to your AI forensics workspace. Select any active warning or critical al
         },
       ]);
     }
-  }, [selectedAlert]);
+  }, [selectedAlert, analysis]);
 
   // Scroll to bottom
   useEffect(() => {
@@ -217,50 +236,121 @@ Would you like me to audit the historical execution tree of this node?`;
           {selectedAlert && (
             <div className="p-4 border-b border-[#23262F] bg-black/20 shrink-0">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono font-semibold text-gray-500 uppercase tracking-wider">
+                <div className="text-[10px] font-sans font-semibold text-gray-500 uppercase tracking-wider">
                   Explainable ML Analytics
-                </span>
-                <span className="text-[10px] font-mono text-red-400 bg-red-400/10 px-1.5 py-0.2 rounded border border-red-500/20">
-                  Anomaly Score: {analysis?.analysis.anomaly_score.toFixed(3) ?? "--"}
-                </span>
+                </div>
+                <div className="flex gap-1.5 items-center">
+                  {analysis?.analysis?.severity && (
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                      analysis.analysis.severity.toUpperCase() === "CRITICAL" || analysis.analysis.severity.toUpperCase() === "HIGH"
+                        ? "text-red-400 bg-red-400/10 border-red-500/20"
+                        : analysis.analysis.severity.toUpperCase() === "MEDIUM"
+                        ? "text-amber-400 bg-amber-400/10 border-amber-500/20"
+                        : "text-green-400 bg-green-400/10 border-green-500/20"
+                    }`}>
+                      {analysis.analysis.severity}
+                    </span>
+                  )}
+                  <span className="text-[10px] font-mono text-red-400 bg-red-400/10 px-2 py-0.5 rounded border border-red-500/20">
+                    Score {analysis?.analysis?.anomaly_score?.toFixed(3) ?? "--"}
+                  </span>
+                  <span className="text-[10px] font-mono text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-500/20">
+                    {analysis?.metadata.model_version ?? "--"}
+                  </span>
+                </div>
               </div>
 
-              {/* Isolation Forest Metrics */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* Live Model Metrics */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
                 <div className="bg-[#161A22]/50 border border-[#23262F]/60 rounded p-2 text-center">
-                  <div className="text-[10px] font-mono text-gray-500">Isol. Forest Score</div>
-                  <div className="text-xs font-mono font-semibold text-orange-400 mt-1">
-                    {selectedAlert.details.isolationForestScore || "0.74"}
+                  <div className="text-[10px] font-mono text-gray-500">
+                    Risk Score
+                  </div>
+                  <div className="text-xs font-mono font-semibold text-red-400 mt-1">
+                    {analysis ? analysis.analysis.risk_score : "--"}
                   </div>
                 </div>
+
                 <div className="bg-[#161A22]/50 border border-[#23262F]/60 rounded p-2 text-center">
-                  <div className="text-[10px] font-mono text-gray-500">RAG Semantic Match</div>
+                  <div className="text-[10px] font-mono text-gray-500">
+                    Confidence
+                  </div>
+                  <div className="text-xs font-mono font-semibold text-emerald-400 mt-1">
+                    {analysis
+                      ? `${Math.round(analysis.analysis.confidence * 100)}%`
+                      : "--"}
+                  </div>
+                </div>
+
+                <div className="bg-[#161A22]/50 border border-[#23262F]/60 rounded p-2 text-center">
+                  <div className="text-[10px] font-mono text-gray-500">
+                    Inference
+                  </div>
                   <div className="text-xs font-mono font-semibold text-blue-400 mt-1">
-                    ChromaDB (98%)
+                    {analysis
+                      ? `${analysis.metadata.analysis_time_ms} ms`
+                      : "--"}
                   </div>
                 </div>
+              </div>
+              <div className="mb-4 rounded-lg bg-[#161A22]/40 border border-[#23262F]/50 p-3">
+
+                <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">
+                  Executive Summary
+                </div>
+
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  {analysis?.explanation.summary ??
+                    "Generating analysis..."}
+                </p>
+
               </div>
 
               {/* SHAP Values Feature Importance Progress list */}
               <div className="space-y-2">
                 <div className="text-[10px] font-mono text-gray-400">SHAP Parameter Weights:</div>
-                {selectedAlert.details.shapFactors?.map((f, i) => (
+                {analysis?.explanation.top_factors?.map((factor, i) => (
+
                   <div key={i} className="text-[11px]">
+
                     <div className="flex items-center justify-between text-gray-400 mb-1">
-                      <span className="truncate max-w-[280px]">{f.factor}</span>
-                      <span className="font-mono text-[10px] text-purple-400">
-                        {(f.impact * 100).toFixed(0)}%
+
+                      <span className="truncate max-w-[280px]">
+                        {factor.feature}
                       </span>
+
+                      <span
+                        className={`font-mono text-[10px] ${factor.direction === "increase"
+                          ? "text-red-400"
+                          : "text-emerald-400"
+                          }`}
+                      >
+                        {factor.impact !== undefined && factor.impact !== null ? `${(factor.impact * 100).toFixed(0)}%` : "--"}
+                      </span>
+
                     </div>
+
                     <div className="w-full bg-[#09090B] h-1.5 rounded-full overflow-hidden">
+
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${f.impact * 100}%` }}
-                        transition={{ duration: 0.8, delay: i * 0.1 }}
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full"
+                        animate={{
+                          width: `${factor.impact * 100}%`,
+                        }}
+                        transition={{
+                          duration: 0.7,
+                          delay: i * 0.08,
+                        }}
+                        className={`h-full rounded-full ${factor.direction === "increase"
+                          ? "bg-gradient-to-r from-red-500 to-orange-400"
+                          : "bg-gradient-to-r from-emerald-500 to-green-400"
+                          }`}
                       />
+
                     </div>
+
                   </div>
+
                 ))}
               </div>
 
