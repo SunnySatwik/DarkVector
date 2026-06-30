@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Alert, Severity } from "../types";
 import { MOCK_ALERTS } from "../mockData";
 import { useAnalysis } from "../hooks/useAnalysis";
-import { useInvestigation } from "../hooks/useInvestigation";
+import { useInvestigation } from "../hooks/useInvestigations";
 import WorkspaceView from "../components/workspace/WorkspaceView";
 
 // ─── Props ────────────────────────────────────────────────────────────────────

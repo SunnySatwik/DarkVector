@@ -77,6 +77,6 @@ export interface InvestigationListResponse {
 
 export interface InvestigationDetail {
   investigation: Investigation;
-
+  alert: AnalyzeRequest;
   analysis: AnalyzeResponse;
 }

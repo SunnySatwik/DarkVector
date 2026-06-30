@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { MOCK_ALERTS } from "../mockData";
 import { Alert } from "../types";
 import {
   Briefcase,
@@ -19,7 +18,9 @@ import {
 } from "lucide-react";
 import { PageHeader } from "../components/ui/DesignSystem";
 import { severityBadgeClass } from "../lib/severity";
-
+import { useInvestigations } from "../hooks/useInvestigations";
+import { mapInvestigationToCase } from "../lib/investigationMapper";
+import { useEffect } from "react";
 interface CaseItem {
   id: string;
   title: string;
@@ -30,45 +31,25 @@ interface CaseItem {
 }
 
 interface InvestigationsProps {
-  onSelectAlert?: (alert: Alert) => void;
+  onOpenInvestigation?: (
+    investigationId: string
+  ) => void;
 }
 
-export default function Investigations({ onSelectAlert }: InvestigationsProps) {
-  const [cases, setCases] = useState<CaseItem[]>([
-    {
-      id: "CASE-402",
-      title: "Container escape inside Kubernetes cluster",
-      assignedAnalyst: "sunnysatwik95",
-      status: "triage",
-      alert: MOCK_ALERTS[0],
-      createdTime: "2 hours ago",
-    },
-    {
-      id: "CASE-398",
-      title: "Large database download from central finance databases",
-      assignedAnalyst: "m_chen@enterprise.com",
-      status: "review",
-      alert: MOCK_ALERTS[1],
-      createdTime: "5 hours ago",
-    },
-    {
-      id: "CASE-391",
-      title: "Suspicious login with physical velocity anomaly",
-      assignedAnalyst: "sunnysatwik95",
-      status: "quarantine",
-      alert: MOCK_ALERTS[2],
-      createdTime: "12 hours ago",
-    },
-    {
-      id: "CASE-384",
-      title: "Kerberoasting credential harvesting on corporate AD domains",
-      assignedAnalyst: "j_thompson",
-      status: "resolved",
-      alert: MOCK_ALERTS[6],
-      createdTime: "Yesterday",
-    },
-  ]);
+export default function Investigations({
+  onOpenInvestigation,
+}: InvestigationsProps) {
+  const { data: investigations } = useInvestigations();
 
+  const [cases, setCases] = useState<CaseItem[]>([]);
+
+  useEffect(() => {
+    if (!investigations) return;
+
+    setCases(
+      investigations.map(mapInvestigationToCase)
+    );
+  }, [investigations]);
   const [activeCaseId, setActiveCaseId] = useState<string>("CASE-402");
 
   const selectedCase = cases.find((c) => c.id === activeCaseId) || cases[0];
@@ -124,11 +105,10 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
                           <div
                             key={c.id}
                             onClick={() => setActiveCaseId(c.id)}
-                            className={`p-4 rounded-lg border text-left cursor-pointer transition-all ${
-                              isSelected
-                                ? "bg-[#161A22] border-purple-500/60 shadow shadow-purple-500/10"
-                                : "bg-black/20 border-[#23262F]/60 hover:border-gray-500/40"
-                            }`}
+                            className={`p-4 rounded-lg border text-left cursor-pointer transition-all ${isSelected
+                              ? "bg-[#161A22] border-purple-500/60 shadow shadow-purple-500/10"
+                              : "bg-black/20 border-[#23262F]/60 hover:border-gray-500/40"
+                              }`}
                           >
                             <div className="flex items-center justify-between gap-2 text-[9px] font-mono text-gray-500">
                               <span>{c.id}</span>
@@ -239,11 +219,10 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
                   <button
                     key={st}
                     onClick={() => moveStatus(selectedCase.id, st)}
-                    className={`px-2 py-1 rounded text-[10px] font-mono font-semibold capitalize border cursor-pointer transition-all ${
-                      selectedCase.status === st
-                        ? "bg-purple-500/10 text-purple-400 border-purple-500/30"
-                        : "bg-transparent text-gray-500 border-[#23262F] hover:border-gray-500"
-                    }`}
+                    className={`px-2 py-1 rounded text-[10px] font-mono font-semibold capitalize border cursor-pointer transition-all ${selectedCase.status === st
+                      ? "bg-purple-500/10 text-purple-400 border-purple-500/30"
+                      : "bg-transparent text-gray-500 border-[#23262F] hover:border-gray-500"
+                      }`}
                   >
                     Set {st}
                   </button>
@@ -317,13 +296,15 @@ export default function Investigations({ onSelectAlert }: InvestigationsProps) {
           </div>
 
           <div className="border-t border-[#23262F]/40 pt-4 mt-4 space-y-3">
-            {onSelectAlert && (
+            {onOpenInvestigation && (
               <button
-                onClick={() => onSelectAlert(selectedCase.alert)}
+                onClick={() =>
+                  onOpenInvestigation(selectedCase.id)
+                }
                 className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-bold rounded-lg transition-all shadow shadow-purple-500/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 animate-pulse" />
-                <span>Open case</span>
+                <span>Open Case</span>
               </button>
             )}
             <div className="text-center">

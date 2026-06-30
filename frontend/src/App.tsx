@@ -12,7 +12,7 @@ import InvestigationWorkspace from "./pages/InvestigationWorkspace";
 import ThreatExplorer from "./pages/ThreatExplorer";
 import ThreatGraph from "./pages/ThreatGraph";
 import KnowledgeBase from "./pages/KnowledgeBase";
-
+import SavedInvestigationWorkspace from "./pages/SavedInvestigationWorkspace";
 import CommandPalette from "./components/CommandPalette";
 import AiAnalystPanel from "./components/AiAnalystPanel";
 import { Alert, Workspace } from "./types";
@@ -23,6 +23,8 @@ export default function App() {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(MOCK_ALERTS[0]); // default to first critical alert
   const { data: analysisData } = useAnalysis(selectedAlert);
   const [activeWorkspaceAlert, setActiveWorkspaceAlert] = useState<Alert | null>(null);
+  const [activeInvestigationId, setActiveInvestigationId] =
+    useState<string | null>(null);
   const [openWorkspaceAlerts, setOpenWorkspaceAlerts] = useState<Alert[]>([]);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
@@ -123,6 +125,22 @@ export default function App() {
 
   // Subpage router
   const renderContent = () => {
+    if (activeInvestigationId) {
+      return (
+        <SavedInvestigationWorkspace
+          investigationId={activeInvestigationId}
+          onCloseWorkspace={() => setActiveInvestigationId(null)}
+        />
+      );
+    }
+    if (activeInvestigationId) {
+      return (
+        <SavedInvestigationWorkspace
+          investigationId={activeInvestigationId}
+          onCloseWorkspace={() => setActiveInvestigationId(null)}
+        />
+      );
+    }
     if (activeWorkspaceAlert) {
       return (
         <InvestigationWorkspace
@@ -156,7 +174,14 @@ export default function App() {
       case "graph":
         return <ThreatGraph />;
       case "investigations":
-        return <Investigations onSelectAlert={handleOpenAlertInWorkspace} />;
+        return (
+          <Investigations
+            onOpenInvestigation={(id) => {
+              setActiveWorkspaceAlert(null);
+              setActiveInvestigationId(id);
+            }}
+          />
+        );
       case "knowledge":
         return <KnowledgeBase />;
       case "live":

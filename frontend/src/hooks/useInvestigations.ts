@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { getInvestigation } from "../api/investigations";
+import {
+    getInvestigation,
+    getInvestigations,
+} from "../api/investigations";
 
 export function useInvestigation(
     investigationId?: string
 ) {
-
     return useQuery({
-
         queryKey: [
             "investigation",
             investigationId,
@@ -21,7 +22,15 @@ export function useInvestigation(
         enabled: !!investigationId,
 
         staleTime: Infinity,
-
     });
+}
 
+export function useInvestigations() {
+    return useQuery({
+        queryKey: ["investigations"],
+
+        queryFn: getInvestigations,
+
+        staleTime: 30000,
+    });
 }
