@@ -13,6 +13,7 @@ export async function getInvestigations(): Promise<Investigation[]> {
 export async function getInvestigation(
     investigationId: string
 ): Promise<InvestigationDetail> {
+
     const response = await api.get(
         `/investigations/${investigationId}`
     );
