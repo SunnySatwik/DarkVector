@@ -305,9 +305,9 @@ export function VectorPanel({
               transition={{ duration: 0.22, delay: 0.08, ease: "easeOut" }}
               className="space-y-2.5"
             >
-              <p className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
+              <div className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
                 <ReactMarkdown>{reasoningText}</ReactMarkdown>
-              </p>
+              </div>
 
               {/* SHAP bar chart — compact */}
               {alert.details.shapFactors &&

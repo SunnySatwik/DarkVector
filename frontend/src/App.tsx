@@ -16,18 +16,29 @@ import SavedInvestigationWorkspace from "./pages/SavedInvestigationWorkspace";
 import CommandPalette from "./components/CommandPalette";
 import AiAnalystPanel from "./components/AiAnalystPanel";
 import { Alert, Workspace } from "./types";
-import { MOCK_WORKSPACES, MOCK_ALERTS } from "./mockData";
-import { useAnalysis } from "./hooks/useAnalysis";
+import { MOCK_WORKSPACES } from "./mockData";
+import { AnalyzeResponse } from "./api/types";
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
-  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(MOCK_ALERTS[0]); // default to first critical alert
-  const { data: analysisData } = useAnalysis(selectedAlert);
+
+  // ── Live workspace state ──────────────────────────────────────────────────
   const [activeWorkspaceAlert, setActiveWorkspaceAlert] = useState<Alert | null>(null);
-  const [activeInvestigationId, setActiveInvestigationId] =
-    useState<string | null>(null);
   const [openWorkspaceAlerts, setOpenWorkspaceAlerts] = useState<Alert[]>([]);
+
+  // ── Saved investigation state ─────────────────────────────────────────────
+  const [activeInvestigationId, setActiveInvestigationId] = useState<string | null>(null);
+
+  // ── AI Panel state — presentational only, never triggers inference ────────
+  // Updated by callbacks from InvestigationWorkspace; cleared on close.
+  const [panelAlert, setPanelAlert] = useState<Alert | null>(null);
+  const [panelAnalysis, setPanelAnalysis] = useState<AnalyzeResponse | null>(null);
+
+  // ── Overlays ──────────────────────────────────────────────────────────────
   const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+
+  // ── UI state ──────────────────────────────────────────────────────────────
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [prevSidebarState, setPrevSidebarState] = useState<boolean>(false);
@@ -107,7 +118,9 @@ export default function App() {
       setOpenWorkspaceAlerts((prev) => [...prev, alert]);
     }
     setActiveWorkspaceAlert(alert);
-    setSelectedAlert(alert);
+    // Update panel alert immediately; analysis arrives via onAnalysisReady callback
+    setPanelAlert(alert);
+    setPanelAnalysis(null);
   };
 
   const handleCloseAlertTab = (alertId: string) => {
@@ -116,11 +129,21 @@ export default function App() {
     if (activeWorkspaceAlert?.id === alertId) {
       if (remaining.length > 0) {
         setActiveWorkspaceAlert(remaining[0]);
-        setSelectedAlert(remaining[0]);
+        setPanelAlert(remaining[0]);
+        setPanelAnalysis(null);
       } else {
         setActiveWorkspaceAlert(null);
+        // Clear panel state — no stale alert should linger
+        setPanelAlert(null);
+        setPanelAnalysis(null);
       }
     }
+  };
+
+  // Called by InvestigationWorkspace whenever analysis resolves
+  const handleAnalysisReady = (alert: Alert, analysis: AnalyzeResponse) => {
+    setPanelAlert(alert);
+    setPanelAnalysis(analysis);
   };
 
   // Subpage router
@@ -129,7 +152,13 @@ export default function App() {
       return (
         <SavedInvestigationWorkspace
           investigationId={activeInvestigationId}
-          onCloseWorkspace={() => setActiveInvestigationId(null)}
+          onCloseWorkspace={() => {
+            setActiveInvestigationId(null);
+            // Clear transient analysis state on workspace close
+            setPanelAlert(null);
+            setPanelAnalysis(null);
+          }}
+          onAnalysisReady={handleAnalysisReady}
         />
       );
     }
@@ -140,7 +169,13 @@ export default function App() {
           openTabs={openWorkspaceAlerts}
           onSelectAlert={handleOpenAlertInWorkspace}
           onCloseAlertTab={handleCloseAlertTab}
-          onCloseWorkspace={() => setActiveWorkspaceAlert(null)}
+          onCloseWorkspace={() => {
+            setActiveWorkspaceAlert(null);
+            // Clear transient analysis state on workspace close
+            setPanelAlert(null);
+            setPanelAnalysis(null);
+          }}
+          onAnalysisReady={handleAnalysisReady}
         />
       );
     }
@@ -240,8 +275,8 @@ export default function App() {
       <AiAnalystPanel
         isOpen={isAiPanelOpen}
         onClose={() => setIsAiPanelOpen(false)}
-        selectedAlert={selectedAlert}
-        analysis={analysisData ?? null}
+        selectedAlert={panelAlert}
+        analysis={panelAnalysis}
         onIsolateNode={(nodeId) => {
           alert(
             `CRITICAL CONTAINMENT DISPATCHED:\n- Container isolation flag successfully written for [ ${nodeId} ]\n- Network interfaces suspended via gRPC agent daemon.`

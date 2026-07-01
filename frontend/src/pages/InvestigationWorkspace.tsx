@@ -2,15 +2,13 @@ import { useState, useEffect } from "react";
 import { Alert, Severity } from "../types";
 import { MOCK_ALERTS } from "../mockData";
 import { useAnalysis } from "../hooks/useAnalysis";
-import { useInvestigation } from "../hooks/useInvestigations";
+import { AnalyzeResponse } from "../api/types";
 import WorkspaceView from "../components/workspace/WorkspaceView";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface InvestigationWorkspaceProps {
-  activeAlert?: Alert;
-
-  investigationId?: string;
+  activeAlert: Alert;
 
   openTabs: Alert[];
 
@@ -19,17 +17,23 @@ interface InvestigationWorkspaceProps {
   onCloseAlertTab: (alertId: string) => void;
 
   onCloseWorkspace: () => void;
+
+  /**
+   * Called once when the ML analysis for the active alert resolves.
+   * App.tsx uses this to populate the AiAnalystPanel without owning useAnalysis itself.
+   */
+  onAnalysisReady?: (alert: Alert, analysis: AnalyzeResponse) => void;
 }
 
 // ─── Root Component ───────────────────────────────────────────────────────────
 
 export default function InvestigationWorkspace({
   activeAlert,
-  investigationId,
   openTabs,
   onSelectAlert,
   onCloseAlertTab,
   onCloseWorkspace,
+  onAnalysisReady,
 }: InvestigationWorkspaceProps) {
   const [quarantineStatus, setQuarantineStatus] = useState<
     "active" | "quarantining" | "quarantined"
@@ -37,32 +41,29 @@ export default function InvestigationWorkspace({
   const [quarantineProgress, setQuarantineProgress] = useState(0);
   const [isBlockApplied, setIsBlockApplied] = useState(false);
 
-  // NEW
-  const { data: investigationData } =
-    useInvestigation(investigationId);
-
-  // TEMPORARY GUARD
-  if (!activeAlert && !investigationData) {
-    return null;
-  }
-
-  const { data: analysisData, isPending, isError, refetch } =
-    useAnalysis(activeAlert!);
+  const { data: analysisData, isPending, isError, refetch } = useAnalysis(activeAlert);
 
   const displayAlert = analysisData
     ? {
-      ...activeAlert!,
-      score: analysisData.analysis.risk_score,
-      severity: analysisData.analysis.severity.toLowerCase() as Severity,
+        ...activeAlert,
+        score: analysisData.analysis.risk_score,
+        severity: analysisData.analysis.severity.toLowerCase() as Severity,
+      }
+    : activeAlert;
+
+  // Notify parent once analysis resolves so it can feed AiAnalystPanel
+  useEffect(() => {
+    if (analysisData) {
+      onAnalysisReady?.(activeAlert, analysisData);
     }
-    : activeAlert!;
+  }, [analysisData]);
 
   // Reset remediation state when the active alert changes
   useEffect(() => {
     setQuarantineStatus("active");
     setQuarantineProgress(0);
     setIsBlockApplied(false);
-  }, [activeAlert!.id]);
+  }, [activeAlert.id]);
 
   const handleIsolate = () => {
     setQuarantineStatus("quarantining");
@@ -80,7 +81,7 @@ export default function InvestigationWorkspace({
   };
 
   const relatedAlerts = MOCK_ALERTS.filter(
-    (a) => a.id !== activeAlert!.id && a.category === activeAlert!.category
+    (a) => a.id !== activeAlert.id && a.category === activeAlert.category
   ).slice(0, 3);
 
   return (

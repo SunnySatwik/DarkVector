@@ -498,15 +498,8 @@ export default function Dashboard({
 }: DashboardProps) {
   const topAlert = MOCK_ALERTS.find((a) => a.severity === "critical") ?? MOCK_ALERTS[0];
 
-  const { data: analysisData, isPending } = useAnalysis(topAlert);
-
-  const displayAlert = analysisData
-    ? {
-      ...topAlert,
-      score: analysisData.analysis.risk_score,
-      severity: analysisData.analysis.severity.toLowerCase() as any,
-    }
-    : topAlert;
+  const displayAlert = topAlert;
+  const isPending = false;
 
   if (isRefreshing) {
     return <DashboardSkeleton />;
