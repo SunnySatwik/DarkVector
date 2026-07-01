@@ -1,15 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { analyzeEvent } from "../api/analysis";
 import { Alert } from "../types";
+import { AnalyzeResponse } from "../api/types";
 
-export function useAnalysis(alert: Alert | null | undefined) {
-  return useQuery({
-    queryKey: ["analysis", alert?.id],
-    queryFn: async () => {
-      if (!alert) throw new Error("No alert selected");
+export function useAnalysis() {
+  const queryClient = useQueryClient();
+
+  return useMutation<AnalyzeResponse, Error, Alert>({
+    mutationFn: async (alert: Alert) => {
       return analyzeEvent(alert);
     },
-    enabled: !!alert?.id,
-    staleTime: Infinity,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["investigations"],
+      });
+    },
   });
 }

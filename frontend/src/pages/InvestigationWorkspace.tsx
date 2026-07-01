@@ -41,7 +41,20 @@ export default function InvestigationWorkspace({
   const [quarantineProgress, setQuarantineProgress] = useState(0);
   const [isBlockApplied, setIsBlockApplied] = useState(false);
 
-  const { data: analysisData, isPending, isError, refetch } = useAnalysis(activeAlert);
+  const mutation = useAnalysis();
+
+  useEffect(() => {
+    mutation.reset();
+    mutation.mutate(activeAlert);
+  }, [activeAlert.id]);
+
+  const analysisData = mutation.data;
+  const isPending = mutation.isPending;
+  const isError = mutation.isError;
+  const refetch = () => {
+    mutation.reset();
+    mutation.mutate(activeAlert);
+  };
 
   const displayAlert = analysisData
     ? {
@@ -56,7 +69,7 @@ export default function InvestigationWorkspace({
     if (analysisData) {
       onAnalysisReady?.(activeAlert, analysisData);
     }
-  }, [analysisData]);
+  }, [analysisData, activeAlert]);
 
   // Reset remediation state when the active alert changes
   useEffect(() => {

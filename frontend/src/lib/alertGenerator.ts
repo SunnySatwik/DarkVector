@@ -46,7 +46,7 @@ function randomIp(): string {
 }
 
 function generateId() {
-    return `AL-${Date.now()}-${randomInt(1000, 9999)}`;
+    return `AL-${crypto.randomUUID()}`;
 }
 
 function randomTimestamp() {

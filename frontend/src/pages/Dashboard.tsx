@@ -35,7 +35,6 @@ import {
   FlameKindling,
 } from "lucide-react";
 import { Badge, Skeleton } from "../components/ui/DesignSystem";
-import { useAnalysis } from "../hooks/useAnalysis";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -513,7 +512,12 @@ export default function Dashboard({
 }: DashboardProps) {
   const { alerts, addAlert } = useAlerts();
 
-  const topAlert = alerts.find((a) => a.severity === "critical") ?? alerts[0];
+  const topAlert =
+    alerts.find((a) => a.severity === "critical") ??
+    alerts.find((a) => a.severity === "high") ??
+    alerts.find((a) => a.severity === "medium") ??
+    alerts.find((a) => a.severity === "low") ??
+    alerts[0];
 
   const displayAlert = topAlert;
   const isPending = false;
