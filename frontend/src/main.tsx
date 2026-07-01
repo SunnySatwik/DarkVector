@@ -7,10 +7,14 @@ import "./index.css";
 
 import { queryClient } from "./lib/queryClient";
 
+import { AlertProvider } from "./context/AlertContext";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <AlertProvider>
+        <App />
+      </AlertProvider>
 
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

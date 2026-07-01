@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { MOCK_ALERTS } from "../mockData";
+import { useAlerts } from "../hooks/useAlerts";
 import { Alert } from "../types";
 import {
   ShieldAlert,
@@ -25,12 +25,13 @@ interface ThreatFeedProps {
 }
 
 export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedProps) {
+  const { alerts } = useAlerts();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [activeSeverity, setActiveSeverity] = useState<string>("all");
   const [expandedAlertId, setExpandedAlertId] = useState<string | null>(null);
 
-  const filteredAlerts = MOCK_ALERTS.filter((alert) => {
+  const filteredAlerts = alerts.filter((alert) => {
     const matchesSearch =
       alert.id.toLowerCase().includes(search.toLowerCase()) ||
       alert.source.toLowerCase().includes(search.toLowerCase()) ||

@@ -17,8 +17,10 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { MOCK_ALERTS } from "../mockData";
+import { useAlerts } from "../hooks/useAlerts";
 import { Alert } from "../types";
+import { MOCK_ALERTS } from "../mockData";
+import { generateRandomAlert } from "../lib/alertGenerator";
 import {
   ChevronRight,
   Sparkles,
@@ -160,28 +162,41 @@ function InlineMarkdown({ text }: { text: string }) {
 
 // ─── Page header ─────────────────────────────────────────────────────────────
 
-function PageHeader() {
+function PageHeader({
+  criticalCount,
+  onGenerateEvent,
+}: {
+  criticalCount: number;
+  onGenerateEvent?: () => void;
+}) {
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  const criticalCount = MOCK_ALERTS.filter(
-    (a) => (a.status === "open" || a.status === "investigating") && a.severity === "critical"
-  ).length;
-
   return (
     <motion.div {...fadeUp(0)} className="mb-8 font-sans">
       <p className="text-[12px] text-gray-500 mb-1">{greeting}</p>
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <h1 className="text-[28px] font-semibold text-gray-100 tracking-tight leading-none">
           What should I work on?
         </h1>
-        {criticalCount > 0 && (
-          <span className="flex items-center gap-1.5 text-[11px] text-red-400 font-sans shrink-0 mb-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-            {criticalCount} critical open
-          </span>
-        )}
+        <div className="flex items-center gap-3 shrink-0 mb-0.5">
+          {criticalCount > 0 && (
+            <span className="flex items-center gap-1.5 text-[11px] text-red-400 font-sans shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+              {criticalCount} critical open
+            </span>
+          )}
+          {onGenerateEvent && (
+            <button
+              onClick={onGenerateEvent}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/20 hover:border-purple-500/40 text-purple-400 text-xs font-mono font-medium transition-all duration-150 cursor-pointer shadow-sm shadow-purple-500/5"
+            >
+              <Zap className="w-3.5 h-3.5 animate-pulse" />
+              <span>Generate Event</span>
+            </button>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -496,10 +511,21 @@ export default function Dashboard({
   onOpenAiPanel,
   isRefreshing,
 }: DashboardProps) {
-  const topAlert = MOCK_ALERTS.find((a) => a.severity === "critical") ?? MOCK_ALERTS[0];
+  const { alerts, addAlert } = useAlerts();
+
+  const topAlert = alerts.find((a) => a.severity === "critical") ?? alerts[0];
 
   const displayAlert = topAlert;
   const isPending = false;
+
+  const criticalCount = alerts.filter(
+    (a) => (a.status === "open" || a.status === "investigating") && a.severity === "critical"
+  ).length;
+
+  const handleGenerateEvent = () => {
+    const alert = generateRandomAlert();
+    addAlert(alert);
+  };
 
   if (isRefreshing) {
     return <DashboardSkeleton />;
@@ -508,7 +534,7 @@ export default function Dashboard({
   return (
     <div className="max-w-3xl mx-auto px-6 py-8 pb-20 space-y-10">
       {/* Greeting */}
-      <PageHeader />
+      <PageHeader criticalCount={criticalCount} onGenerateEvent={handleGenerateEvent} />
 
       {/* 1 — Current highest priority investigation */}
       <PriorityInvestigation alert={displayAlert} onInvestigate={onSelectAlert} isPending={isPending} />
