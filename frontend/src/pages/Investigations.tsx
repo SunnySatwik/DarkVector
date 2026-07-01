@@ -1,62 +1,122 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "motion/react";
-import { Alert } from "../types";
 import {
   Briefcase,
   AlertOctagon,
   RefreshCw,
-  FolderLock,
-  CheckSquare,
   Sparkles,
   ShieldAlert,
-  ArrowRight,
   ShieldX,
-  Play,
-  User,
-  Activity,
   UserCheck,
+  Search,
+  ChevronRight,
+  Shield,
+  Activity,
 } from "lucide-react";
 import { PageHeader } from "../components/ui/DesignSystem";
 import { severityBadgeClass } from "../lib/severity";
 import { useInvestigations } from "../hooks/useInvestigations";
-import { mapInvestigationToCase } from "../lib/investigationMapper";
-import { useEffect } from "react";
-interface CaseItem {
-  id: string;
-  title: string;
-  assignedAnalyst: string;
-  status: "triage" | "review" | "quarantine" | "resolved";
-  alert: Alert;
-  createdTime: string;
-}
+import { CaseItem, mapInvestigationToCase } from "../lib/investigationMapper";
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface InvestigationsProps {
-  onOpenInvestigation?: (
-    investigationId: string
-  ) => void;
+  onOpenInvestigation?: (investigationId: string) => void;
 }
 
-export default function Investigations({
-  onOpenInvestigation,
-}: InvestigationsProps) {
-  const { data: investigations } = useInvestigations();
+// ─── Root Component ───────────────────────────────────────────────────────────
 
-  const [cases, setCases] = useState<CaseItem[]>([]);
+export default function Investigations({ onOpenInvestigation }: InvestigationsProps) {
+  const { data: investigations, isPending, isError } = useInvestigations();
 
-  useEffect(() => {
-    if (!investigations) return;
+  // Derive the canonical list from server data. Local state tracks optimistic status moves.
+  const serverCases = useMemo<CaseItem[]>(
+    () => (investigations ?? []).map(mapInvestigationToCase),
+    [investigations]
+  );
 
-    setCases(
-      investigations.map(mapInvestigationToCase)
-    );
-  }, [investigations]);
-  const [activeCaseId, setActiveCaseId] = useState<string>("CASE-402");
+  // Local optimistic overrides: { [id]: status }
+  const [statusOverrides, setStatusOverrides] = useState<
+    Record<string, CaseItem["status"]>
+  >({});
 
-  const selectedCase = cases.find((c) => c.id === activeCaseId) || cases[0];
+  const cases: CaseItem[] = useMemo(
+    () =>
+      serverCases.map((c) =>
+        statusOverrides[c.id] ? { ...c, status: statusOverrides[c.id] } : c
+      ),
+    [serverCases, statusOverrides]
+  );
+
+  // Search & filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState<"all" | CaseItem["status"]>("all");
+
+  const filteredCases = useMemo(() => {
+    return cases.filter((c) => {
+      const matchesSearch =
+        c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.id.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter = selectedFilter === "all" || c.status === selectedFilter;
+      return matchesSearch && matchesFilter;
+    });
+  }, [cases, searchQuery, selectedFilter]);
+
+  const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
+
+  const selectedCase =
+    filteredCases.find((c) => c.id === activeCaseId) ??
+    filteredCases[0] ??
+    null;
 
   const moveStatus = (caseId: string, newStatus: CaseItem["status"]) => {
-    setCases((prev) => prev.map((c) => (c.id === caseId ? { ...c, status: newStatus } : c)));
+    setStatusOverrides((prev) => ({ ...prev, [caseId]: newStatus }));
   };
+
+  // Compute counts for filter chips
+  const counts = useMemo(() => {
+    return {
+      all: cases.length,
+      triage: cases.filter((c) => c.status === "triage").length,
+      review: cases.filter((c) => c.status === "review").length,
+      quarantine: cases.filter((c) => c.status === "quarantine").length,
+      resolved: cases.filter((c) => c.status === "resolved").length,
+    };
+  }, [cases]);
+
+  // ─── Loading state ─────────────────────────────────────────────────────────
+
+  if (isPending) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Investigations"
+          subtitle="Track, review, and resolve active security incidents in your environment."
+        />
+        <div className="flex flex-col items-center justify-center h-64 text-gray-500 font-mono text-xs gap-3">
+          <RefreshCw className="w-5 h-5 animate-spin text-purple-500" />
+          <span>Loading investigations…</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Error state ───────────────────────────────────────────────────────────
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Investigations"
+          subtitle="Track, review, and resolve active security incidents in your environment."
+        />
+        <div className="flex flex-col items-center justify-center h-64 text-red-400 font-mono text-xs gap-3">
+          <AlertOctagon className="w-6 h-6 text-red-500 animate-pulse" />
+          <span>Failed to load investigations. Check the backend connection.</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -65,253 +125,326 @@ export default function Investigations({
         subtitle="Track, review, and resolve active security incidents in your environment."
       />
 
-      {/* Investigations Columns Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        {/* Kanban Board Column */}
-        <div className="xl:col-span-7 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            {/* Triage Column header */}
-            {(["triage", "review", "quarantine", "resolved"] as const).map((colStatus) => {
-              const colCases = cases.filter((c) => c.status === colStatus);
-              const columnNames = {
-                triage: { label: "Incoming alerts", color: "border-red-500/30 text-red-400" },
-                review: { label: "Under review", color: "border-purple-500/30 text-purple-400" },
-                quarantine: { label: "Contained", color: "border-orange-500/30 text-orange-400" },
-                resolved: { label: "Resolved", color: "border-green-500/30 text-green-400" },
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT COLUMN: Queue, Search, Filters (40%) */}
+        <div className="lg:col-span-5 space-y-4">
+          {/* Search & Filters Card */}
+          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4 space-y-3">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search investigations by title or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-black/40 border border-[#23262F] focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 text-xs font-mono pl-9 pr-4 py-2 rounded-lg text-gray-200 outline-none transition-all placeholder-gray-600"
+              />
+            </div>
+
+            {/* Filter Chips */}
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { key: "all", label: "All", count: counts.all },
+                { key: "triage", label: "Incoming", count: counts.triage },
+                { key: "review", label: "Review", count: counts.review },
+                { key: "quarantine", label: "Contained", count: counts.quarantine },
+                { key: "resolved", label: "Resolved", count: counts.resolved },
+              ].map((chip) => {
+                const isActive = selectedFilter === chip.key;
+                return (
+                  <button
+                    key={chip.key}
+                    onClick={() => setSelectedFilter(chip.key as any)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono rounded-md border cursor-pointer transition-all duration-150 ${
+                      isActive
+                        ? "bg-purple-500/10 text-purple-400 border-purple-500/40 font-semibold"
+                        : "bg-transparent text-gray-500 border-[#23262F] hover:border-gray-500/30 hover:text-gray-300"
+                    }`}
+                  >
+                    <span>{chip.label}</span>
+                    <span
+                      className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${
+                        isActive ? "bg-purple-500/20 text-purple-400" : "bg-black/40 text-gray-600"
+                      }`}
+                    >
+                      {chip.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Scrollable Investigation Queue */}
+          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-2 max-h-[640px] overflow-y-auto scrollbar-thin space-y-1.5">
+            {filteredCases.map((c) => {
+              const isSelected = selectedCase && c.id === selectedCase.id;
+              const statusLabels = {
+                triage: { text: "Incoming", dot: "bg-red-400" },
+                review: { text: "Review", dot: "bg-purple-400" },
+                quarantine: { text: "Contained", dot: "bg-orange-400" },
+                resolved: { text: "Resolved", dot: "bg-green-400" },
               };
+              const statusInfo = statusLabels[c.status];
 
               return (
                 <div
-                  key={colStatus}
-                  className="bg-[#111317] border border-[#23262F] rounded-xl p-3 flex flex-col justify-between min-h-[140px]"
+                  key={c.id}
+                  onClick={() => setActiveCaseId(c.id)}
+                  className={`p-3.5 rounded-lg border text-left cursor-pointer transition-all duration-150 flex items-center justify-between group ${
+                    isSelected
+                      ? "bg-[#161A22] border-purple-500/60 shadow shadow-purple-500/10"
+                      : "bg-black/10 border-transparent hover:bg-black/25 hover:border-[#23262F]"
+                  }`}
                 >
-                  <div>
-                    <div className="flex items-center justify-between border-b border-[#23262F]/50 pb-2 mb-2">
-                      <span
-                        className={`text-[10px] font-mono font-bold ${columnNames[colStatus].color}`}
-                      >
-                        {columnNames[colStatus].label}
-                      </span>
-                      <span className="text-[10px] font-mono text-gray-500 font-bold bg-black/40 border border-[#23262F] px-2 py-0.5 rounded">
-                        {colCases.length}
-                      </span>
+                  <div className="space-y-1.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 text-[9px] font-mono">
+                      <span className="text-purple-400 font-semibold">{c.id}</span>
+                      <span className="text-gray-600">•</span>
+                      <span className="text-gray-500">{c.createdTime}</span>
                     </div>
 
-                    {/* Cards */}
-                    <div className="space-y-2">
-                      {colCases.map((c) => {
-                        const isSelected = c.id === activeCaseId;
-                        return (
-                          <div
-                            key={c.id}
-                            onClick={() => setActiveCaseId(c.id)}
-                            className={`p-4 rounded-lg border text-left cursor-pointer transition-all ${isSelected
-                              ? "bg-[#161A22] border-purple-500/60 shadow shadow-purple-500/10"
-                              : "bg-black/20 border-[#23262F]/60 hover:border-gray-500/40"
-                              }`}
-                          >
-                            <div className="flex items-center justify-between gap-2 text-[9px] font-mono text-gray-500">
-                              <span>{c.id}</span>
-                              <span>{c.createdTime}</span>
-                            </div>
-                            <h4 className="text-xs font-semibold text-gray-200 truncate mt-1">
-                              {c.title}
-                            </h4>
-                            <div className="flex items-center justify-between gap-2 mt-2">
-                              <span
-                                className={`text-[8px] font-mono font-bold px-2 py-0.5 rounded ${severityBadgeClass(c.alert.severity)}`}
-                              >
-                                {c.alert.severity}
-                              </span>
-                              <span className="text-[9px] text-gray-500 truncate max-w-[80px]">
-                                @{c.assignedAnalyst}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {colCases.length === 0 && (
-                        <div className="py-8 text-center text-gray-600 font-mono text-[9px]">
-                          Empty queue
-                        </div>
-                      )}
+                    <h4 className="text-xs font-semibold text-gray-200 group-hover:text-white transition-colors truncate">
+                      {c.title}
+                    </h4>
+
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded ${severityBadgeClass(
+                          c.severity
+                        )}`}
+                      >
+                        {c.severity}
+                      </span>
+                      <span className="flex items-center gap-1 text-[9px] text-gray-500">
+                        <span className={`w-1 h-1 rounded-full ${statusInfo.dot}`} />
+                        <span>{statusInfo.text}</span>
+                      </span>
+                      <span className="text-[9px] text-gray-500 truncate max-w-[90px]">
+                        @{c.assignedAnalyst}
+                      </span>
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pl-3">
+                    <div className="text-right shrink-0">
+                      <div className="text-[10px] font-mono text-gray-500">Risk</div>
+                      <div
+                        className={`text-xs font-mono font-bold ${
+                          c.riskScore >= 80
+                            ? "text-red-400"
+                            : c.riskScore >= 55
+                            ? "text-orange-400"
+                            : "text-blue-400"
+                        }`}
+                      >
+                        {c.riskScore.toFixed(0)}%
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 group-hover:translate-x-0.5 transition-all duration-150 shrink-0" />
                   </div>
                 </div>
               );
             })}
-          </div>
 
-          {/* Quick Node Actions inside Board */}
-          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldX className="w-4 h-4 text-orange-400" />
-              <h3 className="text-xs font-mono font-semibold text-gray-200">
-                Active isolation playbook dispatcher
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-400">
-              <div className="bg-black/20 border border-[#23262F]/50 rounded-lg p-4 space-y-2">
-                <div className="font-semibold text-gray-200 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-400" />
-                  <span>Anomaly threshold</span>
-                </div>
-                <p className="text-[11px] text-gray-500">
-                  Automatically isolate containers when their anomaly score exceeds this threshold.
-                </p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="50"
-                    max="100"
-                    defaultValue="85"
-                    className="flex-1 accent-purple-500 bg-gray-900"
-                  />
-                  <span className="font-mono text-purple-400 font-bold">85%</span>
-                </div>
+            {filteredCases.length === 0 && (
+              <div className="py-12 text-center text-gray-600 font-mono text-xs flex flex-col items-center justify-center gap-2">
+                <Shield className="w-8 h-8 opacity-25" />
+                <span>No matching investigations found.</span>
               </div>
-
-              <div className="bg-black/20 border border-[#23262F]/50 rounded-lg p-4 flex flex-col justify-between">
-                <div>
-                  <div className="font-semibold text-gray-200">Manual containment</div>
-                  <p className="text-[11px] text-gray-500 mt-1">
-                    Immediately isolate the container and block all incoming and outgoing connections.
-                  </p>
-                </div>
-                <button
-                  onClick={() =>
-                    alert(`Issuing containment trigger to node: ${selectedCase.alert.source}`)
-                  }
-                  className="bg-orange-600/10 hover:bg-orange-600/20 border border-orange-500/30 text-orange-400 rounded-lg py-2 text-xs font-mono font-bold mt-2 cursor-pointer transition-colors"
-                >
-                  Isolate host [{selectedCase.alert.source.slice(0, 12)}]
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Selected Case Forensic Viewer Detail Panel */}
-        <div className="xl:col-span-5 bg-[#111317] border border-[#23262F] rounded-xl p-4 flex flex-col justify-between min-h-[460px]">
-          <div>
-            <div className="flex items-center justify-between border-b border-[#23262F] pb-2 mb-4">
-              <div className="flex items-center gap-2">
-                <Briefcase className="w-4.5 h-4.5 text-purple-400" />
-                <h3 className="text-xs font-mono font-semibold text-gray-200">
-                  Case details
-                </h3>
+        {/* RIGHT COLUMN: Case Detail / Investigation Workspace Preview (60%) */}
+        <div className="lg:col-span-7">
+          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-5 flex flex-col justify-between min-h-[560px] space-y-6">
+            {cases.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-gray-600 font-mono text-xs gap-3">
+                <Briefcase className="w-8 h-8 opacity-25" />
+                <span>No investigations found in environment.</span>
               </div>
-              <span className="text-[10px] font-mono text-gray-400 bg-black/40 border border-[#23262F] px-2 py-0.5 rounded">
-                {selectedCase.id}
-              </span>
-            </div>
-
-            {/* Case core metadata */}
-            <div className="space-y-4">
-              <div>
-                <span className="text-[10px] font-mono text-gray-500">Case title</span>
-                <h2 className="text-sm font-semibold text-gray-100 mt-0.5">{selectedCase.title}</h2>
+            ) : !selectedCase ? (
+              <div className="flex flex-col items-center justify-center py-24 text-gray-600 font-mono text-xs gap-3">
+                <ShieldAlert className="w-8 h-8 opacity-25" />
+                <span>Select an investigation to view details.</span>
               </div>
+            ) : (
+              <>
+                <div className="space-y-6">
+                  {/* Case Header Banner */}
+                  <div className="flex items-start justify-between border-b border-[#23262F] pb-4">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                          {selectedCase.id}
+                        </span>
+                        <span
+                          className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded ${severityBadgeClass(
+                            selectedCase.severity
+                          )}`}
+                        >
+                          {selectedCase.severity}
+                        </span>
+                      </div>
+                      <h2 className="text-base font-semibold text-gray-100 leading-snug">
+                        {selectedCase.title}
+                      </h2>
+                    </div>
 
-              {/* Status controller pills */}
-              <div className="flex flex-wrap gap-2">
-                {(["triage", "review", "quarantine", "resolved"] as const).map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => moveStatus(selectedCase.id, st)}
-                    className={`px-2 py-1 rounded text-[10px] font-mono font-semibold capitalize border cursor-pointer transition-all ${selectedCase.status === st
-                      ? "bg-purple-500/10 text-purple-400 border-purple-500/30"
-                      : "bg-transparent text-gray-500 border-[#23262F] hover:border-gray-500"
-                      }`}
-                  >
-                    Set {st}
-                  </button>
-                ))}
-              </div>
+                    <Briefcase className="w-5 h-5 text-purple-400 shrink-0 ml-4 mt-1" />
+                  </div>
 
-              {/* Assignee & Alert Details */}
-              <div className="grid grid-cols-2 gap-4 bg-black/20 border border-[#23262F]/50 rounded-lg p-4 text-[11px] font-mono">
-                <div>
-                  <span className="text-gray-500">Assigned to:</span>
-                  <div className="flex items-center gap-2 text-gray-300 font-semibold mt-1">
-                    <UserCheck className="w-3.5 h-3.5 text-purple-400" />
-                    <span>@{selectedCase.assignedAnalyst}</span>
-                  </div>
-                </div>
-                <div>
-                  <span className="text-gray-500">Affected host:</span>
-                  <div className="flex items-center gap-2 text-gray-300 mt-1">
-                    <Activity className="w-3.5 h-3.5 text-blue-400" />
-                    <span className="truncate max-w-[120px]">{selectedCase.alert.source}</span>
-                  </div>
-                </div>
-              </div>
+                  {/* Context Meta Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-black/20 border border-[#23262F]/50 rounded-lg p-3 space-y-1">
+                      <span className="text-[10px] font-mono text-gray-500">Assigned To</span>
+                      <div className="flex items-center gap-1.5 text-gray-300 font-mono text-xs">
+                        <UserCheck className="w-3.5 h-3.5 text-purple-400" />
+                        <span>@{selectedCase.assignedAnalyst}</span>
+                      </div>
+                    </div>
 
-              {/* Forensic Lineage Diagram */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-mono text-gray-500">
-                  Process tree
-                </span>
-                <div className="bg-[#09090B] border border-[#23262F] rounded-lg p-4 font-mono text-[11px] text-gray-400 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>systemd (PID 1)</span>
+                    <div className="bg-black/20 border border-[#23262F]/50 rounded-lg p-3 space-y-1">
+                      <span className="text-[10px] font-mono text-gray-500">Risk Assessment</span>
+                      <div className="flex items-center gap-1.5 text-gray-300 font-mono text-xs">
+                        <Activity className="w-3.5 h-3.5 text-blue-400" />
+                        <span
+                          className={`font-semibold ${
+                            selectedCase.riskScore >= 80
+                              ? "text-red-400"
+                              : selectedCase.riskScore >= 55
+                              ? "text-orange-400"
+                              : "text-blue-400"
+                          }`}
+                        >
+                          {selectedCase.riskScore.toFixed(1)}% Score
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-black/20 border border-[#23262F]/50 rounded-lg p-3 space-y-1">
+                      <span className="text-[10px] font-mono text-gray-500">Relative Time</span>
+                      <div className="text-gray-300 font-mono text-xs truncate">
+                        {selectedCase.createdTime}
+                      </div>
+                    </div>
                   </div>
-                  <div className="pl-4 border-l border-[#23262F] flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>containerd-shim (PID 8192)</span>
+
+                  {/* Status Controller Pills */}
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-mono text-gray-500">Set Investigation Status</span>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { key: "triage", label: "Incoming (Triage)" },
+                        { key: "review", label: "Under Review" },
+                        { key: "quarantine", label: "Contained" },
+                        { key: "resolved", label: "Resolved" },
+                      ].map((st) => {
+                        const isActive = selectedCase.status === st.key;
+                        return (
+                          <button
+                            key={st.key}
+                            onClick={() => moveStatus(selectedCase.id, st.key as any)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-semibold capitalize border cursor-pointer transition-all duration-150 ${
+                              isActive
+                                ? "bg-purple-500/10 text-purple-400 border-purple-500/40 shadow-sm"
+                                : "bg-transparent text-gray-500 border-[#23262F] hover:border-gray-500/40 hover:text-gray-300"
+                            }`}
+                          >
+                            {st.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="pl-8 border-l border-[#23262F] flex items-center gap-2 text-red-400 font-semibold">
-                    <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                    <span>
-                      {selectedCase.alert.details.processPath || "bash shell endpoint"} (PID 8210)
-                    </span>
-                  </div>
-                  {selectedCase.alert.details.commandLine && (
-                    <div className="pl-12 text-[10px] text-gray-500 break-all select-all bg-black/40 p-2 rounded border border-[#23262F]/40">
-                      {selectedCase.alert.details.commandLine}
+
+                  {/* AI Summary Section */}
+                  {selectedCase.summary && (
+                    <div className="bg-[#161A22]/20 border border-[#23262F] rounded-lg p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-purple-400/80">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>AI Reasoning Summary</span>
+                      </div>
+                      <p className="text-xs font-mono text-gray-400 leading-relaxed">
+                        {selectedCase.summary}
+                      </p>
                     </div>
                   )}
-                </div>
-              </div>
 
-              {/* SHAP explanation card */}
-              <div className="bg-[#161A22]/30 border border-[#23262F] rounded-lg p-4">
-                <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 mb-2">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Why this was flagged</span>
-                </div>
-                <div className="space-y-2 text-[10px] font-mono">
-                  {selectedCase.alert.details.shapFactors?.map((sh, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-gray-400">
-                      <span className="truncate max-w-[180px]">{sh.factor}</span>
-                      <span className="text-purple-400">
-                        +{(sh.impact * 100).toFixed(0)}% deviation
-                      </span>
+                  {/* Active Isolation Playbook Section */}
+                  <div className="bg-black/10 border border-[#23262F]/50 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center gap-2 border-b border-[#23262F]/40 pb-2">
+                      <ShieldX className="w-4 h-4 text-orange-400" />
+                      <h3 className="text-xs font-mono font-semibold text-gray-200">
+                        Active Containment Playbook Dispatcher
+                      </h3>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div className="border-t border-[#23262F]/40 pt-4 mt-4 space-y-3">
-            {onOpenInvestigation && (
-              <button
-                onClick={() =>
-                  onOpenInvestigation(selectedCase.id)
-                }
-                className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-bold rounded-lg transition-all shadow shadow-purple-500/20 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4 animate-pulse" />
-                <span>Open Case</span>
-              </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      {/* Anomaly Threshold Slider */}
+                      <div className="space-y-2">
+                        <div className="font-semibold text-gray-300 flex items-center justify-between font-mono text-[11px]">
+                          <span>Isolation Threshold</span>
+                          <span className="text-purple-400 font-bold">85%</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 font-mono leading-relaxed">
+                          Automatically isolate container when anomalous threshold is breached.
+                        </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <input
+                            type="range"
+                            min="50"
+                            max="100"
+                            defaultValue="85"
+                            className="flex-1 accent-purple-500 bg-gray-900 h-1 rounded-lg cursor-pointer"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Manual Isolation Trigger */}
+                      <div className="flex flex-col justify-between space-y-2">
+                        <div className="space-y-1">
+                          <div className="font-semibold text-gray-300 font-mono text-[11px]">
+                            Manual Network Isolation
+                          </div>
+                          <p className="text-[10px] text-gray-500 font-mono leading-relaxed">
+                            Deploy active isolation policy to segment target interfaces.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() =>
+                            alert(`Issuing containment trigger to case: ${selectedCase.id}`)
+                          }
+                          className="w-full bg-orange-600/10 hover:bg-orange-600/20 border border-orange-500/30 text-orange-400 rounded-lg py-2 text-[10px] font-mono font-bold cursor-pointer transition-colors shadow-sm"
+                        >
+                          Isolate Host [{selectedCase.id.slice(0, 12)}]
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Open Case Action Button */}
+                <div className="border-t border-[#23262F]/40 pt-4 mt-6 space-y-3">
+                  {onOpenInvestigation && (
+                    <button
+                      onClick={() => onOpenInvestigation(selectedCase.id)}
+                      className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-bold rounded-lg transition-all duration-150 shadow-lg hover:shadow-purple-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4 animate-pulse" />
+                      <span>Open Workspace Case</span>
+                    </button>
+                  )}
+                  <div className="text-center">
+                    <span className="text-[10px] font-mono text-gray-500">
+                      Vector aggregate intelligence matching active threat signature profile vectors.
+                    </span>
+                  </div>
+                </div>
+              </>
             )}
-            <div className="text-center">
-              <span className="text-[10px] font-mono text-gray-500">
-                Vector identified similarities with known Docker container escape behavior.
-              </span>
-            </div>
           </div>
         </div>
       </div>

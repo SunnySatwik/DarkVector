@@ -1,35 +1,65 @@
 import { Investigation } from "../api/types";
-import { Alert } from "../types";
+import { Severity } from "../types";
+
+// ─── View Model ───────────────────────────────────────────────────────────────
+// CaseItem is the UI-facing representation of an Investigation summary.
+// It is intentionally flat — no nested Alert shell.
 
 export interface CaseItem {
     id: string;
     title: string;
     assignedAnalyst: string;
     status: "triage" | "review" | "quarantine" | "resolved";
-    alert: Alert;
+    severity: Severity;
+    riskScore: number;
+    summary: string | null;
     createdTime: string;
 }
+
+// ─── Status mapping ───────────────────────────────────────────────────────────
+// Maps backend InvestigationStatus enum values to the UI kanban column keys.
+
+function mapStatus(
+    backendStatus: string
+): CaseItem["status"] {
+    switch (backendStatus.toUpperCase()) {
+        case "NEW":
+            return "triage";
+        case "INVESTIGATING":
+            return "review";
+        case "CONTAINED":
+            return "quarantine";
+        case "RESOLVED":
+        case "FALSE_POSITIVE":
+            return "resolved";
+        default:
+            return "triage";
+    }
+}
+
+// ─── Severity mapping ─────────────────────────────────────────────────────────
+
+function mapSeverity(backendSeverity: string): Severity {
+    const s = backendSeverity.toLowerCase();
+    if (s === "critical" || s === "high" || s === "medium" || s === "low") {
+        return s as Severity;
+    }
+    return "medium";
+}
+
+// ─── Mapper ───────────────────────────────────────────────────────────────────
 
 export function mapInvestigationToCase(
     investigation: Investigation
 ): CaseItem {
-
     return {
-
         id: investigation.investigation_id,
-
         title: investigation.title,
-
         assignedAnalyst: "Unassigned",
-
-        status: "triage",
-
-        alert: {} as Alert,
-
-        createdTime: new Date(
-            investigation.created_at
-        ).toLocaleString(),
-
+        status: mapStatus(investigation.status),
+        severity: mapSeverity(investigation.severity),
+        riskScore: investigation.risk_score,
+        summary: investigation.summary ?? null,
+        createdTime: new Date(investigation.created_at).toLocaleString(),
     };
-
 }

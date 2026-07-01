@@ -133,14 +133,6 @@ export default function App() {
         />
       );
     }
-    if (activeInvestigationId) {
-      return (
-        <SavedInvestigationWorkspace
-          investigationId={activeInvestigationId}
-          onCloseWorkspace={() => setActiveInvestigationId(null)}
-        />
-      );
-    }
     if (activeWorkspaceAlert) {
       return (
         <InvestigationWorkspace
