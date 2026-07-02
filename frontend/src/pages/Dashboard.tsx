@@ -167,9 +167,15 @@ function InlineMarkdown({ text }: { text: string }) {
 function PageHeader({
   criticalCount,
   onGenerateEvent,
+  onSeedDemoAlerts,
+  onClearGeneratedAlerts,
+  onResetAlerts,
 }: {
   criticalCount: number;
   onGenerateEvent?: () => void;
+  onSeedDemoAlerts?: () => void;
+  onClearGeneratedAlerts?: () => void;
+  onResetAlerts?: () => void;
 }) {
   const hour = new Date().getHours();
   const greeting =
@@ -182,13 +188,7 @@ function PageHeader({
         <h1 className="text-[28px] font-semibold text-gray-100 tracking-tight leading-none">
           What should I work on?
         </h1>
-        <div className="flex items-center gap-3 shrink-0 mb-0.5">
-          {criticalCount > 0 && (
-            <span className="flex items-center gap-1.5 text-[11px] text-red-400 font-sans shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-              {criticalCount} critical open
-            </span>
-          )}
+        <div className="flex flex-col items-end gap-2 shrink-0 mb-0.5">
           {onGenerateEvent && (
             <button
               onClick={onGenerateEvent}
@@ -197,6 +197,39 @@ function PageHeader({
               <Zap className="w-3.5 h-3.5 animate-pulse" />
               <span>Generate Event</span>
             </button>
+          )}
+
+          {/* Subtle Developer Controls */}
+          {(onSeedDemoAlerts || onClearGeneratedAlerts || onResetAlerts) && (
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[9px] font-mono text-gray-600 uppercase tracking-wider mr-1 select-none">
+                Dev:
+              </span>
+              {onSeedDemoAlerts && (
+                <button
+                  onClick={onSeedDemoAlerts}
+                  className="px-2 py-1 rounded border border-[#23262F] hover:border-gray-500 text-[10px] font-mono text-gray-400 hover:text-gray-200 transition-colors cursor-pointer"
+                >
+                  Seed Demo
+                </button>
+              )}
+              {onClearGeneratedAlerts && (
+                <button
+                  onClick={onClearGeneratedAlerts}
+                  className="px-2 py-1 rounded border border-[#23262F] hover:border-gray-500 text-[10px] font-mono text-gray-400 hover:text-gray-200 transition-colors cursor-pointer"
+                >
+                  Clear Generated
+                </button>
+              )}
+              {onResetAlerts && (
+                <button
+                  onClick={onResetAlerts}
+                  className="px-2 py-1 rounded border border-red-900/20 hover:border-red-500/30 text-[10px] font-mono text-red-400/80 hover:text-red-400 transition-colors cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -211,10 +244,23 @@ function PriorityInvestigation({
   onInvestigate,
   isPending = false,
 }: {
-  alert: Alert;
+  alert: Alert | null | undefined;
   onInvestigate: (a: Alert) => void;
   isPending?: boolean;
 }) {
+  if (!alert) {
+    return (
+      <motion.section {...fadeUp(0.06)}>
+        <p className="text-[10px] text-gray-600 font-sans tracking-widest uppercase mb-3">
+          Priority investigation
+        </p>
+        <div className="rounded-xl border border-border-custom/12 px-6 py-8 text-center bg-surface/5">
+          <p className="text-xs text-gray-500 font-sans">No alerts available to investigate. Seed demo alerts or generate an event to start.</p>
+        </div>
+      </motion.section>
+    );
+  }
+
   return (
     <motion.section {...fadeUp(0.06)}>
       {/* Section label */}
@@ -612,7 +658,13 @@ export default function Dashboard({
   isRefreshing,
   onOpenInvestigation,
 }: DashboardProps) {
-  const { alerts, addAlert } = useAlerts();
+  const {
+    alerts,
+    addAlert,
+    clearGeneratedAlerts,
+    resetAlerts,
+    seedDemoAlerts,
+  } = useAlerts();
   const { data: investigations, isPending: isInvestigationsPending } = useInvestigations();
 
   const topAlert =
@@ -642,7 +694,13 @@ export default function Dashboard({
   return (
     <div className="max-w-3xl mx-auto px-6 py-8 pb-20 space-y-10">
       {/* Greeting */}
-      <PageHeader criticalCount={criticalCount} onGenerateEvent={handleGenerateEvent} />
+      <PageHeader
+        criticalCount={criticalCount}
+        onGenerateEvent={handleGenerateEvent}
+        onSeedDemoAlerts={seedDemoAlerts}
+        onClearGeneratedAlerts={clearGeneratedAlerts}
+        onResetAlerts={resetAlerts}
+      />
 
       {/* 1 — Current highest priority investigation */}
       <PriorityInvestigation alert={displayAlert} onInvestigate={onSelectAlert} isPending={isPending} />
