@@ -15,7 +15,17 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   const [alerts, setAlerts] = useState<Alert[]>(MOCK_ALERTS);
 
   const addAlert = (alert: Alert) => {
-    setAlerts((prev) => [alert, ...prev]);
+    console.log("Adding", alert.id);
+
+    setAlerts(prev => {
+      console.log("Before", prev.length);
+
+      const next = [alert, ...prev];
+
+      console.log("After", next.length);
+
+      return next;
+    });
   };
 
   const removeAlert = (id: string) => {

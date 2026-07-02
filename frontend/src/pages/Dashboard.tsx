@@ -18,7 +18,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAlerts } from "../hooks/useAlerts";
+import { useInvestigations } from "../hooks/useInvestigations";
 import { Alert } from "../types";
+import { Investigation } from "../api/types";
 import { MOCK_ALERTS } from "../mockData";
 import { generateRandomAlert } from "../lib/alertGenerator";
 import {
@@ -42,26 +44,27 @@ interface DashboardProps {
   onSelectAlert: (alert: Alert) => void;
   onOpenAiPanel: () => void;
   isRefreshing: boolean;
+  onOpenInvestigation?: (id: string) => void;
 }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
-const ACTIVE_INVESTIGATIONS = [
-  {
-    id: "INV-042",
-    title: "Container shell escape via kube-system",
-    alert: MOCK_ALERTS[0],
-    updatedAt: "2 min ago",
-    status: "active" as const,
-  },
-  {
-    id: "INV-041",
-    title: "Multi-source DB dump — finance cluster",
-    alert: MOCK_ALERTS[1],
-    updatedAt: "28 min ago",
-    status: "active" as const,
-  },
-];
+function formatRelativeTime(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins} min ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  } catch (e) {
+    return "recently";
+  }
+}
 
 const RECENT_ACTIVITY = [
   {
@@ -330,15 +333,113 @@ function VectorBriefing({
   );
 }
 
-// ─── 3. Active Investigations ────────────────────────────────────────────────
+// ─── 3. Recent Alerts ────────────────────────────────────────────────────────
+
+function RecentAlerts({
+  alerts,
+  onSelectAlert,
+}: {
+  alerts: Alert[];
+  onSelectAlert: (alert: Alert) => void;
+}) {
+  return (
+    <motion.section {...fadeUp(0.14)}>
+      <div className="flex items-baseline justify-between mb-4">
+        <p className="text-[13px] font-medium text-gray-300 font-sans">Recent alerts</p>
+        <span className="text-[10px] font-mono text-gray-600">
+          {alerts.length} total
+        </span>
+      </div>
+
+      <div className="divide-y divide-border-custom/15">
+        {alerts.slice(0, 5).map((alert, i) => (
+          <motion.button
+            key={alert.id}
+            {...fadeUp(0.16 + i * 0.04)}
+            onClick={() => onSelectAlert(alert)}
+            className="w-full flex items-center justify-between py-3 group transition-colors duration-120 text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${severityDot(alert.severity)}`}
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-mono text-gray-500">
+                    {alert.id.length > 12 ? `${alert.id.slice(0, 12)}...` : alert.id}
+                  </span>
+                  <Badge variant={severityVariant(alert.severity)}>{alert.severity}</Badge>
+                </div>
+                <p className="text-[13px] text-gray-200 font-medium font-sans truncate group-hover:text-white transition-colors">
+                  {alert.type}
+                </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[10px] text-gray-500 font-mono">Source: {alert.source}</span>
+                  <span className="text-gray-700">·</span>
+                  <span className="text-[10px] text-gray-500 font-mono">
+                    {new Date(alert.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 shrink-0 ml-4 transition-colors" />
+          </motion.button>
+        ))}
+      </div>
+    </motion.section>
+  );
+}
+
+// ─── 4. Active Investigations ────────────────────────────────────────────────
 
 function ActiveInvestigations({
   investigations,
   onOpen,
+  isPending,
 }: {
-  investigations: typeof ACTIVE_INVESTIGATIONS;
-  onOpen: (a: Alert) => void;
+  investigations: Investigation[];
+  onOpen: (id: string) => void;
+  isPending: boolean;
 }) {
+  if (isPending) {
+    return (
+      <motion.section {...fadeUp(0.18)}>
+        <div className="flex items-baseline justify-between mb-4">
+          <p className="text-[13px] font-medium text-gray-300 font-sans">Active investigations</p>
+          <Skeleton width={30} height={10} />
+        </div>
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-4 py-3 border-b border-border-custom/15">
+              <Skeleton circle width={8} height={8} className="shrink-0" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton width={60} height={8} />
+                <Skeleton width="50%" height={12} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.section>
+    );
+  }
+
+  if (!investigations || investigations.length === 0) {
+    return (
+      <motion.section {...fadeUp(0.18)}>
+        <div className="flex items-baseline justify-between mb-4">
+          <p className="text-[13px] font-medium text-gray-300 font-sans">Active investigations</p>
+          <span className="text-[10px] font-mono text-gray-600">0 open</span>
+        </div>
+        <div className="border border-border-custom/15 rounded-xl p-6 text-center bg-surface/5">
+          <p className="text-xs text-gray-500 font-sans">No active investigations.</p>
+        </div>
+      </motion.section>
+    );
+  }
+
   return (
     <motion.section {...fadeUp(0.18)}>
       <div className="flex items-baseline justify-between mb-4">
@@ -351,27 +452,27 @@ function ActiveInvestigations({
       <div className="divide-y divide-border-custom/15">
         {investigations.map((inv, i) => (
           <motion.button
-            key={inv.id}
+            key={inv.investigation_id}
             {...fadeUp(0.2 + i * 0.04)}
-            onClick={() => onOpen(inv.alert)}
+            onClick={() => onOpen(inv.investigation_id)}
             className="w-full flex items-center justify-between py-3.5 group transition-colors duration-120 text-left cursor-pointer"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${severityDot(inv.alert.severity)} ${inv.status === "active" ? "animate-pulse" : ""
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${severityDot(inv.severity.toLowerCase())} ${inv.status.toLowerCase() === "investigating" || inv.status.toLowerCase() === "new" ? "animate-pulse" : ""
                   }`}
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-mono text-gray-500">{inv.id}</span>
-                  <Badge variant={severityVariant(inv.alert.severity)}>{inv.alert.severity}</Badge>
+                  <span className="text-[10px] font-mono text-gray-500">{inv.investigation_id}</span>
+                  <Badge variant={severityVariant(inv.severity.toLowerCase())}>{inv.severity}</Badge>
                 </div>
                 <p className="text-[13px] text-gray-200 font-medium font-sans truncate group-hover:text-white transition-colors">
                   {inv.title}
                 </p>
                 <div className="flex items-center gap-1 mt-0.5">
                   <Clock className="w-2.5 h-2.5 text-gray-600" />
-                  <span className="text-[10px] text-gray-500 font-mono">Updated {inv.updatedAt}</span>
+                  <span className="text-[10px] text-gray-500 font-mono">Updated {formatRelativeTime(inv.updated_at)}</span>
                 </div>
               </div>
             </div>
@@ -509,8 +610,10 @@ export default function Dashboard({
   onSelectAlert,
   onOpenAiPanel,
   isRefreshing,
+  onOpenInvestigation,
 }: DashboardProps) {
   const { alerts, addAlert } = useAlerts();
+  const { data: investigations, isPending: isInvestigationsPending } = useInvestigations();
 
   const topAlert =
     alerts.find((a) => a.severity === "critical") ??
@@ -528,6 +631,7 @@ export default function Dashboard({
 
   const handleGenerateEvent = () => {
     const alert = generateRandomAlert();
+    console.log("Generated", alert.id);
     addAlert(alert);
   };
 
@@ -551,8 +655,17 @@ export default function Dashboard({
 
       <div className="border-t border-border-custom/12" />
 
-      {/* 3 — Active investigations */}
-      <ActiveInvestigations investigations={ACTIVE_INVESTIGATIONS} onOpen={onSelectAlert} />
+      {/* 3 — Recent Alerts Feed */}
+      <RecentAlerts alerts={alerts} onSelectAlert={onSelectAlert} />
+
+      <div className="border-t border-border-custom/12" />
+
+      {/* 4 — Active investigations */}
+      <ActiveInvestigations
+        investigations={investigations ?? []}
+        onOpen={onOpenInvestigation ?? (() => {})}
+        isPending={isInvestigationsPending}
+      />
 
       <div className="border-t border-border-custom/12" />
 

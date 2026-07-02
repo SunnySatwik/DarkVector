@@ -10,7 +10,9 @@ from app.schemas.investigation import (
     InvestigationDetailResponse,
 )
 from app.services.investigation_service import InvestigationService
-
+from app.repositories.timeline_repository import TimelineRepository
+from app.services.timeline_service import TimelineService
+from app.schemas.timeline import TimelineEventResponse
 router = APIRouter(
     prefix="/investigations",
     tags=["Investigations"],
@@ -61,4 +63,20 @@ def get_investigation(
         analysis=AnalysisResponse.model_validate(
             investigation.analysis_json
         ),
+    )
+@router.get(
+    "/{investigation_id}/timeline",
+    response_model=list[TimelineEventResponse],
+)
+def get_timeline(
+    investigation_id: str,
+    db: Session = Depends(get_db),
+):
+
+    repository = TimelineRepository(db)
+
+    service = TimelineService(repository)
+
+    return service.get_timeline(
+        investigation_id
     )

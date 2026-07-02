@@ -26,6 +26,7 @@ interface ThreatFeedProps {
 
 export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedProps) {
   const { alerts } = useAlerts();
+  console.log("Dashboard alerts:", alerts.length);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [activeSeverity, setActiveSeverity] = useState<string>("all");
@@ -94,11 +95,10 @@ export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedP
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium capitalize transition-all cursor-pointer ${
-                activeCategory === cat
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium capitalize transition-all cursor-pointer ${activeCategory === cat
                   ? "bg-blue-500/15 text-blue-400 border border-blue-500/35"
                   : "bg-transparent text-gray-500 hover:text-gray-300"
-              }`}
+                }`}
             >
               {cat === "all" ? "All Logs" : cat}
             </button>
@@ -129,11 +129,10 @@ export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedP
           return (
             <div
               key={alert.id}
-              className={`bg-[#111317] border rounded-xl overflow-hidden transition-all duration-200 ${
-                isExpanded
+              className={`bg-[#111317] border rounded-xl overflow-hidden transition-all duration-200 ${isExpanded
                   ? "border-purple-500/40 shadow-lg shadow-purple-500/5"
                   : "border-[#23262F] hover:border-[#23262F]/80"
-              }`}
+                }`}
             >
               {/* Log Header Row */}
               <div
@@ -294,10 +293,10 @@ export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedP
                             </div>
                           </div>
                         )) || (
-                          <div className="text-gray-500 text-center font-mono py-6">
-                            No explainability vectors generated for this class.
-                          </div>
-                        )}
+                            <div className="text-gray-500 text-center font-mono py-6">
+                              No explainability vectors generated for this class.
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>

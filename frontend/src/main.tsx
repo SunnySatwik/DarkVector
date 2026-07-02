@@ -10,13 +10,11 @@ import { queryClient } from "./lib/queryClient";
 import { AlertProvider } from "./context/AlertContext";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AlertProvider>
-        <App />
-      </AlertProvider>
+  <QueryClientProvider client={queryClient}>
+    <AlertProvider>
+      <App />
+    </AlertProvider>
 
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
-  </StrictMode>
+    <ReactQueryDevtools initialIsOpen={false} />
+  </QueryClientProvider>
 );

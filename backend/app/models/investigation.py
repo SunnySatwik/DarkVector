@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Optional, Any, Dict
 
 from sqlalchemy import DateTime, Float, Integer, String, Enum as SQLEnum, Text, JSON
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 
@@ -24,7 +24,7 @@ class Investigation(Base):
     __tablename__ = "investigations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)
-    investigation_id: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
+    investigation_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     alert_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[InvestigationStatus] = mapped_column(
@@ -37,6 +37,7 @@ class Investigation(Base):
         nullable=False,
         default=InvestigationSeverity.LOW
     )
+    
     risk_score: Mapped[float] = mapped_column(Float, nullable=False)
     confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -53,3 +54,9 @@ class Investigation(Base):
         onupdate=datetime.utcnow,
         nullable=False
     )
+    timeline = relationship(
+        "TimelineEvent",
+        back_populates="investigation",
+        cascade="all, delete-orphan",
+        order_by="TimelineEvent.timestamp",
+     )

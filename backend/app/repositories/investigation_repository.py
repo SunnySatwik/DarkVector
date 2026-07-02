@@ -40,6 +40,21 @@ class InvestigationRepository:
         return db.scalar(stmt)
 
     @staticmethod
+    def get_by_alert_id(
+        db: Session,
+        alert_id: str,
+    ) -> Investigation | None:
+
+        stmt = (
+            select(Investigation)
+            .where(
+                Investigation.alert_id == alert_id
+            )
+        )
+
+        return db.scalar(stmt)
+
+    @staticmethod
     def list_all(
         db: Session,
         limit: int = 100,

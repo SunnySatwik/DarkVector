@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
@@ -9,26 +10,22 @@ from app.models.investigation import (
 )
 from app.repositories.investigation_repository import InvestigationRepository
 from app.schemas.analyze import AnalysisResponse
-
+from app.models.timeline import (
+    TimelineActor,
+    TimelineEventType,
+)
+from app.repositories.timeline_repository import TimelineRepository
+from app.services.timeline_service import TimelineService
 
 class InvestigationService:
     """Business logic for investigation lifecycle."""
 
     @staticmethod
     def _generate_investigation_id() -> str:
-        """
-        Temporary investigation ID generator.
-
-        Later we'll replace this with a database-backed
-        sequence like INV-2026-000001.
-        """
-
-        timestamp = datetime.now(UTC)
-
         return (
             f"INV-"
-            f"{timestamp.year}-"
-            f"{timestamp.strftime('%m%d%H%M%S')}"
+            f"{datetime.now(UTC):%y%m%d}-"
+            f"{uuid4().hex[:6].upper()}"
         )
 
     @staticmethod
@@ -40,6 +37,10 @@ class InvestigationService:
         """
         Create and persist an investigation from an analyzed alert.
         """
+        # Idempotency check: return existing if present
+        existing = InvestigationRepository.get_by_alert_id(db, alert["id"])
+        if existing:
+            return existing
 
         severity = InvestigationSeverity[
             analysis.analysis.severity.upper()
@@ -58,10 +59,37 @@ class InvestigationService:
             analysis_json=analysis.model_dump(mode="json"),
         )
 
-        return InvestigationRepository.create(
+        created = InvestigationRepository.create(
             db,
             investigation,
         )
+        timeline_repository = TimelineRepository(db)
+
+        timeline_service = TimelineService(
+            timeline_repository
+        )
+        timeline_service.add_event(
+            investigation_id=created.investigation_id,
+            event_type=TimelineEventType.ALERT_CREATED,
+            actor=TimelineActor.SYSTEM,
+            title="Alert received",
+            description=(
+                f"Security alert '{created.title}' "
+                f"triggered an investigation."
+            ),
+        )
+        timeline_service.add_event(
+            investigation_id=created.investigation_id,
+            event_type=TimelineEventType.ANALYSIS_COMPLETED,
+            actor=TimelineActor.AI,
+            title="AI analysis completed",
+            description=(
+                f"Risk Score: {created.risk_score:.1f} "
+                f"Severity: {created.severity.value}"
+            ),
+        )
+        return created
+
 
     @staticmethod
     def list_investigations(

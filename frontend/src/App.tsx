@@ -187,6 +187,10 @@ export default function App() {
             onSelectAlert={handleOpenAlertInWorkspace}
             onOpenAiPanel={() => setIsAiPanelOpen(true)}
             isRefreshing={isRefreshing}
+            onOpenInvestigation={(id) => {
+              setActiveWorkspaceAlert(null);
+              setActiveInvestigationId(id);
+            }}
           />
         );
       case "threats":
