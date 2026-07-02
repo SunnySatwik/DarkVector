@@ -80,3 +80,12 @@ export interface InvestigationDetail {
   alert: AnalyzeRequest;
   analysis: AnalyzeResponse;
 }
+
+export interface TimelineEvent {
+  id: string;
+  timestamp: string;
+  actor: string;
+  event_type: string;
+  title: string;
+  description: string;
+}

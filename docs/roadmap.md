@@ -120,3 +120,26 @@ Attack Chain Explanation
 Case Collaboration
 
 Executive Reports
+
+Dashboard
+    │
+    ├── Live Alert Feed
+    ├── Priority Investigation
+    ├── Active Investigations
+    └── Metrics
+
+↓
+
+Investigation Workspace
+    │
+    ├── AI Summary
+    ├── SHAP Explanation
+    ├── Threat Intelligence
+    ├── MITRE ATT&CK
+    ├── Timeline
+    ├── Evidence
+    └── Containment Actions
+
+↓
+
+Investigation Report

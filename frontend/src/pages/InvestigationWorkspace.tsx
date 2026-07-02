@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Alert, Severity } from "../types";
 import { MOCK_ALERTS } from "../mockData";
 import { useAnalysis } from "../hooks/useAnalysis";
+import { useInvestigations } from "../hooks/useInvestigations";
 import { AnalyzeResponse } from "../api/types";
 import WorkspaceView from "../components/workspace/WorkspaceView";
 
@@ -42,6 +43,10 @@ export default function InvestigationWorkspace({
   const [isBlockApplied, setIsBlockApplied] = useState(false);
 
   const mutation = useAnalysis();
+  const { data: investigations } = useInvestigations();
+
+  const matchedInv = investigations?.find((inv) => inv.alert_id === activeAlert.id);
+  const investigationId = matchedInv?.investigation_id;
 
   useEffect(() => {
     mutation.reset();
@@ -100,6 +105,7 @@ export default function InvestigationWorkspace({
   return (
     <WorkspaceView
       displayAlert={displayAlert}
+      investigationId={investigationId}
       openTabs={openTabs}
       onSelectAlert={onSelectAlert}
       onCloseAlertTab={onCloseAlertTab}

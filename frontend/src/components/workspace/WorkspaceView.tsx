@@ -17,6 +17,8 @@ import { EventStream } from "./EventStream";
 import { ProcessTree } from "./ProcessTree";
 import { EvidenceAttributes } from "./EvidenceAttributes";
 import { VectorPanel } from "./VectorPanel";
+import { TimelinePanel } from "./TimelinePanel";
+import { useTimeline } from "../../hooks/useInvestigations";
 import {
   severityBadgeVariant,
   severityDotClass,
@@ -24,6 +26,7 @@ import {
 
 export interface WorkspaceViewProps {
   displayAlert: Alert;
+  investigationId?: string;
   openTabs: Alert[];
   onSelectAlert: (alert: Alert) => void;
   onCloseAlertTab: (alertId: string) => void;
@@ -68,6 +71,7 @@ function SectionLabel({
 
 export default function WorkspaceView({
   displayAlert,
+  investigationId,
   openTabs,
   onSelectAlert,
   onCloseAlertTab,
@@ -82,6 +86,9 @@ export default function WorkspaceView({
   refetch,
   relatedAlerts,
 }: WorkspaceViewProps) {
+  const { data: timeline, isPending: isTimelinePending } = useTimeline(investigationId);
+  const showTimelinePending = isPending || (!!displayAlert.id && !investigationId) || isTimelinePending;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -338,6 +345,11 @@ export default function WorkspaceView({
                 <Badge variant="purple" className="shrink-0 ml-4">92% similarity</Badge>
               </div>
             </section>
+
+            {/* Investigation Timeline */}
+            <div className="border-t border-border-custom/12 pt-6 mt-6">
+              <TimelinePanel timeline={timeline} isPending={showTimelinePending} />
+            </div>
 
             {/* ── 4. Related incidents ───────────────────────────────────── */}
             {relatedAlerts.length > 0 && (

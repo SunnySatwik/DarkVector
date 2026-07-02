@@ -2,6 +2,7 @@ import { api } from "./client";
 import {
     Investigation,
     InvestigationDetail,
+    TimelineEvent,
 } from "./types";
 
 export async function getInvestigations(): Promise<Investigation[]> {
@@ -18,5 +19,14 @@ export async function getInvestigation(
         `/investigations/${investigationId}`
     );
 
+    return response.data;
+}
+
+export async function getTimeline(
+    investigationId: string
+): Promise<TimelineEvent[]> {
+    const response = await api.get(
+        `/investigations/${investigationId}/timeline`
+    );
     return response.data;
 }

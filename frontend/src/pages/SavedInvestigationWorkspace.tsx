@@ -61,6 +61,7 @@ export default function SavedInvestigationWorkspace({
     return (
         <WorkspaceView
             displayAlert={displayAlert}
+            investigationId={investigationId}
 
             openTabs={[displayAlert]}
 
