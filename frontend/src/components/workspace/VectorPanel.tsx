@@ -75,31 +75,32 @@ export function VectorPanel({
   >([]);
   const [isResponding, setIsResponding] = useState(false);
   const [conversationOpen, setConversationOpen] = useState(true);
+  const [isolateToast, setIsolateToast] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Generate context-aware summary based on alert category
+  // First-person analyst-voice summaries per category
   const categorySummary: Record<string, string> = {
-    process: "an unusual process spawned outside the expected execution chain. The container attempted to escape its namespace boundary.",
-    network: "unauthorized outbound data transfer was detected through an unrecognised egress path.",
-    authentication: "a login was recorded from a geographic location that does not match this account's historical pattern.",
-    system: "IAM policy drift allowed privilege escalation beyond the expected role boundary.",
+    process: "I spotted a process that spawned outside the normal execution chain for this container. This pattern is consistent with a namespace escape attempt — the binary wasn't part of the expected runtime.",
+    network: "I found an unauthorized outbound connection that doesn't match this server's known egress patterns. The destination hasn't been seen in previous traffic from this host.",
+    authentication: "I noticed a login from an unusual location that doesn't match this account's historical access pattern. The timing and geography are both out of character.",
+    system: "I detected IAM policy changes that opened up privilege escalation paths beyond the expected role boundary. This kind of drift is often the first step in a lateral movement chain.",
   };
 
   const summaryText =
     categorySummary[alert.category] ??
-    "an anomalous event was detected that deviates from baseline behavior.";
+    "I detected anomalous activity that significantly deviates from the established baseline for this source.";
 
-  // Generate reasoning based on SHAP factors
+  // Conversational reasoning from SHAP factors
   const topFactor = alert.details.shapFactors?.[0];
   const secondFactor = alert.details.shapFactors?.[1];
 
   const reasoningText = topFactor
-    ? `The primary driver of this score is **${topFactor.factor}** (${(topFactor.impact * 100).toFixed(0)}% influence)${
+    ? `The biggest red flag here is **${topFactor.factor}** — it accounts for ${(topFactor.impact * 100).toFixed(0)}% of why I flagged this event${
         secondFactor
-          ? `, followed by **${secondFactor.factor}** (${(secondFactor.impact * 100).toFixed(0)}%)`
+          ? `. **${secondFactor.factor}** (${(secondFactor.impact * 100).toFixed(0)}%) was the next strongest signal`
           : ""
-      }. These deviations pushed the anomaly score above the critical threshold.`
-    : "The model detected a pattern that deviates significantly from the historical baseline for this source.";
+      }. Together these pushed the risk score above the critical threshold.`
+    : "I flagged this because the overall pattern deviates significantly from what I'd normally expect from this source. There isn't a single dominant signal — it's the combination that's unusual.";
 
   // Seed initial Vector message when alert changes
   useEffect(() => {
@@ -110,7 +111,7 @@ export function VectorPanel({
     setChatMessages([
       {
         sender: "ai",
-        text: `I've reviewed the evidence for **${alert.id}**. Ask me anything about this case.`,
+        text: `I've looked at this case. There are a few things worth discussing — ask me anything about **${alert.id}**.`,
         time,
       },
     ]);
@@ -138,7 +139,7 @@ export function VectorPanel({
       let reply: string;
 
       if (q.includes("isolate") || q.includes("quarantine")) {
-        reply = `To isolate **\`${alert.source}\`**, I'll apply a Kubernetes NetworkPolicy with \`spec.policyTypes: [Egress]\` blocking all outbound routes. Use the **Isolate node** action to dispatch.`;
+        reply = `I'd recommend isolating **\`${alert.source}\`** now. Use the **Isolate node** action in the panel above — it'll cut the host's outbound connections and update the investigation status to Contained. Once isolated, review the process tree before deciding on a full image rebuild.`;
       } else if (
         q.includes("explain") ||
         q.includes("why") ||
@@ -147,23 +148,23 @@ export function VectorPanel({
         const factors = alert.details.shapFactors ?? [];
         reply =
           factors.length > 0
-            ? `The top contributing factors are:\n\n${factors
+            ? `Here's what stood out most:\n\n${factors
                 .map(
                   (f) =>
-                    `- **${f.factor}**: ${(f.impact * 100).toFixed(0)}% influence`
+                    `- **${f.factor}** — ${(f.impact * 100).toFixed(0)}% of the risk score`
                 )
-                .join("\n")}\n\nThese deviations pushed the score above the critical threshold.`
-            : "The anomaly model detected significant deviation from baseline. No SHAP data is available for this alert.";
+                .join("\n")}\n\nNone of these alone would be alarming, but together they're a clear outlier from this source's normal pattern.`
+            : "I flagged this based on the overall deviation from baseline — there isn't detailed attribution data for this specific alert.";
       } else if (
         q.includes("cve") ||
         q.includes("mitre") ||
         q.includes("threat")
       ) {
-        reply = `This incident correlates with **MITRE ATT&CK T1611** (Escape to Host) at 92% similarity and **CVE-2022-0847 (Dirty Pipe)** at 85%. The namespace manipulation technique is consistent with documented container breakout patterns.`;
+        reply = `This looks like it matches **MITRE ATT&CK T1611 – Escape to Host**. The namespace manipulation pattern is consistent with documented container breakout techniques. I'd check recent kernel patch levels on this host before closing the case.`;
       } else {
-        reply = `I've cross-referenced your query against the case context for **${alert.id}**. The source node \`${alert.source}\` is currently ${
-          quarantineStatus === "quarantined" ? "isolated" : "active"
-        }. Would you like me to draft a remediation script or generate a report?`;
+        reply = `Right now, **\`${alert.source}\`** is ${
+          quarantineStatus === "quarantined" ? "isolated — no further egress is possible from this node" : "still active, so the threat window is open"
+        }. What would you like to look into — the process chain, the network connections, or the MITRE mapping?`;
       }
 
       setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
@@ -382,15 +383,15 @@ export function VectorPanel({
                 </div>
               ) : (
                 <button
-                  onClick={onIsolate}
+                  onClick={() => { onIsolate(); setIsolateToast(false); }}
                   disabled={quarantineStatus !== "active"}
                   className={`shrink-0 ml-2 text-[11px] px-2.5 py-1 rounded-md border transition-all duration-120 cursor-pointer font-sans ${
                     quarantineStatus === "quarantined"
-                      ? "text-red-400 border-red-500/20 bg-red-500/5 cursor-default opacity-60"
+                      ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 cursor-default"
                       : "text-gray-400 border-border-custom/30 hover:text-gray-200 hover:border-gray-500/30 hover:bg-elevated/40 disabled:opacity-30 disabled:cursor-not-allowed"
                   }`}
                 >
-                  {quarantineStatus === "quarantined" ? "Isolated" : "Isolate"}
+                  {quarantineStatus === "quarantined" ? "✓ Host Isolated" : "Isolate"}
                 </button>
               )}
             </div>
@@ -426,6 +427,16 @@ export function VectorPanel({
           </motion.div>
         </div>
       </div>
+
+      {/* ── Isolation toast banner ── */}
+      {quarantineStatus === "quarantined" && (
+        <div className="mx-4 mb-0 mt-2 px-3 py-2 rounded-lg bg-emerald-500/8 border border-emerald-500/20 flex items-center gap-2 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+          <p className="text-[11px] text-emerald-400 font-sans">
+            Containment initiated — investigation status updated to <strong>CONTAINED</strong>.
+          </p>
+        </div>
+      )}
 
       {/* ── Pinned Conversation history ── */}
       <div className="border-t border-border-custom/15 bg-bg/50 px-4 py-3 shrink-0 flex flex-col min-h-0 max-h-[260px] md:max-h-[300px]">

@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
-import { Alert } from "../../types";
+import { Alert, Severity } from "../../types";
+import { ContextEnrichment } from "../../api/types";
 import {
   ChevronRight,
   X,
@@ -9,11 +10,12 @@ import {
   Activity,
   Target,
   Sparkles,
-  Layers,
+  Shield,
+  Crosshair,
+  FileText,
 } from "lucide-react";
 import { Badge, Skeleton } from "../ui/DesignSystem";
 import { EventTimeline } from "./EventTimeline";
-import { EventStream } from "./EventStream";
 import { ProcessTree } from "./ProcessTree";
 import { EvidenceAttributes } from "./EvidenceAttributes";
 import { VectorPanel } from "./VectorPanel";
@@ -26,7 +28,12 @@ import {
 
 export interface WorkspaceViewProps {
   displayAlert: Alert;
+  detectionSeverity: Severity;
   investigationId?: string;
+  investigationStatus?: string;
+  onUpdateStatus?: (status: string) => void;
+  onOpenReport?: (investigationId: string) => void;
+  analysisContext?: ContextEnrichment;
   openTabs: Alert[];
   onSelectAlert: (alert: Alert) => void;
   onCloseAlertTab: (alertId: string) => void;
@@ -69,9 +76,24 @@ function SectionLabel({
   );
 }
 
+// ─── Threat Intel reputation → badge variant ─────────────────────────────────
+function reputationVariant(reputation: string): "critical" | "high" | "medium" | "low" | "default" {
+  switch (reputation) {
+    case "malicious":  return "critical";
+    case "suspicious": return "high";
+    case "clean":      return "success" as unknown as "low"; // reuse success styling
+    default:           return "default";
+  }
+}
+
 export default function WorkspaceView({
   displayAlert,
+  detectionSeverity,
   investigationId,
+  investigationStatus,
+  onUpdateStatus,
+  onOpenReport,
+  analysisContext,
   openTabs,
   onSelectAlert,
   onCloseAlertTab,
@@ -162,7 +184,7 @@ export default function WorkspaceView({
       {/* ── Three-column body ──────────────────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden min-h-0 w-full">
 
-        {/* LEFT — Timeline + Event log */}
+        {/* LEFT — Timeline */}
         <motion.div
           {...fadeIn(0.06)}
           className="hidden md:flex flex-col shrink-0 grow-0 md:w-[22%] xl:w-[20%] 2xl:w-[18%] border-r border-border-custom/15 overflow-hidden"
@@ -174,15 +196,6 @@ export default function WorkspaceView({
               <h2 className="text-[11px] font-sans font-medium text-gray-500">Timeline</h2>
             </div>
             <EventTimeline alert={displayAlert} />
-          </div>
-
-          {/* Event log section */}
-          <div className="border-t border-border-custom/15 p-4 overflow-y-auto max-h-[44%] scrollbar-thin">
-            <div className="flex items-center gap-1.5 mb-3">
-              <Layers className="w-3.5 h-3.5 text-gray-500" />
-              <h2 className="text-[11px] font-sans font-medium text-gray-500">Event log</h2>
-            </div>
-            <EventStream alert={displayAlert} />
           </div>
         </motion.div>
 
@@ -197,15 +210,54 @@ export default function WorkspaceView({
             {/* ── 1. Incident hero — What happened? ─────────────────────── */}
             <section className="space-y-4">
               {/* Meta row */}
-              <div className="flex items-center gap-2 mb-2 flex-wrap h-[18px]">
+              <div className="flex items-center gap-3 mb-2 flex-wrap text-[10px] text-gray-500 font-sans">
                 {isPending ? (
-                  <Skeleton width={48} height={16} className="rounded-md animate-pulse-slow" />
+                  <Skeleton width={120} height={16} className="rounded-md animate-pulse-slow" />
                 ) : (
-                  <Badge variant={severityBadgeVariant(displayAlert.severity)}>
-                    {displayAlert.severity}
-                  </Badge>
+                  <div className="flex items-center gap-2 bg-surface/30 border border-border-custom/10 px-2 py-0.5 rounded-md shrink-0">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-gray-500 font-mono tracking-wide">Detection Severity:</span>
+                      <Badge variant={severityBadgeVariant(detectionSeverity)}>{detectionSeverity}</Badge>
+                    </div>
+                    <span className="text-gray-600 font-mono">→</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-purple-400 font-mono tracking-wide">AI Assessment:</span>
+                      <Badge variant={severityBadgeVariant(displayAlert.severity)}>{displayAlert.severity}</Badge>
+                    </div>
+                  </div>
                 )}
+                <span className="font-mono text-[10px] text-gray-600">|</span>
                 <span className="font-mono text-[10px] text-gray-500">{displayAlert.id}</span>
+                <span className="text-gray-700">·</span>
+                <div className="flex items-center gap-1 font-sans shrink-0">
+                  <span className="text-[9px] text-gray-500 font-mono tracking-wide">Status:</span>
+                  {investigationId ? (
+                    <select
+                      value={investigationStatus}
+                      onChange={(e) => onUpdateStatus?.(e.target.value)}
+                      className="bg-black/40 border border-border-custom/50 hover:border-border-custom rounded-md px-1.5 py-0.5 text-[10px] font-mono text-gray-300 hover:text-white outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/20 cursor-pointer transition-colors duration-120"
+                    >
+                      <option value="NEW" className="bg-[#111317] text-gray-300">NEW</option>
+                      <option value="INVESTIGATING" className="bg-[#111317] text-gray-300">INVESTIGATING</option>
+                      <option value="CONTAINED" className="bg-[#111317] text-gray-300">CONTAINED</option>
+                      <option value="RESOLVED" className="bg-[#111317] text-gray-300">RESOLVED</option>
+                    </select>
+                  ) : (
+                    <Badge variant="default">NEW</Badge>
+                  )}
+                </div>
+                {investigationId && onOpenReport && (
+                  <>
+                    <span className="text-gray-700">·</span>
+                    <button
+                      onClick={() => onOpenReport(investigationId)}
+                      className="flex items-center gap-1.5 text-[10px] text-purple-400 hover:text-purple-300 font-mono transition-colors duration-120 cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-purple-400" />
+                      <span>View Report</span>
+                    </button>
+                  </>
+                )}
                 <span className="text-gray-700">·</span>
                 <span className="flex items-center gap-1 text-[10px] text-gray-500 font-sans">
                   <Clock className="w-3 h-3" />
@@ -295,9 +347,7 @@ export default function WorkspaceView({
                 </div>
               ) : (
                 <p className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
-                  Vector has assessed the suspicious spawn indicators and correlated them
-                  against historical server configurations. The execution patterns match
-                  catalogued namespace manipulations and represent an active escape trajectory.
+                  I reviewed the signals from this source and found activity that doesn't match the expected behavior for this host. The combination of process lineage, network activity, and timing patterns pushed the score above the critical threshold.
                 </p>
               )}
 
@@ -329,21 +379,60 @@ export default function WorkspaceView({
                   </div>
                 )}
 
-              {/* Correlated vulnerability — inline, not in a card */}
-              <div className="flex items-baseline justify-between pt-1">
-                <div>
-                  <p className="text-[10px] text-gray-600 font-sans mb-0.5">
-                    Correlated vulnerability
-                  </p>
-                  <span className="text-[11px] font-mono text-blue-300/80">
-                    CVE-2022-0847 (Dirty Pipe)
-                  </span>
-                  <span className="text-[10px] text-gray-600 ml-2">
-                    — 85% match on privilege escalation trajectory
-                  </span>
+              {/* ── MITRE ATT&CK ── */}
+              {isPending ? (
+                <div className="flex items-center gap-3 pt-1">
+                  <Skeleton width={60} height={14} className="rounded animate-pulse-slow" />
+                  <Skeleton width={120} height={14} className="rounded animate-pulse-slow" />
+                  <Skeleton width={80} height={14} className="rounded animate-pulse-slow" />
                 </div>
-                <Badge variant="purple" className="shrink-0 ml-4">92% similarity</Badge>
-              </div>
+              ) : analysisContext?.mitre ? (
+                <div className="flex items-baseline justify-between pt-1">
+                  <div className="flex items-start gap-2">
+                    <Crosshair className="w-3.5 h-3.5 text-blue-400/70 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] text-gray-600 font-sans mb-0.5">
+                        MITRE ATT&amp;CK · {analysisContext.mitre.tactic}
+                      </p>
+                      <span className="text-[11px] font-mono text-blue-300/80">
+                        {analysisContext.mitre.technique_id}
+                      </span>
+                      <span className="text-[10px] text-gray-400 ml-2 font-sans">
+                        {analysisContext.mitre.technique_name}
+                      </span>
+                    </div>
+                  </div>
+                  <Badge variant="blue" className="shrink-0 ml-4">{analysisContext.mitre.tactic}</Badge>
+                </div>
+              ) : null}
+
+              {/* ── Threat Intelligence ── */}
+              {isPending ? (
+                <div className="flex items-center gap-3 pt-1">
+                  <Skeleton width={70} height={14} className="rounded animate-pulse-slow" />
+                  <Skeleton width={150} height={14} className="rounded animate-pulse-slow" />
+                </div>
+              ) : analysisContext?.threat_intelligence ? (
+                <div className="flex items-baseline justify-between pt-1">
+                  <div className="flex items-start gap-2">
+                    <Shield className="w-3.5 h-3.5 text-purple-400/70 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] text-gray-600 font-sans mb-0.5">
+                        Threat Intelligence · {analysisContext.threat_intelligence.category}
+                      </p>
+                      <span className="text-[10px] text-gray-400 font-sans">
+                        {analysisContext.threat_intelligence.summary}
+                      </span>
+                    </div>
+                  </div>
+                  <Badge
+                    variant={reputationVariant(analysisContext.threat_intelligence.reputation) as "critical" | "high" | "medium" | "low" | "default"}
+                    className="shrink-0 ml-4 capitalize"
+                  >
+                    {analysisContext.threat_intelligence.reputation}
+                  </Badge>
+                </div>
+              ) : null}
             </section>
 
             {/* Investigation Timeline */}

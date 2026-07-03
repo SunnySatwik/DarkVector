@@ -1,16 +1,11 @@
-import { useState } from "react";
 import {
   FileText,
-  Download,
-  Sparkles,
-  ShieldCheck,
-  CheckSquare,
   RefreshCw,
-  Layers,
+  AlertOctagon,
+  Eye,
 } from "lucide-react";
 import {
   Card,
-  Button,
   Badge,
   Table,
   TableHeader,
@@ -18,180 +13,135 @@ import {
   TableHead,
   TableCell,
   PageHeader,
-  PanelHeader,
 } from "../components/ui/DesignSystem";
+import { useInvestigations } from "../hooks/useInvestigations";
 
-interface SecurityReport {
-  id: string;
-  title: string;
-  type: "compliance" | "incident" | "weekly";
-  date: string;
-  status: "signed" | "draft";
-  author: string;
+interface ReportsProps {
+  onOpenReport?: (investigationId: string) => void;
 }
 
-export default function Reports() {
-  const [reports, setReports] = useState<SecurityReport[]>([]);
-  const [promptValue, setPromptValue] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+export default function Reports({ onOpenReport }: ReportsProps) {
+  const { data: investigations, isPending, isError } = useInvestigations();
 
-  // Seed default reports
-  useState(() => {
-    setReports([
-      {
-        id: "REP-912",
-        title: "Q2 security compliance report",
-        type: "compliance",
-        date: "2026-06-20",
-        status: "signed",
-        author: "sunnysatwik95",
-      },
-      {
-        id: "REP-842",
-        title: "Incident report: Unauthorized shell access on API server",
-        type: "incident",
-        date: "2026-06-25",
-        status: "draft",
-        author: "Vector-AI",
-      },
-      {
-        id: "REP-810",
-        title: "Weekly exposure check - Week 25",
-        type: "weekly",
-        date: "2026-06-22",
-        status: "signed",
-        author: "m_chen",
-      },
-    ]);
-  });
+  if (isPending) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Reports"
+          subtitle="View and print incident summaries and investigation reports."
+        />
+        <div className="flex flex-col items-center justify-center h-64 text-gray-500 font-mono text-xs gap-3">
+          <RefreshCw className="w-5 h-5 animate-spin text-purple-500" />
+          <span>Loading reports…</span>
+        </div>
+      </div>
+    );
+  }
 
-  const handleCreateReport = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!promptValue.trim()) return;
-
-    setIsGenerating(true);
-
-    setTimeout(() => {
-      const newRep: SecurityReport = {
-        id: `REP-${Math.floor(100 + Math.random() * 900)}`,
-        title: promptValue.length > 50 ? `${promptValue.slice(0, 50)}...` : promptValue,
-        type: promptValue.toLowerCase().includes("compliance") ? "compliance" : "incident",
-        date: new Date().toISOString().split("T")[0],
-        status: "draft",
-        author: "Vector-AI",
-      };
-      setReports((prev) => [newRep, ...prev]);
-      setPromptValue("");
-      setIsGenerating(false);
-    }, 1800);
-  };
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Reports"
+          subtitle="View and print incident summaries and investigation reports."
+        />
+        <div className="flex flex-col items-center justify-center h-64 text-red-400 font-mono text-xs gap-3">
+          <AlertOctagon className="w-6 h-6 text-red-500 animate-pulse" />
+          <span>Failed to load reports. Check the backend connection.</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Reports"
-        subtitle="View, search, or generate incident summaries and compliance reports."
+        subtitle="View and print incident summaries and investigation reports."
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Generate Report Prompt */}
-        <div className="lg:col-span-5">
-          <Card className="flex flex-col justify-between min-h-[300px]">
-            <form onSubmit={handleCreateReport} className="space-y-4">
-              <PanelHeader icon={Sparkles} title="Draft report with AI" iconClassName="text-purple-400" />
-
-              <div className="space-y-2 text-secondary-body">
-                <label className="font-medium text-gray-300 font-sans">Report description</label>
-                <textarea
-                  value={promptValue}
-                  onChange={(e) => setPromptValue(e.target.value)}
-                  placeholder="e.g., Incident report for suspicious database downloads on srv-db-01..."
-                  className="w-full h-24 bg-[#09090B] border border-border-custom/40 rounded-lg p-2.5 text-secondary-body text-gray-200 placeholder-gray-600 focus:outline-none focus:border-purple-500/40 transition-colors font-mono resize-none"
-                />
-                <p className="text-caption text-gray-500 font-sans">
-                  Vector will compile evidence and format a draft report.
-                </p>
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={isGenerating || !promptValue.trim()}
-                className="w-full justify-center py-2"
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Drafting report...</span>
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>Draft report</span>
-                  </>
-                )}
-              </Button>
-            </form>
-          </Card>
-        </div>
-
-        {/* Existing Reports List */}
-        <div className="lg:col-span-7">
+      <div className="grid grid-cols-1 gap-5">
+        <div className="col-span-1">
           <Card className="p-0">
             <div className="p-3.5 border-b border-border-custom/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-card-title font-sans font-medium text-gray-200">Recent reports</span>
+                <span className="text-card-title font-sans font-medium text-gray-200">Recent investigation reports</span>
               </div>
-              <Badge variant="default">{reports.length} reports</Badge>
+              <Badge variant="default">{(investigations ?? []).length} reports</Badge>
             </div>
 
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
-                  <TableHead>Report name</TableHead>
-                  <TableHead>Type</TableHead>
+                  <TableHead>Report Name</TableHead>
+                  <TableHead>Severity</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <tbody>
-                {reports.map((rep) => (
-                  <TableRow key={rep.id}>
-                    <TableCell className="font-mono text-mono-small text-gray-400">{rep.id}</TableCell>
+                {(investigations ?? []).map((inv) => (
+                  <TableRow key={inv.investigation_id}>
+                    <TableCell className="font-mono text-mono-small text-gray-400">
+                      {inv.investigation_id}
+                    </TableCell>
                     <TableCell>
-                      <div className="font-sans font-medium text-secondary-body text-gray-200">{rep.title}</div>
+                      <div className="font-sans font-medium text-secondary-body text-gray-200">
+                        Incident Report: {inv.title}
+                      </div>
                       <div className="text-caption text-gray-500 font-mono mt-0.5">
-                        {rep.date} • Created by {rep.author}
+                        Created: {new Date(inv.created_at).toLocaleString()}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge
                         className="capitalize"
                         variant={
-                          rep.type === "incident"
+                          inv.severity.toLowerCase() === "critical"
                             ? "critical"
-                            : rep.type === "compliance"
-                              ? "purple"
-                              : "blue"
+                            : inv.severity.toLowerCase() === "high"
+                              ? "high"
+                              : inv.severity.toLowerCase() === "medium"
+                                ? "medium"
+                                : "low"
                         }
                       >
-                        {rep.type}
+                        {inv.severity.toLowerCase()}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className="capitalize" variant={rep.status === "signed" ? "success" : "default"}>
-                        {rep.status}
+                      <Badge
+                        className="capitalize"
+                        variant={inv.status.toLowerCase() === "resolved" ? "success" : "default"}
+                      >
+                        {inv.status.toLowerCase()}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="xs" title="Download report PDF">
-                        <Download className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        {onOpenReport && (
+                          <button
+                            onClick={() => onOpenReport(inv.investigation_id)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-mono rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all cursor-pointer"
+                            title="View Report"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>View Report</span>
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
+                {(investigations ?? []).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12 text-gray-500 font-mono text-xs">
+                      No investigation reports found in the environment.
+                    </TableCell>
+                  </TableRow>
+                )}
               </tbody>
             </Table>
           </Card>

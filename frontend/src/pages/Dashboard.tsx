@@ -19,7 +19,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAlerts } from "../hooks/useAlerts";
 import { useInvestigations } from "../hooks/useInvestigations";
-import { Alert } from "../types";
+import { Alert, Severity } from "../types";
 import { Investigation } from "../api/types";
 import { MOCK_ALERTS } from "../mockData";
 import { generateRandomAlert } from "../lib/alertGenerator";
@@ -29,10 +29,7 @@ import {
   ArrowRight,
   Clock,
   ShieldAlert,
-  CheckCircle2,
-  User,
   Activity,
-  AlertTriangle,
   Zap,
   FlameKindling,
 } from "lucide-react";
@@ -66,63 +63,19 @@ function formatRelativeTime(isoString: string): string {
   }
 }
 
-const RECENT_ACTIVITY = [
-  {
-    id: "act-1",
-    icon: ShieldAlert,
-    text: "Alert AL-8491 escalated to critical",
-    time: "2m ago",
-    color: "text-red-400",
-  },
-  {
-    id: "act-2",
-    icon: CheckCircle2,
-    text: "INV-039 marked resolved by a_patel",
-    time: "14m ago",
-    color: "text-emerald-400",
-  },
-  {
-    id: "act-3",
-    icon: User,
-    text: "m_chen@enterprise.com flagged for impossible travel",
-    time: "34m ago",
-    color: "text-orange-400",
-  },
-  {
-    id: "act-4",
-    icon: Activity,
-    text: "Sensor heartbeat OK — 148 nodes reporting",
-    time: "1h ago",
-    color: "text-gray-500",
-  },
-  {
-    id: "act-5",
-    icon: AlertTriangle,
-    text: "AL-7102 IAM privilege escalation under review",
-    time: "2h ago",
-    color: "text-yellow-400",
-  },
-];
-
 const AI_BRIEFING =
-  "Two critical incidents demand immediate attention. A container shell escape on **srv-k8s-api-01** has active connections to a known malicious address (194.26.135.84). Simultaneously, an unusual 4.8 GB database download is ongoing from the finance cluster. Recommend isolating `srv-k8s-api-01` and pausing database traffic before the data transfer completes.";
-
-const SUGGESTED_NEXT = {
-  label: "Isolate srv-k8s-api-01",
-  description: "Apply network quarantine to block active egress to malicious hosts",
-  alert: MOCK_ALERTS[0],
-};
+  "I'm seeing two things that need your attention. There's an active shell escape on **srv-k8s-api-01** with an open connection to `194.26.135.84` — that IP is flagged as malicious. At the same time, an unusually large database transfer (4.8 GB) is ongoing from the finance cluster. I'd isolate `srv-k8s-api-01` first and pause the database traffic before the transfer completes.";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function severityVariant(s: string): "critical" | "high" | "medium" | "low" | "default" {
+function severityVariant(s: Severity): "critical" | "high" | "medium" | "low" | "default" {
   if (s === "critical") return "critical";
   if (s === "high") return "high";
   if (s === "medium") return "medium";
   return "low";
 }
 
-function severityDot(s: string) {
+function severityDot(s: Severity) {
   if (s === "critical") return "bg-red-500";
   if (s === "high") return "bg-orange-500";
   if (s === "medium") return "bg-yellow-500";
@@ -505,13 +458,13 @@ function ActiveInvestigations({
           >
             <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${severityDot(inv.severity.toLowerCase())} ${inv.status.toLowerCase() === "investigating" || inv.status.toLowerCase() === "new" ? "animate-pulse" : ""
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${severityDot(inv.severity)} ${inv.status.toLowerCase() === "investigating" || inv.status.toLowerCase() === "new" ? "animate-pulse" : ""
                   }`}
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-[10px] font-mono text-gray-500">{inv.investigation_id}</span>
-                  <Badge variant={severityVariant(inv.severity.toLowerCase())}>{inv.severity}</Badge>
+                  <Badge variant={severityVariant(inv.severity)}>{inv.severity}</Badge>
                 </div>
                 <p className="text-[13px] text-gray-200 font-medium font-sans truncate group-hover:text-white transition-colors">
                   {inv.title}
@@ -530,82 +483,6 @@ function ActiveInvestigations({
   );
 }
 
-// ─── 4. Suggested next action ─────────────────────────────────────────────────
-
-function SuggestedNext({
-  action,
-  onTrigger,
-}: {
-  action: typeof SUGGESTED_NEXT;
-  onTrigger: (a: Alert) => void;
-}) {
-  const [dismissed, setDismissed] = useState(false);
-
-  return (
-    <AnimatePresence>
-      {!dismissed && (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-          className="border border-border-custom/15 rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        >
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="w-6 h-6 rounded-lg bg-primary-blue/8 flex items-center justify-center shrink-0 mt-0.5">
-              <Zap className="w-3 h-3 text-primary-blue" />
-            </div>
-            <div className="min-w-0 font-sans">
-              <p className="text-[10px] text-primary-blue tracking-wide font-medium mb-1">Suggested next action</p>
-              <p className="text-[13px] font-semibold text-gray-100">{action.label}</p>
-              <p className="text-[12px] text-gray-500 mt-0.5 leading-relaxed">{action.description}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-            <button
-              onClick={() => setDismissed(true)}
-              className="text-[11px] text-gray-500 hover:text-gray-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-elevated/40 cursor-pointer font-sans"
-            >
-              Dismiss
-            </button>
-            <button
-              onClick={() => onTrigger(action.alert)}
-              className="flex items-center gap-1.5 text-[11px] font-medium font-sans text-gray-200 border border-border-custom/30 bg-elevated/60 hover:bg-elevated hover:border-border-custom/60 px-3.5 py-1.5 rounded-lg transition-all duration-120 cursor-pointer group"
-            >
-              Open case
-              <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ─── 5. Recent activity ──────────────────────────────────────────────────────
-
-function RecentActivity({ items }: { items: typeof RECENT_ACTIVITY }) {
-  return (
-    <motion.section {...fadeUp(0.26)}>
-      <p className="text-[13px] font-medium text-gray-300 font-sans mb-4">Recent activity</p>
-      <div className="space-y-0 divide-y divide-border-custom/12">
-        {items.map((item, i) => {
-          const Icon = item.icon;
-          return (
-            <div key={item.id} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
-              <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${item.color}`} />
-              <p className="text-[12px] text-gray-400 leading-relaxed flex-1 font-sans">{item.text}</p>
-              <span className="text-[10px] text-gray-600 shrink-0 font-mono whitespace-nowrap">
-                {item.time}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </motion.section>
-  );
-}
 
 // ─── Loading skeleton ────────────────────────────────────────────────────────
 
@@ -725,15 +602,6 @@ export default function Dashboard({
         isPending={isInvestigationsPending}
       />
 
-      <div className="border-t border-border-custom/12" />
-
-      {/* Bottom row: Suggested action + Recent activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10">
-        <div className="space-y-4">
-          <SuggestedNext action={SUGGESTED_NEXT} onTrigger={onSelectAlert} />
-        </div>
-        <RecentActivity items={RECENT_ACTIVITY} />
-      </div>
     </div>
   );
 }

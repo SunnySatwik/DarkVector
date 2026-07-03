@@ -50,9 +50,31 @@ class Metadata(BaseModel):
     analysis_time_ms: float
 
 
+# ---------- Context Enrichment ----------
+
+class MitreInfo(BaseModel):
+    technique_id: str
+    technique_name: str
+    tactic: str
+    description: str
+
+
+class ThreatIntelInfo(BaseModel):
+    reputation: str
+    confidence: int
+    category: str
+    summary: str
+
+
+class ContextEnrichment(BaseModel):
+    mitre: MitreInfo
+    threat_intelligence: ThreatIntelInfo
+
+
 # ---------- Final Response ----------
 
 class AnalysisResponse(BaseModel):
     analysis: AnalysisResult
     explanation: Explanation
     metadata: Metadata
+    context: Optional[ContextEnrichment] = None

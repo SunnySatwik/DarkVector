@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Alert, Severity } from "../types";
 import { MOCK_ALERTS } from "../mockData";
 import { useAnalysis } from "../hooks/useAnalysis";
-import { useInvestigations } from "../hooks/useInvestigations";
+import { useInvestigations, useUpdateInvestigationStatus } from "../hooks/useInvestigations";
 import { AnalyzeResponse } from "../api/types";
 import WorkspaceView from "../components/workspace/WorkspaceView";
 
@@ -24,6 +24,7 @@ interface InvestigationWorkspaceProps {
    * App.tsx uses this to populate the AiAnalystPanel without owning useAnalysis itself.
    */
   onAnalysisReady?: (alert: Alert, analysis: AnalyzeResponse) => void;
+  onOpenReport?: (id: string) => void;
 }
 
 // ─── Root Component ───────────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ export default function InvestigationWorkspace({
   onCloseAlertTab,
   onCloseWorkspace,
   onAnalysisReady,
+  onOpenReport,
 }: InvestigationWorkspaceProps) {
   const [quarantineStatus, setQuarantineStatus] = useState<
     "active" | "quarantining" | "quarantined"
@@ -47,6 +49,8 @@ export default function InvestigationWorkspace({
 
   const matchedInv = investigations?.find((inv) => inv.alert_id === activeAlert.id);
   const investigationId = matchedInv?.investigation_id;
+
+  const updateStatusMutation = useUpdateInvestigationStatus(investigationId);
 
   useEffect(() => {
     mutation.reset();
@@ -61,12 +65,12 @@ export default function InvestigationWorkspace({
     mutation.mutate(activeAlert);
   };
 
-  const displayAlert = analysisData
+  const displayAlert: Alert = analysisData
     ? {
-        ...activeAlert,
-        score: analysisData.analysis.risk_score,
-        severity: analysisData.analysis.severity.toLowerCase() as Severity,
-      }
+      ...activeAlert,
+      score: analysisData.analysis.risk_score,
+      severity: analysisData.analysis.severity.toLowerCase() as Severity,
+    }
     : activeAlert;
 
   // Notify parent once analysis resolves so it can feed AiAnalystPanel
@@ -91,6 +95,8 @@ export default function InvestigationWorkspace({
         if (prev >= 100) {
           clearInterval(interval);
           setQuarantineStatus("quarantined");
+          // Automatically update investigation status and record timeline event
+          updateStatusMutation.mutate("CONTAINED");
           return 100;
         }
         return prev + 20;
@@ -105,7 +111,12 @@ export default function InvestigationWorkspace({
   return (
     <WorkspaceView
       displayAlert={displayAlert}
+      detectionSeverity={activeAlert.severity}
       investigationId={investigationId}
+      investigationStatus={matchedInv?.status ?? "NEW"}
+      onUpdateStatus={(status) => updateStatusMutation.mutate(status)}
+      onOpenReport={onOpenReport}
+      analysisContext={analysisData?.context ?? undefined}
       openTabs={openTabs}
       onSelectAlert={onSelectAlert}
       onCloseAlertTab={onCloseAlertTab}

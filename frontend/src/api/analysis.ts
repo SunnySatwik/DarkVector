@@ -1,3 +1,4 @@
+import { Severity } from "../types";
 import { api } from "./client";
 import { AnalyzeRequest, AnalyzeResponse } from "./types";
 
@@ -10,5 +11,12 @@ export async function analyzeEvent(
         payload
     );
 
-    return response.data;
+    const data = response.data as AnalyzeResponse;
+    return {
+        ...data,
+        analysis: {
+            ...data.analysis,
+            severity: data.analysis.severity.toLowerCase() as Severity,
+        },
+    };
 }

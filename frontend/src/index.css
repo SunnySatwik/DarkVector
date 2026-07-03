@@ -7,15 +7,24 @@
   --font-display: "Geist", sans-serif;
 
   /* Premium Grayscale/Calm Theme Colors */
-  --color-bg: #090b11;
-  --color-surface: #11141b;
-  --color-elevated: #171c26;
-  --color-border-custom: #232833;
+  --color-bg: var(--bg-color);
+  --color-surface: var(--surface-color);
+  --color-elevated: var(--elevated-color);
+  --color-border-custom: var(--border-custom-color);
   --color-primary-blue: #5a8eff;
   --color-secondary-purple: #846cff;
   --color-success-green: #10b981;
   --color-warning-orange: #f59e0b;
   --color-critical-red: #ff5a5f;
+
+  /* Gray colors overridden dynamically */
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
 
   /* Custom Typography System Tokens */
   --text-display: 2rem;
@@ -38,6 +47,36 @@
   --animate-scanline: scanline 6s linear infinite;
 }
 
+:root {
+  --bg-color: #090b11;
+  --surface-color: #11141b;
+  --elevated-color: #171c26;
+  --border-custom-color: #232833;
+
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+}
+
+:root.light {
+  --bg-color: #f8fafc;
+  --surface-color: #ffffff;
+  --elevated-color: #f1f5f9;
+  --border-custom-color: #cbd5e1;
+
+  --gray-100: #0f172a;
+  --gray-200: #1e293b;
+  --gray-300: #334155;
+  --gray-400: #475569;
+  --gray-500: #64748b;
+  --gray-600: #94a3b8;
+  --gray-700: #cbd5e1;
+}
+
 @keyframes scanline {
   0% {
     transform: translateY(-100%);
@@ -51,15 +90,17 @@
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(35, 40, 51, 0.4) transparent;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
 }
 
 html,
 body {
-  background-color: var(--color-bg);
-  color: #e2e8f0;
+  background-color: var(--bg-color);
+  color: var(--gray-200);
   font-family: var(--font-sans);
   overflow-x: hidden;
 }
+
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {

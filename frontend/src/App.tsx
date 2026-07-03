@@ -7,12 +7,12 @@ import Investigations from "./pages/Investigations";
 import LiveEvents from "./pages/LiveEvents";
 import Models from "./pages/Models";
 import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
 import InvestigationWorkspace from "./pages/InvestigationWorkspace";
 import ThreatExplorer from "./pages/ThreatExplorer";
 import ThreatGraph from "./pages/ThreatGraph";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import SavedInvestigationWorkspace from "./pages/SavedInvestigationWorkspace";
+import InvestigationReportView from "./pages/InvestigationReportView";
 import CommandPalette from "./components/CommandPalette";
 import AiAnalystPanel from "./components/AiAnalystPanel";
 import { Alert, Workspace } from "./types";
@@ -28,6 +28,7 @@ export default function App() {
 
   // ── Saved investigation state ─────────────────────────────────────────────
   const [activeInvestigationId, setActiveInvestigationId] = useState<string | null>(null);
+  const [activeReportId, setActiveReportId] = useState<string | null>(null);
 
   // ── AI Panel state — presentational only, never triggers inference ────────
   // Updated by callbacks from InvestigationWorkspace; cleared on close.
@@ -55,34 +56,6 @@ export default function App() {
 
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace>(MOCK_WORKSPACES[0]);
 
-  // Seed notification list
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif-1",
-      type: "alert" as const,
-      title: "Pod Shell Escape Attempt",
-      message: "Critical process bash launched inside kube-system container srv-k8s-api-01.",
-      time: "2m ago",
-      read: false,
-    },
-    {
-      id: "notif-2",
-      type: "info" as const,
-      title: "Sensor Heartbeat Updated",
-      message: "All 148 global active threat vectors successfully aggregated in ChromaDB.",
-      time: "15m ago",
-      read: false,
-    },
-    {
-      id: "notif-3",
-      type: "success" as const,
-      title: "Node Isolation Succeeded",
-      message: "Kubernetes network isolation policy successfully deployed for workstation-hr-12.",
-      time: "1h ago",
-      read: true,
-    },
-  ]);
-
   // Support CMD+K hotkey for Command Palette globally
   useEffect(() => {
     function handleGlobalKeys(e: KeyboardEvent) {
@@ -101,15 +74,6 @@ export default function App() {
     setTimeout(() => {
       setIsRefreshing(false);
     }, 800);
-  };
-
-  // Notification actions
-  const handleMarkRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  };
-
-  const handleClearAll = () => {
-    setNotifications([]);
   };
 
   // Workspace interactions
@@ -148,6 +112,14 @@ export default function App() {
 
   // Subpage router
   const renderContent = () => {
+    if (activeReportId) {
+      return (
+        <InvestigationReportView
+          investigationId={activeReportId}
+          onClose={() => setActiveReportId(null)}
+        />
+      );
+    }
     if (activeInvestigationId) {
       return (
         <SavedInvestigationWorkspace
@@ -159,6 +131,7 @@ export default function App() {
             setPanelAnalysis(null);
           }}
           onAnalysisReady={handleAnalysisReady}
+          onOpenReport={setActiveReportId}
         />
       );
     }
@@ -176,6 +149,7 @@ export default function App() {
             setPanelAnalysis(null);
           }}
           onAnalysisReady={handleAnalysisReady}
+          onOpenReport={setActiveReportId}
         />
       );
     }
@@ -203,7 +177,12 @@ export default function App() {
       case "explorer":
         return <ThreatExplorer />;
       case "graph":
-        return <ThreatGraph />;
+        return (
+          <ThreatGraph
+            activeAlert={activeWorkspaceAlert}
+            activeInvestigationId={activeInvestigationId}
+          />
+        );
       case "investigations":
         return (
           <Investigations
@@ -211,6 +190,7 @@ export default function App() {
               setActiveWorkspaceAlert(null);
               setActiveInvestigationId(id);
             }}
+            onOpenReport={setActiveReportId}
           />
         );
       case "knowledge":
@@ -220,9 +200,7 @@ export default function App() {
       case "models":
         return <Models />;
       case "reports":
-        return <Reports />;
-      case "settings":
-        return <Settings />;
+        return <Reports onOpenReport={setActiveReportId} />;
       default:
         return (
           <Dashboard
@@ -243,15 +221,8 @@ export default function App() {
           setActiveTab(tab);
           setActiveWorkspaceAlert(null);
         }}
-        workspaces={MOCK_WORKSPACES}
         activeWorkspace={activeWorkspace}
-        onSelectWorkspace={setActiveWorkspace}
         onOpenSearch={() => setIsCommandPaletteOpen(true)}
-        onRefresh={handleRefresh}
-        isRefreshing={isRefreshing}
-        notifications={notifications}
-        onMarkRead={handleMarkRead}
-        onClearAll={handleClearAll}
         isSidebarCollapsed={isSidebarCollapsed}
         onToggleSidebarCollapse={setIsSidebarCollapsed}
       >

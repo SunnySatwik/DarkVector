@@ -1,9 +1,11 @@
+import { Severity } from "../types";
+
 export interface AnalyzeRequest {
   id: string;
   timestamp: string;
   source: string;
   type: string;
-  severity: string;
+  severity: Severity;
   category: string;
   description: string;
   details: {
@@ -28,7 +30,7 @@ export interface TopFactor {
 export interface AnalysisResult {
   risk_score: number;
   anomaly_score: number;
-  severity: string;
+  severity: Severity;
   confidence: number;
   is_anomaly: boolean;
 }
@@ -43,10 +45,30 @@ export interface Metadata {
   analysis_time_ms: number;
 }
 
+export interface MitreInfo {
+  technique_id: string;
+  technique_name: string;
+  tactic: string;
+  description: string;
+}
+
+export interface ThreatIntelInfo {
+  reputation: string;
+  confidence: number;
+  category: string;
+  summary: string;
+}
+
+export interface ContextEnrichment {
+  mitre: MitreInfo;
+  threat_intelligence: ThreatIntelInfo;
+}
+
 export interface AnalyzeResponse {
   analysis: AnalysisResult;
   explanation: Explanation;
   metadata: Metadata;
+  context?: ContextEnrichment;
 }
 
 export interface Investigation {
@@ -58,7 +80,7 @@ export interface Investigation {
 
   status: string;
 
-  severity: string;
+  severity: Severity;
 
   risk_score: number;
 

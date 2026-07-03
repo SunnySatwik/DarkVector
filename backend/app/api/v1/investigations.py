@@ -8,6 +8,7 @@ from app.schemas.investigation import (
     InvestigationResponse,
     InvestigationListResponse,
     InvestigationDetailResponse,
+    UpdateInvestigationRequest,
 )
 from app.services.investigation_service import InvestigationService
 from app.repositories.timeline_repository import TimelineRepository
@@ -80,3 +81,25 @@ def get_timeline(
     return service.get_timeline(
         investigation_id
     )
+
+
+@router.patch(
+    "/{investigation_id}/status",
+    response_model=InvestigationResponse,
+)
+def update_investigation_status(
+    investigation_id: str,
+    payload: UpdateInvestigationRequest,
+    db: Session = Depends(get_db),
+):
+    investigation = InvestigationService.update_status(
+        db,
+        investigation_id,
+        payload.status,
+    )
+    if investigation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Investigation not found",
+        )
+    return InvestigationResponse.model_validate(investigation)

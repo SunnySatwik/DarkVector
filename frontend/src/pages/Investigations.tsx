@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Shield,
   Activity,
+  FileText,
 } from "lucide-react";
 import { PageHeader } from "../components/ui/DesignSystem";
 import { severityBadgeClass } from "../lib/severity";
@@ -22,11 +23,12 @@ import { CaseItem, mapInvestigationToCase } from "../lib/investigationMapper";
 
 interface InvestigationsProps {
   onOpenInvestigation?: (investigationId: string) => void;
+  onOpenReport?: (investigationId: string) => void;
 }
 
 // ─── Root Component ───────────────────────────────────────────────────────────
 
-export default function Investigations({ onOpenInvestigation }: InvestigationsProps) {
+export default function Investigations({ onOpenInvestigation, onOpenReport }: InvestigationsProps) {
   const { data: investigations, isPending, isError } = useInvestigations();
 
   // Derive the canonical list from server data. Local state tracks optimistic status moves.
@@ -77,9 +79,9 @@ export default function Investigations({ onOpenInvestigation }: InvestigationsPr
   const counts = useMemo(() => {
     return {
       all: cases.length,
-      triage: cases.filter((c) => c.status === "triage").length,
-      review: cases.filter((c) => c.status === "review").length,
-      quarantine: cases.filter((c) => c.status === "quarantine").length,
+      new: cases.filter((c) => c.status === "new").length,
+      investigating: cases.filter((c) => c.status === "investigating").length,
+      contained: cases.filter((c) => c.status === "contained").length,
       resolved: cases.filter((c) => c.status === "resolved").length,
     };
   }, [cases]);
@@ -146,9 +148,9 @@ export default function Investigations({ onOpenInvestigation }: InvestigationsPr
             <div className="flex flex-wrap gap-1.5">
               {[
                 { key: "all", label: "All", count: counts.all },
-                { key: "triage", label: "Incoming", count: counts.triage },
-                { key: "review", label: "Review", count: counts.review },
-                { key: "quarantine", label: "Contained", count: counts.quarantine },
+                { key: "new", label: "New", count: counts.new },
+                { key: "investigating", label: "Investigating", count: counts.investigating },
+                { key: "contained", label: "Contained", count: counts.contained },
                 { key: "resolved", label: "Resolved", count: counts.resolved },
               ].map((chip) => {
                 const isActive = selectedFilter === chip.key;
@@ -181,9 +183,9 @@ export default function Investigations({ onOpenInvestigation }: InvestigationsPr
             {filteredCases.map((c) => {
               const isSelected = selectedCase && c.id === selectedCase.id;
               const statusLabels = {
-                triage: { text: "Incoming", dot: "bg-red-400" },
-                review: { text: "Review", dot: "bg-purple-400" },
-                quarantine: { text: "Contained", dot: "bg-orange-400" },
+                new: { text: "New", dot: "bg-red-400" },
+                investigating: { text: "Investigating", dot: "bg-purple-400" },
+                contained: { text: "Contained", dot: "bg-orange-400" },
                 resolved: { text: "Resolved", dot: "bg-green-400" },
               };
               const statusInfo = statusLabels[c.status];
@@ -337,9 +339,9 @@ export default function Investigations({ onOpenInvestigation }: InvestigationsPr
                     <span className="text-[10px] font-mono text-gray-500">Set Investigation Status</span>
                     <div className="flex flex-wrap gap-2">
                       {[
-                        { key: "triage", label: "Incoming (Triage)" },
-                        { key: "review", label: "Under Review" },
-                        { key: "quarantine", label: "Contained" },
+                        { key: "new", label: "New" },
+                        { key: "investigating", label: "Investigating" },
+                        { key: "contained", label: "Contained" },
                         { key: "resolved", label: "Resolved" },
                       ].map((st) => {
                         const isActive = selectedCase.status === st.key;
@@ -426,15 +428,24 @@ export default function Investigations({ onOpenInvestigation }: InvestigationsPr
                   </div>
                 </div>
 
-                {/* Footer Open Case Action Button */}
-                <div className="border-t border-[#23262F]/40 pt-4 mt-6 space-y-3">
+                 {/* Footer Open Case Action Button */}
+                <div className="border-t border-[#23262F]/40 pt-4 mt-6 flex flex-col sm:flex-row items-center gap-2">
                   {onOpenInvestigation && (
                     <button
                       onClick={() => onOpenInvestigation(selectedCase.id)}
-                      className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-bold rounded-lg transition-all duration-150 shadow-lg hover:shadow-purple-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full sm:flex-1 h-9 px-3 bg-purple-600 hover:bg-purple-500 text-white font-mono text-[11px] font-bold rounded-lg transition-all duration-150 shadow-lg hover:shadow-purple-500/20 flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                     >
-                      <Sparkles className="w-4 h-4 animate-pulse" />
-                      <span>Open Workspace Case</span>
+                      <Sparkles className="w-3.5 h-3.5 animate-pulse shrink-0" />
+                      <span>Open Workspace</span>
+                    </button>
+                  )}
+                  {onOpenReport && (
+                    <button
+                      onClick={() => onOpenReport(selectedCase.id)}
+                      className="w-full sm:flex-1 h-9 px-3 bg-[#161A22] border border-[#23262F] hover:bg-[#23262F] text-gray-300 hover:text-white font-mono text-[11px] font-bold rounded-lg transition-all duration-150 flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span>View Report</span>
                     </button>
                   )}
                   <div className="text-center">

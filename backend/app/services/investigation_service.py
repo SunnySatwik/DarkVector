@@ -113,3 +113,36 @@ class InvestigationService:
             db,
             investigation_id,
         )
+
+    @staticmethod
+    def update_status(
+        db: Session,
+        investigation_id: str,
+        status: InvestigationStatus,
+    ) -> Investigation | None:
+        """
+        Update the status of an investigation and log a timeline event.
+        """
+        investigation = InvestigationRepository.get_by_investigation_id(
+            db,
+            investigation_id,
+        )
+        if not investigation:
+            return None
+
+        # Only update and log if the status actually changed to prevent duplicate events
+        if investigation.status != status:
+            investigation.status = status
+            InvestigationRepository.update(db, investigation)
+
+            timeline_repository = TimelineRepository(db)
+            timeline_service = TimelineService(timeline_repository)
+            timeline_service.add_event(
+                investigation_id=investigation_id,
+                event_type=TimelineEventType.STATUS_CHANGED,
+                actor=TimelineActor.ANALYST,
+                title="Status changed",
+                description=f"Investigation marked as {status.value.title()}.",
+            )
+
+        return investigation

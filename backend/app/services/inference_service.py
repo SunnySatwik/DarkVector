@@ -11,9 +11,11 @@ from app.ml.risk_scorer import RiskScorer
 from app.schemas.analyze import (
     AnalysisResponse,
     AnalysisResult,
+    ContextEnrichment,
     Explanation,
     Metadata,
 )
+from app.services.context.context_service import ContextService
 
 logger = logging.getLogger("darkvector.analysis")
 
@@ -120,6 +122,13 @@ class InferenceService:
             analysis_time_ms,
         )
 
+        # --------------------------------------------------
+        # Context Enrichment (MITRE + Threat Intelligence)
+        # --------------------------------------------------
+
+        context_dict = ContextService.enrich(alert_data)
+        context = ContextEnrichment.model_validate(context_dict)
+
         return AnalysisResponse(
 
             analysis=AnalysisResult(
@@ -153,4 +162,6 @@ class InferenceService:
                     analysis_time_ms
                 ),
             ),
+
+            context=context,
         )

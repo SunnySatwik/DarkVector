@@ -9,7 +9,7 @@ export interface CaseItem {
     id: string;
     title: string;
     assignedAnalyst: string;
-    status: "triage" | "review" | "quarantine" | "resolved";
+    status: "new" | "investigating" | "contained" | "resolved";
     severity: Severity;
     riskScore: number;
     summary: string | null;
@@ -17,23 +17,23 @@ export interface CaseItem {
 }
 
 // ─── Status mapping ───────────────────────────────────────────────────────────
-// Maps backend InvestigationStatus enum values to the UI kanban column keys.
+// Maps backend InvestigationStatus enum values to the UI status keys.
 
 function mapStatus(
     backendStatus: string
 ): CaseItem["status"] {
     switch (backendStatus.toUpperCase()) {
         case "NEW":
-            return "triage";
+            return "new";
         case "INVESTIGATING":
-            return "review";
+            return "investigating";
         case "CONTAINED":
-            return "quarantine";
+            return "contained";
         case "RESOLVED":
         case "FALSE_POSITIVE":
             return "resolved";
         default:
-            return "triage";
+            return "new";
     }
 }
 

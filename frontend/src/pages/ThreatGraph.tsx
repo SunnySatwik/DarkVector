@@ -1,22 +1,26 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Network,
-  ShieldAlert,
   Cpu,
   Database,
   Server,
   ExternalLink,
   Shield,
   HelpCircle,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
-import { Card, Button, Badge, SectionHeader, PageHeader } from "../components/ui/DesignSystem";
+import { Card, Button, Badge, PageHeader } from "../components/ui/DesignSystem";
+import { useInvestigation, useInvestigations } from "../hooks/useInvestigations";
+import { Alert, Severity } from "../types";
+import { ContextEnrichment } from "../api/types";
 
 interface Node {
   id: string;
   label: string;
   type: "pod" | "process" | "database" | "external-ip";
-  severity: "critical" | "high" | "medium" | "none";
+  severity: Severity | "none";
   x: number;
   y: number;
   details: string;
@@ -28,65 +32,134 @@ interface Link {
   isThreat: boolean;
 }
 
-const MOCK_NODES: Node[] = [
-  {
-    id: "1",
-    label: "ingress-nginx",
-    type: "pod",
-    severity: "none",
+interface ThreatGraphProps {
+  activeAlert?: Alert | null;
+  activeInvestigationId?: string | null;
+}
+
+function buildGraphData(alert: Alert, context?: ContextEnrichment): { nodes: Node[]; links: Link[] } {
+  const nodes: Node[] = [];
+  const links: Link[] = [];
+
+  // 1. Source Node (always exists)
+  nodes.push({
+    id: "source",
+    label: alert.source,
+    type: alert.source.includes("db-") ? "database" : "pod",
+    severity: alert.severity,
     x: 100,
     y: 150,
-    details: "Public-facing reverse proxy routing inbound HTTP vectors.",
-  },
-  {
-    id: "2",
-    label: "auth-service",
-    type: "pod",
-    severity: "medium",
-    x: 280,
-    y: 150,
-    details: "Handles authentication and core user authorization claims.",
-  },
-  {
-    id: "3",
-    label: "k8s-api-agent",
-    type: "process",
-    severity: "critical",
-    x: 460,
-    y: 100,
-    details: "Injected namespace container running hijacked terminal process.",
-  },
-  {
-    id: "4",
-    label: "postgres-leader",
-    type: "database",
-    severity: "none",
-    x: 460,
-    y: 220,
-    details: "Main system backend database housing application records.",
-  },
-  {
-    id: "5",
-    label: "194.26.135.84",
-    type: "external-ip",
-    severity: "critical",
-    x: 640,
-    y: 100,
-    details: "Known command-and-control server (C2) hosting secondary payloads.",
-  },
-];
+    details: `Incident origin source asset node '${alert.source}'. Initial classification: ${alert.severity.toUpperCase()}. Category: ${alert.category}.`,
+  });
 
-const MOCK_LINKS: Link[] = [
-  { source: "1", target: "2", isThreat: false },
-  { source: "2", target: "3", isThreat: true },
-  { source: "2", target: "4", isThreat: false },
-  { source: "3", target: "5", isThreat: true },
-];
+  let lastNodeId = "source";
 
-export default function ThreatGraph() {
-  const [selectedNode, setSelectedNode] = useState<Node | null>(MOCK_NODES[2]); // Default to critical hijacked process
-  const [nodes, setNodes] = useState<Node[]>(MOCK_NODES);
+  // 2. User Node (if username exists)
+  if (alert.details?.username) {
+    nodes.push({
+      id: "user",
+      label: alert.details.username,
+      type: "pod",
+      severity: "none",
+      x: 250,
+      y: 70,
+      details: `Associated credential account session: ${alert.details.username}. Verified alignment with historic location profile.`,
+    });
+    links.push({ source: "source", target: "user", isThreat: false });
+  }
+
+  // 3. Parent Process Node (if parentProcess exists)
+  if (alert.details?.parentProcess) {
+    nodes.push({
+      id: "parent-process",
+      label: alert.details.parentProcess,
+      type: "pod",
+      severity: "none",
+      x: 250,
+      y: 230,
+      details: `Parent execution process lineage node: ${alert.details.parentProcess}. Spawned by container initialization sequence.`,
+    });
+    links.push({ source: "source", target: "parent-process", isThreat: false });
+    lastNodeId = "parent-process";
+  }
+
+  // 4. Spawned Binary Node (if processPath exists)
+  if (alert.details?.processPath) {
+    nodes.push({
+      id: "process",
+      label: alert.details.processPath,
+      type: "process",
+      severity: "critical",
+      x: 430,
+      y: 150,
+      details: `Flagged anomalous execution node: ${alert.details.processPath}. Command line arguments: "${alert.details.commandLine || 'none'}". Isolation Forest score: ${alert.score}/100.`,
+    });
+    links.push({ source: lastNodeId, target: "process", isThreat: true });
+    lastNodeId = "process";
+  }
+
+  // 5. Remote Destination Node (if ipAddress exists)
+  if (alert.details?.ipAddress) {
+    const rep = context?.threat_intelligence.reputation || "unknown";
+    const sev = rep === "malicious" ? "critical" : rep === "suspicious" ? "high" : "none";
+    nodes.push({
+      id: "remote-ip",
+      label: `${alert.details.ipAddress}${alert.details.port ? `:${alert.details.port}` : ""}`,
+      type: "external-ip",
+      severity: sev as any,
+      x: 610,
+      y: 150,
+      details: `Remote connection endpoint: ${alert.details.ipAddress} on port ${alert.details.port || 'N/A'}. Reputation: ${rep.toUpperCase()}. Category: ${context?.threat_intelligence.category || 'Unclassified'}. Summary: ${context?.threat_intelligence.summary || 'No threat details.'}`,
+    });
+    links.push({ source: lastNodeId, target: "remote-ip", isThreat: true });
+  }
+
+  return { nodes, links };
+}
+
+export default function ThreatGraph({
+  activeAlert,
+  activeInvestigationId,
+}: ThreatGraphProps) {
+  // Query investigations queue
+  const { data: investigations, isPending: isListPending, isError: isListError } = useInvestigations();
+
+  // Determine target investigation ID: use props if present, else fallback to the latest in the queue
+  const targetId = useMemo(() => {
+    if (activeInvestigationId) return activeInvestigationId;
+    if (investigations && investigations.length > 0) {
+      return investigations[0].investigation_id;
+    }
+    return undefined;
+  }, [activeInvestigationId, investigations]);
+
+  // Load detailed investigation state (including alerts and context lookups)
+  const { data: detailData, isPending: isDetailPending, isError: isDetailError } = useInvestigation(targetId);
+
+  const isPending = isListPending || isDetailPending;
+  const isError = isListError || isDetailError;
+
+  // Selected node inspection state
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isolatedNodes, setIsolatedNodes] = useState<string[]>([]);
+
+  // Dynamically build graph data when detailed investigation completes loading
+  const graph = useMemo(() => {
+    if (!detailData) return { nodes: [], links: [] };
+    const alertData = detailData.alert as Alert;
+    const contextData = detailData.analysis?.context;
+    return buildGraphData(alertData, contextData);
+  }, [detailData]);
+
+  // Default to selecting the source or process node when graph is loaded
+  useEffect(() => {
+    if (graph.nodes.length > 0) {
+      const processNode = graph.nodes.find((n) => n.id === "process");
+      setSelectedNode(processNode || graph.nodes[0]);
+    } else {
+      setSelectedNode(null);
+    }
+  }, [graph]);
 
   const handleIsolate = (nodeId: string) => {
     if (isolatedNodes.includes(nodeId)) {
@@ -96,12 +169,54 @@ export default function ThreatGraph() {
     }
   };
 
+  if (isPending) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Evidence Graph"
+          subtitle="Visualize relationships between container processes, socket files, and active network connections in an interactive evidence map."
+        />
+        <div className="flex flex-col items-center justify-center h-64 text-gray-500 font-mono text-xs gap-3">
+          <RefreshCw className="w-5 h-5 animate-spin text-purple-500" />
+          <span>Generating evidence graph from active telemetry...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !detailData) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Evidence Graph"
+          subtitle="Visualize relationships between container processes, socket files, and active network connections in an interactive evidence map."
+        />
+        <div className="flex flex-col items-center justify-center h-64 text-red-400 font-mono text-xs gap-3">
+          <AlertTriangle className="w-6 h-6 text-red-500 animate-pulse" />
+          <span>No active investigation data available to map. Please trigger an alert.</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Threat graph"
+        title="Evidence Graph"
         subtitle="Visualize relationships between container processes, socket files, and active network connections in an interactive evidence map."
       />
+
+      <div className="bg-[#161A22]/20 border border-border-custom/20 rounded-xl px-4 py-2 text-xs flex items-center justify-between text-gray-400 font-mono">
+        <span>
+          {activeInvestigationId
+            ? <>Showing evidence map for <strong className="text-purple-400">{detailData.investigation.investigation_id}</strong> · {detailData.investigation.title}</>
+            : <>No investigation selected — showing most recent incident: <strong className="text-purple-400">{detailData.investigation.investigation_id}</strong> · {detailData.investigation.title}</>
+          }
+        </span>
+        <Badge variant={detailData.investigation.status.toLowerCase() === "resolved" ? "success" : "default"}>
+          {detailData.investigation.status}
+        </Badge>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* SVG Graph Canvas */}
@@ -111,11 +226,11 @@ export default function ThreatGraph() {
               <div className="flex items-center gap-2">
                 <Network className="w-4 h-4 text-blue-400" />
                 <span className="font-mono text-xs font-bold text-gray-200">
-                  Evidence map
+                  Interactive Evidence Map
                 </span>
               </div>
               <div className="flex gap-2">
-                <Badge variant="critical">Critical link triggered</Badge>
+                <Badge variant="critical">Telemetry stream verified</Badge>
               </div>
             </div>
 
@@ -123,9 +238,9 @@ export default function ThreatGraph() {
             <div className="relative w-full overflow-x-auto min-h-[400px] flex justify-center items-center p-6 bg-black/25">
               <svg className="w-[750px] h-[300px] select-none" viewBox="0 0 750 300">
                 {/* Connections (Links) */}
-                {MOCK_LINKS.map((link, idx) => {
-                  const sourceNode = nodes.find((n) => n.id === link.source);
-                  const targetNode = nodes.find((n) => n.id === link.target);
+                {graph.links.map((link, idx) => {
+                  const sourceNode = graph.nodes.find((n) => n.id === link.source);
+                  const targetNode = graph.nodes.find((n) => n.id === link.target);
                   if (!sourceNode || !targetNode) return null;
 
                   const isSourceIsolated = isolatedNodes.includes(sourceNode.id);
@@ -158,7 +273,7 @@ export default function ThreatGraph() {
                 })}
 
                 {/* Nodes rendering */}
-                {nodes.map((node) => {
+                {graph.nodes.map((node) => {
                   const isSelected = selectedNode?.id === node.id;
                   const isIsolated = isolatedNodes.includes(node.id);
 
@@ -236,9 +351,9 @@ export default function ThreatGraph() {
                         x={node.x}
                         y={node.y + 35}
                         textAnchor="middle"
-                        className={`text-[10px] font-mono font-medium ${isIsolated ? "fill-gray-600" : isSelected ? "fill-white" : "fill-gray-400"}`}
+                        className={`text-[9px] font-mono font-medium ${isIsolated ? "fill-gray-600" : isSelected ? "fill-white" : "fill-gray-400"}`}
                       >
-                        {node.label}
+                        {node.label.length > 20 ? `${node.label.slice(0, 18)}...` : node.label}
                       </text>
 
                       {/* Isolation Line Slash marker if isolated */}
@@ -262,10 +377,10 @@ export default function ThreatGraph() {
             <div className="px-4 py-3 border-t border-[#23262F]/40 bg-[#161A22]/20 flex items-center justify-between text-[10px] font-mono text-gray-500">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1">
-                  <circle cx="4" cy="4" r="3" fill="#EF4444" /> Critical threat vector
+                  <circle cx="4" cy="4" r="3" fill="#EF4444" /> Target Host / Threat Vector
                 </span>
                 <span className="flex items-center gap-1">
-                  <circle cx="4" cy="4" r="3" fill="#3B82F6" /> Connected pod
+                  <circle cx="4" cy="4" r="3" fill="#3B82F6" /> Connected Pod / Asset
                 </span>
                 <span className="flex items-center gap-1">
                   <line
@@ -280,7 +395,7 @@ export default function ThreatGraph() {
                   Socket egress connection
                 </span>
               </div>
-              <span>Click nodes to inspect metadata</span>
+              <span>Click nodes to inspect telemetry metadata</span>
             </div>
           </Card>
         </div>
@@ -300,7 +415,7 @@ export default function ThreatGraph() {
                   <div className="flex items-center justify-between border-b border-[#23262F]/40 pb-3">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-blue-400" />
-                      <span className="font-mono text-xs font-bold text-gray-200">Asset audit</span>
+                      <span className="font-mono text-xs font-bold text-gray-200">Asset Audit</span>
                     </div>
                     <Badge
                       variant={selectedNode.severity === "none" ? "default" : selectedNode.severity}
@@ -312,16 +427,16 @@ export default function ThreatGraph() {
                   <div className="space-y-3">
                     <div>
                       <div className="text-[10px] font-mono text-gray-500">
-                        Asset name
+                        Asset Name
                       </div>
-                      <div className="text-xs font-mono font-bold text-gray-200 mt-0.5">
+                      <div className="text-xs font-mono font-bold text-gray-200 mt-0.5 break-all">
                         {selectedNode.label}
                       </div>
                     </div>
 
                     <div>
                       <div className="text-[10px] font-mono text-gray-500">
-                        Asset category
+                        Asset Category
                       </div>
                       <div className="text-xs text-gray-400 capitalize font-medium mt-0.5">
                         {selectedNode.type}
@@ -330,7 +445,7 @@ export default function ThreatGraph() {
 
                     <div>
                       <div className="text-[10px] font-mono text-gray-500">
-                        Technical forensic details
+                        Technical Forensic Details
                       </div>
                       <p className="text-[11px] text-gray-400 leading-relaxed mt-1 font-sans bg-[#09090B] border border-[#23262F]/50 rounded-lg p-2.5">
                         {selectedNode.details}
@@ -345,7 +460,7 @@ export default function ThreatGraph() {
                         onClick={() => handleIsolate(selectedNode.id)}
                         className="w-full py-2 cursor-pointer font-bold"
                       >
-                        Re-establish asset trust
+                        Re-establish Asset Trust
                       </Button>
                     ) : (
                       <Button
@@ -353,7 +468,7 @@ export default function ThreatGraph() {
                         onClick={() => handleIsolate(selectedNode.id)}
                         className="w-full py-2 cursor-pointer font-bold"
                       >
-                        Isolate / contain asset
+                        Isolate / Contain Asset
                       </Button>
                     )}
                   </div>

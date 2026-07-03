@@ -1,3 +1,4 @@
+import { Severity } from "../types";
 import { api } from "./client";
 import {
     Investigation,
@@ -7,19 +8,38 @@ import {
 
 export async function getInvestigations(): Promise<Investigation[]> {
     const response = await api.get("/investigations");
-
-    return response.data.investigations;
+    const raw = response.data.investigations as Investigation[];
+    return raw.map((inv) => ({
+        ...inv,
+        severity: inv.severity.toLowerCase() as Severity,
+    }));
 }
 
 export async function getInvestigation(
     investigationId: string
 ): Promise<InvestigationDetail> {
-
     const response = await api.get(
         `/investigations/${investigationId}`
     );
-
-    return response.data;
+    const data = response.data as InvestigationDetail;
+    return {
+        ...data,
+        investigation: {
+            ...data.investigation,
+            severity: data.investigation.severity.toLowerCase() as Severity,
+        },
+        alert: {
+            ...data.alert,
+            severity: data.alert.severity.toLowerCase() as Severity,
+        },
+        analysis: {
+            ...data.analysis,
+            analysis: {
+                ...data.analysis.analysis,
+                severity: data.analysis.analysis.severity.toLowerCase() as Severity,
+            },
+        },
+    };
 }
 
 export async function getTimeline(
@@ -29,4 +49,19 @@ export async function getTimeline(
         `/investigations/${investigationId}/timeline`
     );
     return response.data;
+}
+
+export async function updateInvestigationStatus(
+    investigationId: string,
+    status: string
+): Promise<Investigation> {
+    const response = await api.patch(
+        `/investigations/${investigationId}/status`,
+        { status }
+    );
+    const inv = response.data as Investigation;
+    return {
+        ...inv,
+        severity: inv.severity.toLowerCase() as Severity,
+    };
 }

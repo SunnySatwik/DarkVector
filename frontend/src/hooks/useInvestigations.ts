@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
     getInvestigation,
     getInvestigations,
     getTimeline,
+    updateInvestigationStatus,
 } from "../api/investigations";
 
 export function useInvestigation(
@@ -45,5 +46,25 @@ export function useTimeline(investigationId?: string) {
         enabled: !!investigationId,
 
         staleTime: 10000,
+    });
+}
+
+export function useUpdateInvestigationStatus(investigationId?: string) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (status: string) =>
+            updateInvestigationStatus(investigationId!, status),
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ["investigation", investigationId],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["timeline", investigationId],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["investigations"],
+            });
+        },
     });
 }

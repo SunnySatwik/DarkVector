@@ -38,7 +38,6 @@ export default function AiAnalystPanel({
   analysis,
   onIsolateNode,
 }: AiAnalystPanelProps) {
-  const [activeModel, setActiveModel] = useState("Gemini-2.5-Security");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -51,38 +50,31 @@ export default function AiAnalystPanel({
         setMessages([
           {
             sender: "ai",
-            text: `### 🔍 Analyzing event ${selectedAlert.id}...
-  
-Please wait while Vector computes the explainability metrics and containment recommendations.`,
+            text: `I'm reviewing **${selectedAlert.id}** now. Give me a moment to assess the signals and put together a picture of what happened.`,
             timestamp: new Date().toLocaleTimeString(),
           },
         ]);
       } else {
         const shapText = analysis.explanation.top_factors
-          ?.map((f) => `- **${f.feature}** accounts for **${(f.impact * 100).toFixed(0)}%** of the decision deviation.`)
-          .join("\n") || "- Lack of baseline behavioral data.";
+          ?.map((f) => `- **${f.feature}** was responsible for ${(f.impact * 100).toFixed(0)}% of the risk score.`)
+          .join("\n") || "- No dominant signal — the risk is driven by the overall pattern deviation.";
 
         setMessages([
           {
             sender: "ai",
-            text: `### 🔍 DarkVector Vector AI Analysis: Incident ${selectedAlert.id}
-  
-I have analyzed the threat log originating from \`${selectedAlert.source}\`. The event has an **Isolation Forest anomaly score of ${analysis.analysis.anomaly_score?.toFixed(3) ?? "--"}** and a **calibrated risk score of ${analysis.analysis.risk_score ?? "--"}**, which strongly correlates with typical **malicious post-compromise activity**.
-  
-#### Key Indicators (SHAP Explainer):
+            text: `I've reviewed **${selectedAlert.id}** from \`${selectedAlert.source}\`.
+
+The anomaly score came in at **${analysis.analysis.anomaly_score?.toFixed(3) ?? "--"}** with a risk score of **${analysis.analysis.risk_score ?? "--"}**. That puts this in the category of events I'd want to act on quickly.
+
+**What stood out:**
 ${shapText}
-  
-#### Summary:
-${analysis.explanation.summary}
-  
-#### Reconstructed Adversary Path:
-1. Spawning of atypical shell binaries via unverified parent container layer (\`${selectedAlert.details.parentProcess || "system-d"}\`).
-2. Immediate execution of raw socket redirection towards suspected command-and-control subnet.
-  
-#### Recommended Mitigation Playbook:
-- [ ] **Quarantine host node / container network** to stop command-and-control communication.
-- [ ] **Revoke credentials** associated with active process.
-- [ ] **Rebuild image state** with strict read-only root filesystems.`,
+
+**My read:** ${analysis.explanation.summary}
+
+**What I'd do next:**
+- Isolate \`${selectedAlert.source}\` to stop any active command-and-control communication.
+- Check whether credentials associated with this session have been used elsewhere.
+- Review the process tree to confirm the full execution chain before rebuilding the image.`,
             timestamp: new Date().toLocaleTimeString(),
           },
         ]);
@@ -91,14 +83,7 @@ ${analysis.explanation.summary}
       setMessages([
         {
           sender: "ai",
-          text: `### 🌌 DarkVector Security Co-pilot Active
-
-Welcome to your AI forensics workspace. Select any active warning or critical alert from the feed to perform a deeper **SHAP Explainability analysis**, or ask me directly to generate containment commands.
-
-*Suggested commands:*
-- *"Analyze current container isolation states"*
-- *"Show active malicious connection origins"*
-- *"Draft a Kubernetes NetworkPolicy to block external IPs"*`,
+          text: `I'm ready. Select an alert from the feed and I'll walk you through what I see — the risk factors, the most likely attack pattern, and what I'd recommend doing next.`,
           timestamp: new Date().toLocaleTimeString(),
         },
       ]);
@@ -128,55 +113,14 @@ Welcome to your AI forensics workspace. Select any active warning or critical al
         userMsgText.toLowerCase().includes("isolate") ||
         userMsgText.toLowerCase().includes("quarantine")
       ) {
-        aiResponseText = `### ⚠️ Initiating Quarantine Validation Sequence
-        
-I can generate the command block to isolate node \`${selectedAlert?.source || "srv-k8s-api-01"}\` instantly. Please verify your administrative rights.
-
-\`\`\`bash
-# DarkVector Agent Containment Action
-kubectl patch deployment ${selectedAlert?.source.split("-")[0] || "k8s-pod"} -p '{"spec":{"template":{"metadata":{"labels":{"darkvector.security/quarantine":"true"}}}}}'
-\`\`\`
-
-*Would you like me to dispatch this command to the primary sensor via gRPC now?*`;
+        aiResponseText = `I'd recommend isolating **\`${selectedAlert?.source || "the source host"}\`** as soon as possible. Use the Isolate action in the Investigation Workspace — it'll sever the host's outbound connections and automatically update the status to Contained. Once that's done, review the process tree before deciding whether a full image rebuild is needed.`;
       } else if (
         userMsgText.toLowerCase().includes("block") ||
         userMsgText.toLowerCase().includes("networkpolicy")
       ) {
-        aiResponseText = `### 🛡️ Generated Kubernetes NetworkPolicy
-        
-Apply this network block to terminate egress connections to external IP \`${selectedAlert?.details.ipAddress || "194.26.135.84"}\`:
-
-\`\`\`yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: block-malicious-egress-vector
-  namespace: default
-spec:
-  podSelector:
-    matchLabels:
-      app: srv-k8s-api
-  policyTypes:
-  - Egress
-  egress:
-  - to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-        except:
-        - ${selectedAlert?.details.ipAddress || "194.26.135.84"}/32
-\`\`\`
-
-Apply this manifest via \`kubectl apply -f blocking-policy.yaml\`.`;
+        aiResponseText = `To block egress to **\`${selectedAlert?.details.ipAddress || "the remote IP"}\`**, your team can apply a network egress rule through your infrastructure tooling. If this host is Kubernetes-managed, a NetworkPolicy with an egress deny rule targeted to that CIDR is the right move. I'd also flag that IP for threat intel tracking if you haven't already.`;
       } else {
-        aiResponseText = `### 🔮 Platform Intelligence Context
-        
-I am monitoring active process signals. For telemetry segment \`${selectedAlert?.id || "GLOBAL-CORE"}\`, the model predicts high behavioral risk.
-
-- **Process Integrity Index:** 12% (Critical degradation)
-- **RAG ChromaDB Correlation:** Found 3 similar signatures involving Docker container escaping.
-- **SHAP Impact Weights:** Process lineage depth represents the primary trigger.
-
-Would you like me to audit the historical execution tree of this node?`;
+        aiResponseText = `Looking at **${selectedAlert?.id || "this case"}** — the source \`${selectedAlert?.source || "node"}\` is showing a pattern I'd want to investigate further. Is there something specific you want me to focus on? I can walk through the process chain, the network connections, or the MITRE mapping.`;
       }
 
       setMessages((prev) => [
@@ -214,15 +158,6 @@ Would you like me to audit the historical execution tree of this node?`;
             </div>
 
             <div className="flex items-center gap-2">
-              <select
-                value={activeModel}
-                onChange={(e) => setActiveModel(e.target.value)}
-                className="bg-[#09090B] border border-[#23262F] text-[10px] font-mono text-purple-400 rounded px-2 py-0.5 focus:outline-none"
-              >
-                <option value="Gemini-2.5-Security">Gemini 2.5 Security</option>
-                <option value="DeepMind-DV-S1">DeepMind-DV-S1</option>
-                <option value="RAG-Chroma-Hybrid">RAG-Chroma Hybrid</option>
-              </select>
               <button
                 onClick={onClose}
                 className="p-1 hover:bg-[#161A22] rounded transition-colors text-gray-400 hover:text-gray-200"
@@ -385,7 +320,7 @@ Would you like me to audit the historical execution tree of this node?`;
                   {msg.sender === "ai" ? (
                     <>
                       <BrainCircuit className="w-3 h-3 text-purple-400" />
-                      <span>DarkVector AI Co-pilot</span>
+                      <span>Vector AI Security Analyst</span>
                     </>
                   ) : (
                     <span>Security Analyst (You)</span>
