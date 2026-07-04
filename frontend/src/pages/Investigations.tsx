@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Briefcase,
   AlertOctagon,
@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "../components/ui/DesignSystem";
 import { severityBadgeClass } from "../lib/severity";
-import { useInvestigations } from "../hooks/useInvestigations";
+import { useInvestigations, useUpdateInvestigationStatus } from "../hooks/useInvestigations";
 import { CaseItem, mapInvestigationToCase } from "../lib/investigationMapper";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -30,6 +30,14 @@ interface InvestigationsProps {
 
 export default function Investigations({ onOpenInvestigation, onOpenReport }: InvestigationsProps) {
   const { data: investigations, isPending, isError } = useInvestigations();
+  const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
+
+  const showSuccessToast = (msg: string) => {
+    setToast({ message: msg, visible: true });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 4000);
+  };
 
   // Derive the canonical list from server data. Local state tracks optimistic status moves.
   const serverCases = useMemo<CaseItem[]>(
@@ -70,6 +78,8 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
     filteredCases.find((c) => c.id === activeCaseId) ??
     filteredCases[0] ??
     null;
+
+  const updateStatusMutation = useUpdateInvestigationStatus(selectedCase?.id || "");
 
   const moveStatus = (caseId: string, newStatus: CaseItem["status"]) => {
     setStatusOverrides((prev) => ({ ...prev, [caseId]: newStatus }));
@@ -385,28 +395,33 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                      {/* Anomaly Threshold Slider */}
-                      <div className="space-y-2">
-                        <div className="font-semibold text-gray-300 flex items-center justify-between font-mono text-[11px]">
-                          <span>Isolation Threshold</span>
-                          <span className="text-purple-400 font-bold">85%</span>
+                      {/* Containment Status Card */}
+                      <div className="space-y-2 bg-[#161A22]/30 border border-[#23262F]/40 rounded-lg p-3 flex flex-col justify-between h-full">
+                        <div className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">
+                          Containment Status
                         </div>
-                        <p className="text-[10px] text-gray-500 font-mono leading-relaxed">
-                          Automatically isolate container when anomalous threshold is breached.
+                        <div className="flex items-center gap-2 mt-1">
+                          {selectedCase.status === "contained" ? (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                              <span className="text-xs font-mono font-bold text-emerald-400">🟢 Contained</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0 animate-pulse" />
+                              <span className="text-xs font-mono font-bold text-orange-400">● Active</span>
+                            </>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-gray-500 font-mono leading-relaxed mt-2">
+                          {selectedCase.status === "contained"
+                            ? "Host has been segmented. Egress connections are blocked."
+                            : "Host network egress interfaces are active and unsegmented."}
                         </p>
-                        <div className="flex items-center gap-2 pt-1">
-                          <input
-                            type="range"
-                            min="50"
-                            max="100"
-                            defaultValue="85"
-                            className="flex-1 accent-purple-500 bg-gray-900 h-1 rounded-lg cursor-pointer"
-                          />
-                        </div>
                       </div>
 
                       {/* Manual Isolation Trigger */}
-                      <div className="flex flex-col justify-between space-y-2">
+                      <div className="flex flex-col justify-between space-y-2 bg-[#161A22]/30 border border-[#23262F]/40 rounded-lg p-3 h-full">
                         <div className="space-y-1">
                           <div className="font-semibold text-gray-300 font-mono text-[11px]">
                             Manual Network Isolation
@@ -416,12 +431,31 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
                           </p>
                         </div>
                         <button
-                          onClick={() =>
-                            alert(`Issuing containment trigger to case: ${selectedCase.id}`)
-                          }
-                          className="w-full bg-orange-600/10 hover:bg-orange-600/20 border border-orange-500/30 text-orange-400 rounded-lg py-2 text-[10px] font-mono font-bold cursor-pointer transition-colors shadow-sm"
+                          onClick={() => {
+                            if (selectedCase.status !== "contained") {
+                              updateStatusMutation.mutate("CONTAINED", {
+                                onSuccess: () => {
+                                  // Update optimistic local overrides
+                                  moveStatus(selectedCase.id, "contained");
+                                  showSuccessToast("Containment initiated successfully. The affected host has been marked as contained.");
+                                }
+                              });
+                            }
+                          }}
+                          disabled={selectedCase.status === "contained" || updateStatusMutation.isPending}
+                          className={`w-full py-2 text-[10px] font-mono font-bold rounded-lg cursor-pointer transition-all duration-150 shadow-sm border ${
+                            selectedCase.status === "contained"
+                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 cursor-default"
+                              : updateStatusMutation.isPending
+                              ? "bg-orange-600/10 border-orange-500/20 text-orange-400/50 cursor-wait animate-pulse"
+                              : "bg-orange-600/10 hover:bg-orange-600/20 border border-orange-500/30 text-orange-400 hover:shadow-orange-500/10"
+                          }`}
                         >
-                          Isolate Host [{selectedCase.id.slice(0, 12)}]
+                          {selectedCase.status === "contained"
+                            ? "✓ Host Contained"
+                            : updateStatusMutation.isPending
+                            ? "Isolating Host..."
+                            : `Isolate Host [${selectedCase.id.slice(0, 12)}]`}
                         </button>
                       </div>
                     </div>
@@ -459,6 +493,21 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
           </div>
         </div>
       </div>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast.visible && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-[#111317] border border-emerald-500/30 shadow-xl shadow-emerald-500/5 px-4 py-3 rounded-xl text-gray-200 font-sans text-xs"
+          >
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+            <div className="w-2 h-2 rounded-full bg-emerald-500 absolute left-4 shrink-0" />
+            <span>{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

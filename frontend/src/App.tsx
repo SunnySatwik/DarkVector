@@ -8,9 +8,7 @@ import LiveEvents from "./pages/LiveEvents";
 import Models from "./pages/Models";
 import Reports from "./pages/Reports";
 import InvestigationWorkspace from "./pages/InvestigationWorkspace";
-import ThreatExplorer from "./pages/ThreatExplorer";
 import ThreatGraph from "./pages/ThreatGraph";
-import KnowledgeBase from "./pages/KnowledgeBase";
 import SavedInvestigationWorkspace from "./pages/SavedInvestigationWorkspace";
 import InvestigationReportView from "./pages/InvestigationReportView";
 import CommandPalette from "./components/CommandPalette";
@@ -174,8 +172,6 @@ export default function App() {
             onOpenAiPanel={() => setIsAiPanelOpen(true)}
           />
         );
-      case "explorer":
-        return <ThreatExplorer />;
       case "graph":
         return (
           <ThreatGraph
@@ -193,8 +189,6 @@ export default function App() {
             onOpenReport={setActiveReportId}
           />
         );
-      case "knowledge":
-        return <KnowledgeBase />;
       case "live":
         return <LiveEvents />;
       case "models":
@@ -252,12 +246,6 @@ export default function App() {
         onClose={() => setIsAiPanelOpen(false)}
         selectedAlert={panelAlert}
         analysis={panelAnalysis}
-        onIsolateNode={(nodeId) => {
-          alert(
-            `CRITICAL CONTAINMENT DISPATCHED:\n- Container isolation flag successfully written for [ ${nodeId} ]\n- Network interfaces suspended via gRPC agent daemon.`
-          );
-          setIsAiPanelOpen(false);
-        }}
       />
     </>
   );

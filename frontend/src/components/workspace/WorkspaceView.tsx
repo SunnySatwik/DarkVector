@@ -490,6 +490,7 @@ export default function WorkspaceView({
             isAnalysisPending={isPending}
             isAnalysisError={isError}
             onRetryAnalysis={refetch}
+            analysisContext={analysisContext}
           />
         </motion.div>
       </div>

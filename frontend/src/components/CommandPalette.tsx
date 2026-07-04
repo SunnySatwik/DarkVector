@@ -2,11 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
-  ShieldAlert,
   Cpu,
-  Settings,
   FileText,
-  Sliders,
   Activity,
   CornerDownLeft,
 } from "lucide-react";
@@ -85,39 +82,6 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
       icon: FileText,
       action: () => {
         onNavigate("reports");
-        onClose();
-      },
-    },
-    {
-      id: "nav-settings",
-      category: "Navigation",
-      title: "Go to settings",
-      subtitle: "Configure gRPC telemetry, sensor parameters, and security credentials",
-      icon: Settings,
-      action: () => {
-        onNavigate("settings");
-        onClose();
-      },
-    },
-    {
-      id: "act-scan",
-      category: "Quick actions",
-      title: "Trigger isolation forest scan",
-      subtitle: "Force immediate check on all active log nodes",
-      icon: Sliders,
-      action: () => {
-        alert("Triggering full anomalous trace scanning... Isolated tree nodes verified.");
-        onClose();
-      },
-    },
-    {
-      id: "act-isolate",
-      category: "Quick actions",
-      title: "Isolate critical container node srv-k8s-api-01",
-      subtitle: "Quarantine privileged containers immediately via gRPC",
-      icon: ShieldAlert,
-      action: () => {
-        alert("Node quarantine command issued.");
         onClose();
       },
     },

@@ -15,7 +15,7 @@
  *   — The incident is the hero, not the interface.
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAlerts } from "../hooks/useAlerts";
 import { useInvestigations } from "../hooks/useInvestigations";
@@ -63,8 +63,7 @@ function formatRelativeTime(isoString: string): string {
   }
 }
 
-const AI_BRIEFING =
-  "I'm seeing two things that need your attention. There's an active shell escape on **srv-k8s-api-01** with an open connection to `194.26.135.84` — that IP is flagged as malicious. At the same time, an unusually large database transfer (4.8 GB) is ongoing from the finance cluster. I'd isolate `srv-k8s-api-01` first and pause the database traffic before the transfer completes.";
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -544,6 +543,39 @@ export default function Dashboard({
   } = useAlerts();
   const { data: investigations, isPending: isInvestigationsPending } = useInvestigations();
 
+  const dynamicBriefing = useMemo(() => {
+    const activeInvs = (investigations || []).filter(
+      (inv) => inv.status.toUpperCase() !== "RESOLVED"
+    );
+    const totalActive = activeInvs.length;
+
+    if (totalActive === 0) {
+      return "There are currently no active investigations. All anomalous signals have been successfully reviewed and resolved.";
+    }
+
+    const highestPriority = [...activeInvs].sort((a, b) => b.risk_score - a.risk_score)[0];
+    const newest = [...activeInvs].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0];
+    const underReview = activeInvs.filter(
+      (inv) => inv.status.toUpperCase() === "INVESTIGATING" || inv.status.toUpperCase() === "NEW"
+    ).length;
+
+    let text = `There are currently **${totalActive}** active investigations.`;
+    if (highestPriority) {
+      const sevLabel =
+        highestPriority.severity.charAt(0).toUpperCase() + highestPriority.severity.slice(1);
+      text += ` The highest priority case is **${highestPriority.title}** (${sevLabel}, Risk **${highestPriority.risk_score}**).`;
+    }
+    if (newest) {
+      text += ` **${newest.title}** is the newest investigation.`;
+    }
+    if (underReview > 0) {
+      text += ` **${underReview}** investigation${underReview === 1 ? " is" : "s are"} currently under active review.`;
+    }
+    return text;
+  }, [investigations]);
+
   const topAlert =
     alerts.find((a) => a.severity === "critical") ??
     alerts.find((a) => a.severity === "high") ??
@@ -586,7 +618,7 @@ export default function Dashboard({
       <div className="border-t border-border-custom/12" />
 
       {/* 2 — Vector's briefing */}
-      <VectorBriefing briefing={AI_BRIEFING} onOpenAiPanel={onOpenAiPanel} />
+      <VectorBriefing briefing={dynamicBriefing} onOpenAiPanel={onOpenAiPanel} />
 
       <div className="border-t border-border-custom/12" />
 

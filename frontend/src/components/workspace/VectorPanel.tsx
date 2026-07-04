@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Alert } from "../../types";
+import type { ContextEnrichment } from "../../api/types";
 import { Skeleton } from "../ui/DesignSystem";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -38,6 +39,8 @@ export interface VectorPanelProps {
   isAnalysisPending?: boolean;
   isAnalysisError?: boolean;
   onRetryAnalysis?: () => void;
+  /** MITRE + Threat Intel context from the ML pipeline — used to ground AI chat responses */
+  analysisContext?: ContextEnrichment;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -68,6 +71,7 @@ export function VectorPanel({
   isAnalysisPending = false,
   isAnalysisError = false,
   onRetryAnalysis,
+  analysisContext,
 }: VectorPanelProps) {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<
@@ -160,7 +164,13 @@ export function VectorPanel({
         q.includes("mitre") ||
         q.includes("threat")
       ) {
-        reply = `This looks like it matches **MITRE ATT&CK T1611 – Escape to Host**. The namespace manipulation pattern is consistent with documented container breakout techniques. I'd check recent kernel patch levels on this host before closing the case.`;
+        if (analysisContext?.mitre) {
+          const { technique_id, technique_name, tactic, description } = analysisContext.mitre;
+          const tiRep = analysisContext.threat_intelligence?.reputation ?? "unknown";
+          reply = `Based on the investigation context, this maps to **MITRE ATT&CK ${technique_id} – ${technique_name}** (Tactic: **${tactic}**).\n\n${description}\n\nThe source reputation is marked as **${tiRep}**. I'd review recent kernel and container patch levels before closing this case.`;
+        } else {
+          reply = `I don't have MITRE context loaded for this alert yet — try re-running the analysis. In general, the pattern here is consistent with container escape or privilege escalation techniques.`;
+        }
       } else {
         reply = `Right now, **\`${alert.source}\`** is ${
           quarantineStatus === "quarantined" ? "isolated — no further egress is possible from this node" : "still active, so the threat window is open"
@@ -433,7 +443,7 @@ export function VectorPanel({
         <div className="mx-4 mb-0 mt-2 px-3 py-2 rounded-lg bg-emerald-500/8 border border-emerald-500/20 flex items-center gap-2 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
           <p className="text-[11px] text-emerald-400 font-sans">
-            Containment initiated — investigation status updated to <strong>CONTAINED</strong>.
+            Containment initiated successfully. The affected host has been marked as contained.
           </p>
         </div>
       )}

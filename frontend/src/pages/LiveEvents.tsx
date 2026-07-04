@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, Trash2, Terminal, ShieldCheck, Cpu, Database, Search } from "lucide-react";
+import { Play, Pause, Trash2, Terminal, ShieldCheck, Database, Search } from "lucide-react";
 import { PageHeader } from "../components/ui/DesignSystem";
 
 interface LogLine {
@@ -28,11 +28,6 @@ export default function LiveEvents() {
       level: "info",
       service: "vector-classifier",
       message: "Isolation Forest inference processed on srv-db-backup. Anomaly Score: 0.124",
-    },
-    {
-      level: "info",
-      service: "chromadb-vector",
-      message: "ChromaDB query parsed. Match confidence for namespace: 94.2%",
     },
     {
       level: "info",
@@ -238,15 +233,9 @@ export default function LiveEvents() {
         <div className="bg-[#111317] border-t border-[#23262F] px-4 py-2 flex items-center justify-between text-[10px] font-mono text-gray-500 shrink-0">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
-              <Cpu className="w-3.5 h-3.5 text-blue-400" />
-              <span>
-                Daemon Memory: <strong>14.2 MB</strong>
-              </span>
-            </span>
-            <span className="flex items-center gap-1">
               <Database className="w-3.5 h-3.5 text-purple-400" />
               <span>
-                Log Buffer Size: <strong>{logs.length} Lines</strong>
+                Log Buffer: <strong>{logs.length} Lines</strong>
               </span>
             </span>
           </div>

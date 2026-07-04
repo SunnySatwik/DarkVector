@@ -5,13 +5,8 @@ import {
   Sparkles,
   BrainCircuit,
   X,
-  MessageSquare,
-  Terminal,
   RefreshCw,
   Send,
-  ShieldAlert,
-  CheckCircle,
-  ShieldX,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { AnalyzeResponse } from "../api/types";
@@ -55,26 +50,46 @@ export default function AiAnalystPanel({
           },
         ]);
       } else {
-        const shapText = analysis.explanation.top_factors
-          ?.map((f) => `- **${f.feature}** was responsible for ${(f.impact * 100).toFixed(0)}% of the risk score.`)
-          .join("\n") || "- No dominant signal — the risk is driven by the overall pattern deviation.";
+        const shapExplanations = analysis.explanation.top_factors
+          ?.map((f) => {
+            const feature = f.feature.replace(/^num__|^cat__/, "").replace(/_/g, " ");
+            if (feature.includes("bytes transferred")) {
+              return `- The volume of data transferred contributed strongly to this alert because it deviated significantly from historical behaviour.`;
+            }
+            if (feature.includes("port")) {
+              return `- The network connection port contributed strongly because it is not typical for this server's workload profile.`;
+            }
+            if (feature.includes("source")) {
+              return `- The host server contributed strongly to this alert because it is executing actions outside its normal baseline.`;
+            }
+            if (feature.includes("type")) {
+              return `- The trigger type signature contributed strongly because it matches known anomalous patterns.`;
+            }
+            if (feature.includes("command line") || feature.includes("process path")) {
+              return `- The executed process path or command line parameters contributed strongly because they deviate from standard operations.`;
+            }
+            return `- The system attribute **${feature}** showed a marked deviation from historical patterns.`;
+          })
+          .join("\n") || "- The overall event pattern deviates from historical baseline behavior.";
 
         setMessages([
           {
             sender: "ai",
-            text: `I've reviewed **${selectedAlert.id}** from \`${selectedAlert.source}\`.
+            text: `I have completed the analysis of **${selectedAlert.id}** on host \`${selectedAlert.source}\`.
 
-The anomaly score came in at **${analysis.analysis.anomaly_score?.toFixed(3) ?? "--"}** with a risk score of **${analysis.analysis.risk_score ?? "--"}**. That puts this in the category of events I'd want to act on quickly.
+### • What I found
+The event was flagged with an anomaly score of **${analysis.analysis.anomaly_score?.toFixed(3) ?? "--"}** and a risk score of **${analysis.analysis.risk_score ?? "--"}**. 
 
-**What stood out:**
-${shapText}
+Here are the key factors that contributed to this anomaly score:
+${shapExplanations}
 
-**My read:** ${analysis.explanation.summary}
+### • Why it matters
+${analysis.explanation.summary}
 
-**What I'd do next:**
-- Isolate \`${selectedAlert.source}\` to stop any active command-and-control communication.
-- Check whether credentials associated with this session have been used elsewhere.
-- Review the process tree to confirm the full execution chain before rebuilding the image.`,
+### • Recommended next steps
+1. **Isolate host** \`${selectedAlert.source}\` immediately to prevent potential command-and-control (C2) communication or lateral movement.
+2. **Audit process lineage** and parent processes in the process chain to trace execution flow.
+3. **Verify network connections** and remote endpoints for known indicators of compromise (IOCs).`,
             timestamp: new Date().toLocaleTimeString(),
           },
         ]);
@@ -131,11 +146,7 @@ ${shapText}
     }, 1500);
   };
 
-  const triggerIsolate = () => {
-    if (selectedAlert && onIsolateNode) {
-      onIsolateNode(selectedAlert.source);
-    }
-  };
+
 
   return (
     <AnimatePresence>
@@ -189,14 +200,11 @@ ${shapText}
                   <span className="text-[10px] font-mono text-red-400 bg-red-400/10 px-2 py-0.5 rounded border border-red-500/20">
                     Score {analysis?.analysis?.anomaly_score?.toFixed(3) ?? "--"}
                   </span>
-                  <span className="text-[10px] font-mono text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-500/20">
-                    {analysis?.metadata.model_version ?? "--"}
-                  </span>
                 </div>
               </div>
 
               {/* Live Model Metrics */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="grid grid-cols-2 gap-2 mb-4">
                 <div className="bg-[#161A22]/50 border border-[#23262F]/60 rounded p-2 text-center">
                   <div className="text-[10px] font-mono text-gray-500">
                     Risk Score
@@ -208,23 +216,10 @@ ${shapText}
 
                 <div className="bg-[#161A22]/50 border border-[#23262F]/60 rounded p-2 text-center">
                   <div className="text-[10px] font-mono text-gray-500">
-                    Confidence
+                    Anomaly Score
                   </div>
-                  <div className="text-xs font-mono font-semibold text-emerald-400 mt-1">
-                    {analysis
-                      ? `${Math.round(analysis.analysis.confidence * 100)}%`
-                      : "--"}
-                  </div>
-                </div>
-
-                <div className="bg-[#161A22]/50 border border-[#23262F]/60 rounded p-2 text-center">
-                  <div className="text-[10px] font-mono text-gray-500">
-                    Inference
-                  </div>
-                  <div className="text-xs font-mono font-semibold text-blue-400 mt-1">
-                    {analysis
-                      ? `${analysis.metadata.analysis_time_ms} ms`
-                      : "--"}
+                  <div className="text-xs font-mono font-semibold text-purple-400 mt-1">
+                    {analysis ? analysis.analysis.anomaly_score.toFixed(3) : "--"}
                   </div>
                 </div>
               </div>
@@ -241,70 +236,41 @@ ${shapText}
 
               </div>
 
-              {/* SHAP Values Feature Importance Progress list */}
+              {/* SHAP Values Feature Importance Explanations */}
               <div className="space-y-2">
-                <div className="text-[10px] font-mono text-gray-400">SHAP Parameter Weights:</div>
-                {analysis?.explanation.top_factors?.map((factor, i) => (
-
-                  <div key={i} className="text-[11px]">
-
-                    <div className="flex items-center justify-between text-gray-400 mb-1">
-
-                      <span className="truncate max-w-[280px]">
-                        {factor.feature}
-                      </span>
-
-                      <span
-                        className={`font-mono text-[10px] ${factor.direction === "increase"
-                          ? "text-red-400"
-                          : "text-emerald-400"
-                          }`}
-                      >
-                        {factor.impact !== undefined && factor.impact !== null ? `${(factor.impact * 100).toFixed(0)}%` : "--"}
-                      </span>
-
-                    </div>
-
-                    <div className="w-full bg-[#09090B] h-1.5 rounded-full overflow-hidden">
-
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{
-                          width: `${factor.impact * 100}%`,
-                        }}
-                        transition={{
-                          duration: 0.7,
-                          delay: i * 0.08,
-                        }}
-                        className={`h-full rounded-full ${factor.direction === "increase"
-                          ? "bg-gradient-to-r from-red-500 to-orange-400"
-                          : "bg-gradient-to-r from-emerald-500 to-green-400"
-                          }`}
-                      />
-
-                    </div>
-
-                  </div>
-
-                ))}
-              </div>
-
-              {/* Instant Node Actions inside AI Drawer */}
-              <div className="mt-4 pt-4 border-t border-[#23262F]/40 flex gap-2">
-                <button
-                  onClick={triggerIsolate}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg py-2 text-xs font-medium transition-colors"
-                >
-                  <ShieldX className="w-3.5 h-3.5" />
-                  Isolate Node Context
-                </button>
-                <button
-                  onClick={() => alert("Tracing path details deployed to SIEM dashboard")}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-[#161A22] hover:bg-[#23262F] border border-[#23262F] text-gray-300 rounded-lg py-2 text-xs font-medium transition-colors"
-                >
-                  <Terminal className="w-3.5 h-3.5 text-gray-400" />
-                  Export Telemetry
-                </button>
+                <div className="text-[10px] font-sans font-semibold text-gray-500 uppercase tracking-wider">
+                  Key Factor Explanations
+                </div>
+                <div className="space-y-2 bg-[#161A22]/30 border border-[#23262F]/40 rounded-lg p-3">
+                  {analysis?.explanation.top_factors && analysis.explanation.top_factors.length > 0 ? (
+                    analysis.explanation.top_factors.map((factor, i) => {
+                      const feature = factor.feature.replace(/^num__|^cat__/, "").replace(/_/g, " ");
+                      let desc = "";
+                      if (feature.includes("bytes transferred")) {
+                        desc = "The volume of data transferred contributed strongly to this alert because it deviated significantly from historical behaviour.";
+                      } else if (feature.includes("port")) {
+                        desc = "The connection port contributed strongly to this alert because it is not typical for this server's workload profile.";
+                      } else if (feature.includes("source")) {
+                        desc = "The host server contributed strongly to this alert because it is executing actions outside its normal baseline.";
+                      } else if (feature.includes("type")) {
+                        desc = "The alert type signature contributed strongly to this alert because it matches known threat signatures.";
+                      } else if (feature.includes("command line") || feature.includes("process path")) {
+                        desc = "The runtime process path or command line contributed strongly because it deviates from standard operations.";
+                      } else {
+                        desc = `The parameter "${feature}" contributed strongly to this alert because it deviated significantly from historical behavior.`;
+                      }
+                      return (
+                        <p key={i} className="text-xs text-gray-300 leading-relaxed font-sans">
+                          • {desc}
+                        </p>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-gray-500 font-sans italic">
+                      The risk score is driven by the overall pattern deviation rather than a single feature.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}

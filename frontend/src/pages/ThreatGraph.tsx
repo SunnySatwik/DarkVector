@@ -206,14 +206,33 @@ export default function ThreatGraph({
         subtitle="Visualize relationships between container processes, socket files, and active network connections in an interactive evidence map."
       />
 
-      <div className="bg-[#161A22]/20 border border-border-custom/20 rounded-xl px-4 py-2 text-xs flex items-center justify-between text-gray-400 font-mono">
-        <span>
-          {activeInvestigationId
-            ? <>Showing evidence map for <strong className="text-purple-400">{detailData.investigation.investigation_id}</strong> · {detailData.investigation.title}</>
-            : <>No investigation selected — showing most recent incident: <strong className="text-purple-400">{detailData.investigation.investigation_id}</strong> · {detailData.investigation.title}</>
-          }
-        </span>
-        <Badge variant={detailData.investigation.status.toLowerCase() === "resolved" ? "success" : "default"}>
+      <div className="bg-[#161A22]/20 border border-border-custom/20 rounded-xl p-5 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-gray-300 font-sans">
+        <div className="space-y-1">
+          {activeInvestigationId ? (
+            <>
+              <p className="text-xs text-gray-500 font-mono">Showing evidence for:</p>
+              <h2 className="text-base font-bold text-gray-100 font-mono tracking-tight">
+                {detailData.investigation.investigation_id}
+              </h2>
+              <p className="text-sm font-medium text-purple-400">
+                {detailData.investigation.title}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-orange-400 uppercase tracking-wider font-mono">
+                ⚠ No investigation selected.
+              </p>
+              <p className="text-xs text-gray-500">
+                Displaying the most recent investigation.
+              </p>
+              <h2 className="text-sm font-bold text-gray-200 font-mono mt-1">
+                {detailData.investigation.investigation_id} · {detailData.investigation.title}
+              </h2>
+            </>
+          )}
+        </div>
+        <Badge variant={detailData.investigation.status.toLowerCase() === "resolved" ? "success" : "default"} className="self-start sm:self-center">
           {detailData.investigation.status}
         </Badge>
       </div>

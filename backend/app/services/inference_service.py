@@ -95,16 +95,48 @@ class InferenceService:
         )
 
         # --------------------------------------------------
-        # Executive Summary
-        # (Later replaced by Gemini)
+        # Executive Summary  (analyst-voice, first-person)
         # --------------------------------------------------
 
+        category = alert_data.get("category", "unknown")
+        source = alert_data.get("source", "an unknown host")
+        alert_type = alert_data.get("type", "an anomalous event")
+
+        _category_context: dict[str, str] = {
+            "process": (
+                f"I spotted a process on `{source}` that spawned outside the expected "
+                f"execution chain — the binary doesn't match anything in this host's "
+                f"normal runtime profile."
+            ),
+            "network": (
+                f"I found an outbound connection from `{source}` that doesn't match "
+                f"this server's known egress patterns. The destination has no prior "
+                f"history from this host."
+            ),
+            "authentication": (
+                f"I noticed unusual authentication activity on `{source}` that doesn't "
+                f"fit this account's historical access pattern. The timing and origin "
+                f"are both out of character."
+            ),
+            "system": (
+                f"I detected privilege changes on `{source}` that opened escalation "
+                f"paths beyond the expected role boundary — a common precursor to "
+                f"lateral movement."
+            ),
+        }
+
+        _base = _category_context.get(
+            category,
+            f"I detected anomalous activity from `{source}` that deviates significantly "
+            f"from the established baseline for this host type.",
+        )
+
         summary = (
-            f"The event was classified as "
-            f"{risk.severity} risk with a "
-            f"risk score of {risk.risk_score:.1f}. "
-            f"The strongest feature contributions "
-            f"were used to determine the anomaly."
+            f"{_base} "
+            f"The alert type is **{alert_type}** and at a risk score of "
+            f"**{risk.risk_score:.1f}**, this sits in the {risk.severity.upper()} range. "
+            f"I'd recommend reviewing the process tree and recent network connections "
+            f"before closing this case."
         )
 
         # --------------------------------------------------

@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import {
   ArrowLeft,
-  Printer,
   Briefcase,
   Activity,
   Shield,
@@ -30,10 +29,6 @@ export default function InvestigationReportView({
 
   const isPending = isDetailPending || isTimelinePending;
   const isError = isDetailError;
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   const formattedDate = useMemo(() => {
     if (!detailData?.investigation.created_at) return "";
@@ -129,21 +124,13 @@ export default function InvestigationReportView({
       `}</style>
 
       {/* Action bar (Hidden on print) */}
-      <div className="max-w-4xl mx-auto px-6 py-4 no-print flex items-center justify-between border-b border-border-custom/12 bg-surface/20 sticky top-0 backdrop-blur-md z-10">
+      <div className="max-w-4xl mx-auto px-6 py-4 no-print flex items-center border-b border-border-custom/12 bg-surface/20 sticky top-0 backdrop-blur-md z-10">
         <button
           onClick={onClose}
           className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors group cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform duration-120" />
           <span>Back to Workspace</span>
-        </button>
-
-        <button
-          onClick={handlePrint}
-          className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-bold rounded-lg transition-all duration-150 shadow-md hover:shadow-purple-500/20 cursor-pointer"
-        >
-          <Printer className="w-3.5 h-3.5" />
-          <span>Print Report</span>
         </button>
       </div>
 
