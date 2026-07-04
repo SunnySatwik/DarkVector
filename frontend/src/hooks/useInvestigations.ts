@@ -5,6 +5,7 @@ import {
     getInvestigations,
     getTimeline,
     updateInvestigationStatus,
+    getInvestigationReport,
 } from "../api/investigations";
 
 export function useInvestigation(
@@ -65,6 +66,18 @@ export function useUpdateInvestigationStatus(investigationId?: string) {
             queryClient.invalidateQueries({
                 queryKey: ["investigations"],
             });
+            queryClient.invalidateQueries({
+                queryKey: ["report", investigationId],
+            });
         },
+    });
+}
+
+export function useInvestigationReport(investigationId?: string) {
+    return useQuery({
+        queryKey: ["report", investigationId],
+        queryFn: () => getInvestigationReport(investigationId!),
+        enabled: !!investigationId,
+        staleTime: 30000,
     });
 }

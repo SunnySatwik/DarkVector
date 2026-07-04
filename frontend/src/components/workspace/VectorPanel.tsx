@@ -25,6 +25,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import type { Alert } from "../../types";
 import type { ContextEnrichment } from "../../api/types";
+import { sendChatMessage } from "../../api/investigations";
 import { Skeleton } from "../ui/DesignSystem";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -41,6 +42,7 @@ export interface VectorPanelProps {
   onRetryAnalysis?: () => void;
   /** MITRE + Threat Intel context from the ML pipeline — used to ground AI chat responses */
   analysisContext?: ContextEnrichment;
+  investigationId?: string;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -72,6 +74,7 @@ export function VectorPanel({
   isAnalysisError = false,
   onRetryAnalysis,
   analysisContext,
+  investigationId,
 }: VectorPanelProps) {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<
@@ -125,7 +128,7 @@ export function VectorPanel({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isResponding]);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
 
@@ -138,48 +141,33 @@ export function VectorPanel({
     setChatMessages((prev) => [...prev, { sender: "user", text, time }]);
     setIsResponding(true);
 
-    setTimeout(() => {
-      const q = text.toLowerCase();
-      let reply: string;
-
-      if (q.includes("isolate") || q.includes("quarantine")) {
-        reply = `I'd recommend isolating **\`${alert.source}\`** now. Use the **Isolate node** action in the panel above — it'll cut the host's outbound connections and update the investigation status to Contained. Once isolated, review the process tree before deciding on a full image rebuild.`;
-      } else if (
-        q.includes("explain") ||
-        q.includes("why") ||
-        q.includes("shap")
-      ) {
-        const factors = alert.details.shapFactors ?? [];
-        reply =
-          factors.length > 0
-            ? `Here's what stood out most:\n\n${factors
-                .map(
-                  (f) =>
-                    `- **${f.factor}** — ${(f.impact * 100).toFixed(0)}% of the risk score`
-                )
-                .join("\n")}\n\nNone of these alone would be alarming, but together they're a clear outlier from this source's normal pattern.`
-            : "I flagged this based on the overall deviation from baseline — there isn't detailed attribution data for this specific alert.";
-      } else if (
-        q.includes("cve") ||
-        q.includes("mitre") ||
-        q.includes("threat")
-      ) {
-        if (analysisContext?.mitre) {
-          const { technique_id, technique_name, tactic, description } = analysisContext.mitre;
-          const tiRep = analysisContext.threat_intelligence?.reputation ?? "unknown";
-          reply = `Based on the investigation context, this maps to **MITRE ATT&CK ${technique_id} – ${technique_name}** (Tactic: **${tactic}**).\n\n${description}\n\nThe source reputation is marked as **${tiRep}**. I'd review recent kernel and container patch levels before closing this case.`;
-        } else {
-          reply = `I don't have MITRE context loaded for this alert yet — try re-running the analysis. In general, the pattern here is consistent with container escape or privilege escalation techniques.`;
-        }
+    try {
+      if (investigationId) {
+        const reply = await sendChatMessage(investigationId, text);
+        setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
       } else {
-        reply = `Right now, **\`${alert.source}\`** is ${
-          quarantineStatus === "quarantined" ? "isolated — no further egress is possible from this node" : "still active, so the threat window is open"
-        }. What would you like to look into — the process chain, the network connections, or the MITRE mapping?`;
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            sender: "ai",
+            text: "No active case found. I require an active investigation context to analyze and answer security questions.",
+            time,
+          },
+        ]);
       }
-
-      setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
+    } catch (err) {
+      console.error("Chat request failed:", err);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          sender: "ai",
+          text: "I experienced a network error trying to connect to my reasoning service. Please check your backend connection.",
+          time,
+        },
+      ]);
+    } finally {
       setIsResponding(false);
-    }, 700);
+    }
   };
 
   return (

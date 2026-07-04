@@ -10,8 +10,9 @@ import {
   UserCheck,
   CheckCircle,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { Badge, Skeleton } from "../components/ui/DesignSystem";
-import { useInvestigation, useTimeline } from "../hooks/useInvestigations";
+import { useInvestigation, useTimeline, useInvestigationReport } from "../hooks/useInvestigations";
 import { severityBadgeVariant } from "../lib/severity";
 import { Severity } from "../types";
 
@@ -26,8 +27,9 @@ export default function InvestigationReportView({
 }: InvestigationReportViewProps) {
   const { data: detailData, isPending: isDetailPending, isError: isDetailError } = useInvestigation(investigationId);
   const { data: timelineData, isPending: isTimelinePending } = useTimeline(investigationId);
+  const { data: reportData, isPending: isReportPending } = useInvestigationReport(investigationId);
 
-  const isPending = isDetailPending || isTimelinePending;
+  const isPending = isDetailPending || isTimelinePending || isReportPending;
   const isError = isDetailError;
 
   const formattedDate = useMemo(() => {
@@ -236,9 +238,9 @@ export default function InvestigationReportView({
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Vector Incident Summarisation</span>
               </div>
-              <p className="text-xs text-gray-300 font-sans leading-relaxed print-text-dark">
-                {investigation.summary}
-              </p>
+              <div className="text-xs text-gray-300 font-sans leading-relaxed print-text-dark prose prose-invert max-w-none">
+                <ReactMarkdown>{reportData?.report || ""}</ReactMarkdown>
+              </div>
             </div>
           </div>
 

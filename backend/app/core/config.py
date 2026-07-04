@@ -12,6 +12,9 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
 
+    GEMINI_API_KEY: str = ""
+    USE_LLM: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,

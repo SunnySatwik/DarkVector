@@ -103,3 +103,33 @@ def update_investigation_status(
             detail="Investigation not found",
         )
     return InvestigationResponse.model_validate(investigation)
+
+from pydantic import BaseModel
+
+class ReportResponse(BaseModel):
+    report: str
+
+@router.get(
+    "/{investigation_id}/report",
+    response_model=ReportResponse,
+)
+def get_investigation_report(
+    investigation_id: str,
+    db: Session = Depends(get_db),
+):
+    investigation = InvestigationService.get_investigation(
+        db,
+        investigation_id,
+    )
+    if investigation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Investigation not found",
+        )
+
+    timeline_repo = TimelineRepository(db)
+    timeline_events = timeline_repo.list_for_investigation(investigation_id)
+
+    from app.services.llm.llm_service import LLMService
+    report_content = LLMService.generate_report(db, investigation, timeline_events)
+    return ReportResponse(report=report_content)

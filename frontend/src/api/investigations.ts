@@ -65,3 +65,23 @@ export async function updateInvestigationStatus(
         severity: inv.severity.toLowerCase() as Severity,
     };
 }
+
+export async function sendChatMessage(
+    investigationId: string,
+    message: string
+): Promise<string> {
+    const response = await api.post("/chat/", {
+        investigation_id: investigationId,
+        message,
+    });
+    return response.data.reply;
+}
+
+export async function getInvestigationReport(
+    investigationId: string
+): Promise<{ report: string }> {
+    const response = await api.get(
+        `/investigations/${investigationId}/report`
+    );
+    return response.data;
+}

@@ -491,6 +491,7 @@ export default function WorkspaceView({
             isAnalysisError={isError}
             onRetryAnalysis={refetch}
             analysisContext={analysisContext}
+            investigationId={investigationId}
           />
         </motion.div>
       </div>
