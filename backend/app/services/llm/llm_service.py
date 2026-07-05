@@ -126,7 +126,7 @@ class LLMService:
                 raw_reply = f"{raw_reply}\n\nEvidence Used\n{citation_lines}"
 
             stage = "Response Validator"
-            reply = ResponseValidator.validate_summary(raw_reply)
+            reply = ResponseValidator.validate_summary(raw_reply, knowledge_doc)
             logger.info("[Validator] ✓ Passed")
 
             # Timing and Metrics Logging
@@ -234,7 +234,7 @@ class LLMService:
                 raw_reply = f"{raw_reply}\n\nEvidence Used\n{citation_lines}"
 
             stage = "Response Validator"
-            reply = ResponseValidator.validate_chat(raw_reply)
+            reply = ResponseValidator.validate_chat(raw_reply, knowledge_doc)
             logger.info("[Validator] ✓ Passed")
 
             # Timing and Metrics Logging
@@ -346,7 +346,7 @@ class LLMService:
                 raw_reply = f"{raw_reply}\n\nEvidence Used\n{citation_lines}"
 
             stage = "Response Validator"
-            reply = ResponseValidator.validate_report(raw_reply)
+            reply = ResponseValidator.validate_report(raw_reply, knowledge_doc)
             logger.info("[Validator] ✓ Passed")
 
             # Timing and Metrics Logging
