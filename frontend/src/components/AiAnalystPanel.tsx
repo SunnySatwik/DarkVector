@@ -7,9 +7,12 @@ import {
   X,
   RefreshCw,
   Send,
+  Copy,
+  Check,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { AnalyzeResponse } from "../api/types";
+import { sendChatMessage } from "../api/investigations";
 
 interface AiAnalystPanelProps {
   isOpen: boolean;
@@ -36,7 +39,19 @@ export default function AiAnalystPanel({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const handleCopy = (text: string, id: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setToastMessage("Copied to clipboard");
+    setTimeout(() => {
+      setCopiedId(null);
+      setToastMessage(null);
+    }, 2000);
+  };
 
   // Initialize chat when alert changes
   useEffect(() => {
@@ -110,40 +125,47 @@ ${analysis.explanation.summary}
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || !selectedAlert) return;
 
     const userMsgText = inputValue;
-    const timestamp = new Date().toLocaleTimeString();
+    const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    // Format current history for LLM
+    const formattedHistory = messages.map(m => ({
+      sender: m.sender,
+      text: m.text
+    }));
 
     setMessages((prev) => [...prev, { sender: "user", text: userMsgText, timestamp }]);
     setInputValue("");
     setIsTyping(true);
 
-    // Simulate cyber security response stream after 1.5s
-    setTimeout(() => {
-      let aiResponseText = "";
-      if (
-        userMsgText.toLowerCase().includes("isolate") ||
-        userMsgText.toLowerCase().includes("quarantine")
-      ) {
-        aiResponseText = `I'd recommend isolating **\`${selectedAlert?.source || "the source host"}\`** as soon as possible. Use the Isolate action in the Investigation Workspace — it'll sever the host's outbound connections and automatically update the status to Contained. Once that's done, review the process tree before deciding whether a full image rebuild is needed.`;
-      } else if (
-        userMsgText.toLowerCase().includes("block") ||
-        userMsgText.toLowerCase().includes("networkpolicy")
-      ) {
-        aiResponseText = `To block egress to **\`${selectedAlert?.details.ipAddress || "the remote IP"}\`**, your team can apply a network egress rule through your infrastructure tooling. If this host is Kubernetes-managed, a NetworkPolicy with an egress deny rule targeted to that CIDR is the right move. I'd also flag that IP for threat intel tracking if you haven't already.`;
-      } else {
-        aiResponseText = `Looking at **${selectedAlert?.id || "this case"}** — the source \`${selectedAlert?.source || "node"}\` is showing a pattern I'd want to investigate further. Is there something specific you want me to focus on? I can walk through the process chain, the network connections, or the MITRE mapping.`;
-      }
-
+    try {
+      const reply = await sendChatMessage(
+        undefined,
+        userMsgText,
+        formattedHistory,
+        selectedAlert.id
+      );
       setMessages((prev) => [
         ...prev,
-        { sender: "ai", text: aiResponseText, timestamp: new Date().toLocaleTimeString() },
+        { sender: "ai", text: reply, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }
       ]);
+    } catch (err) {
+      console.error("Panel chat failed:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "ai",
+          text: "I experienced an error connecting to my primary analyst database. Please try again.",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        }
+      ]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
 
@@ -294,16 +316,30 @@ ${analysis.explanation.summary}
                   <span>• {msg.timestamp}</span>
                 </div>
 
-                <div
-                  className={`max-w-[92%] rounded-xl px-3 py-2 text-xs font-sans leading-relaxed border ${msg.sender === "user"
-                    ? "bg-blue-500/10 border-blue-500/30 text-gray-100"
-                    : "bg-[#161A22] border-[#23262F] text-gray-300"
-                    }`}
-                >
-                  {/* Markdown inside AI response */}
-                  <div className="markdown-body prose prose-invert prose-xs max-w-none">
-                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                <div className="flex items-start gap-1.5 max-w-[92%] group relative">
+                  <div
+                    className={`rounded-xl px-3 py-2 text-xs font-sans leading-relaxed border ${msg.sender === "user"
+                      ? "bg-blue-500/10 border-blue-500/30 text-gray-100"
+                      : "bg-[#161A22] border-[#23262F] text-gray-300"
+                      }`}
+                  >
+                    {/* Markdown inside AI response */}
+                    <div className="markdown-body prose prose-invert prose-xs max-w-none select-text">
+                      <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(msg.text, i)}
+                    className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-300 p-1.5 rounded transition-opacity cursor-pointer shrink-0"
+                    title="Copy message"
+                  >
+                    {copiedId === i ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
                 </div>
               </div>
             ))}
@@ -338,11 +374,26 @@ ${analysis.explanation.summary}
             />
             <button
               type="submit"
-              className="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors shadow shadow-purple-500/20"
+              className="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors shadow shadow-purple-500/20 animate-pulse-slow"
             >
               <Send className="w-3.5 h-3.5" />
             </button>
           </form>
+
+          {/* Toast Notification */}
+          <AnimatePresence>
+            {toastMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="fixed bottom-6 right-6 bg-[#111317] border border-emerald-500/30 text-gray-200 px-4 py-2 rounded-xl text-xs font-sans shadow-lg z-50 flex items-center gap-2"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                {toastMessage}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>

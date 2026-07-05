@@ -21,6 +21,8 @@ import {
   Unplug,
   Shield,
   ChevronDown,
+  Copy,
+  Check,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Alert } from "../../types";
@@ -81,6 +83,18 @@ export function VectorPanel({
     { sender: "ai" | "user"; text: string; time: string }[]
   >([]);
   const [isResponding, setIsResponding] = useState(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleCopy = (text: string, id: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setToastMessage("Copied to clipboard");
+    setTimeout(() => {
+      setCopiedId(null);
+      setToastMessage(null);
+    }, 2000);
+  };
   const [conversationOpen, setConversationOpen] = useState(true);
   const [isolateToast, setIsolateToast] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -115,14 +129,31 @@ export function VectorPanel({
       hour: "2-digit",
       minute: "2-digit",
     });
+
+    const processPath = alert.details.processPath || "anomalous executable";
+    const source = alert.source;
+    const technique = analysisContext?.mitre?.technique_name || "unauthorized execution";
+    const parentProcess = alert.details.parentProcess ? ` parented by \`${alert.details.parentProcess}\`` : "";
+    const outboundStr = alert.details.ipAddress ? ` and outbound traffic to \`${alert.details.ipAddress}\`` : "";
+
+    const text = `I reviewed this investigation before you opened it.
+
+The strongest indicator is an unexpected \`${processPath}\` process that spawned outside the expected execution chain on **${source}**${parentProcess}.
+
+Combined with the outbound connection${outboundStr} and the MITRE mapping, this looks consistent with a **${technique}** attempt.
+
+I'd start by verifying the parent process and confirming whether the affected workload is still communicating externally.
+
+Ask me anything about this investigation.`;
+
     setChatMessages([
       {
         sender: "ai",
-        text: `I've looked at this case. There are a few things worth discussing — ask me anything about **${alert.id}**.`,
+        text,
         time,
       },
     ]);
-  }, [alert]);
+  }, [alert, analysisContext]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -143,7 +174,11 @@ export function VectorPanel({
 
     try {
       if (investigationId) {
-        const reply = await sendChatMessage(investigationId, text);
+        const formattedHistory = chatMessages.map((m) => ({
+          sender: m.sender,
+          text: m.text,
+        }));
+        const reply = await sendChatMessage(investigationId, text, formattedHistory);
         setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
       } else {
         setChatMessages((prev) => [
@@ -477,16 +512,30 @@ export function VectorPanel({
                     <span className="text-[10px] text-gray-600 mb-1 px-0.5 font-sans">
                       {msg.sender === "ai" ? "Vector" : "You"} · {msg.time}
                     </span>
-                    <div
-                      className={`max-w-[96%] rounded-lg px-2.5 py-1.5 text-[12px] leading-relaxed ${
-                        msg.sender === "user"
-                          ? "bg-violet-500/8 text-gray-300"
-                          : "bg-surface/60 text-gray-400"
-                      }`}
-                    >
-                      <div className="prose prose-invert prose-xs max-w-none [&_p]:my-0 [&_strong]:text-gray-300 font-sans">
-                        <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    <div className="flex items-start gap-1 max-w-[96%] group relative">
+                      <div
+                        className={`rounded-lg px-2.5 py-1.5 text-[12px] leading-relaxed ${
+                          msg.sender === "user"
+                            ? "bg-violet-500/8 text-gray-300"
+                            : "bg-surface/60 text-gray-400"
+                        }`}
+                      >
+                        <div className="prose prose-invert prose-xs max-w-none [&_p]:my-0 [&_strong]:text-gray-300 font-sans select-text">
+                          <ReactMarkdown>{msg.text}</ReactMarkdown>
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(msg.text, i)}
+                        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-300 p-1 rounded transition-opacity cursor-pointer shrink-0"
+                        title="Copy message"
+                      >
+                        {copiedId === i ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
                     </div>
                   </motion.div>
                 ))}
@@ -541,6 +590,20 @@ export function VectorPanel({
           <Send className="w-3.5 h-3.5" />
         </button>
       </form>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="fixed bottom-6 right-6 bg-[#111317] border border-emerald-500/30 text-gray-200 px-4 py-2 rounded-xl text-xs font-sans shadow-lg z-50 flex items-center gap-2"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

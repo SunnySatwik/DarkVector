@@ -23,7 +23,7 @@ export default function AppLayout({
   onToggleSidebarCollapse,
 }: AppLayoutProps) {
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg text-gray-100 select-none animate-theme-transition">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg text-gray-100 animate-theme-transition">
       {/* Upper Main Section */}
       <div className="flex-1 flex overflow-hidden h-full">
         {/* Sidebar Navigation */}

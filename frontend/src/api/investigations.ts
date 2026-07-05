@@ -67,12 +67,16 @@ export async function updateInvestigationStatus(
 }
 
 export async function sendChatMessage(
-    investigationId: string,
-    message: string
+    investigationId: string | undefined,
+    message: string,
+    history: { sender: string; text: string }[] = [],
+    alertId?: string
 ): Promise<string> {
     const response = await api.post("/chat/", {
         investigation_id: investigationId,
+        alert_id: alertId,
         message,
+        history,
     });
     return response.data.reply;
 }

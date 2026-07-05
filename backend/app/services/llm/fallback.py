@@ -11,7 +11,7 @@ class FallbackAI:
         category = alert_data.get("category", "unknown")
         source = alert_data.get("source", "an unknown host")
         alert_type = alert_data.get("type", "an anomalous event")
-        print("⚠️ USING FALLBACK")
+        print("[FALLBACK] Generating summary fallback")
         _category_context = {
             "process": (
                 f"I spotted a process on `{source}` that spawned outside the expected "
@@ -50,7 +50,7 @@ class FallbackAI:
         )
 
     @staticmethod
-    def generate_chat(investigation, timeline: list, message: str) -> str:
+    def generate_chat(investigation, timeline: list, message: str, history: list = None) -> str:
         q = message.lower()
         # Retrieve properties from investigation database model or dictionary
         if hasattr(investigation, "alert_json"):
@@ -66,7 +66,7 @@ class FallbackAI:
         source = alert_json.get("source", "unknown host")
         context = analysis_json.get("context", {})
         is_contained = "contained" in status_str
-        print("⚠️ USING FALLBACK")
+        print("[FALLBACK] Generating chat fallback")
         if "isolate" in q or "quarantine" in q:
             return (
                 f"I'd recommend isolating **`{source}`** now. Use the **Isolate host** action "
@@ -84,7 +84,7 @@ class FallbackAI:
                     impact = f.get("impact", 0)
                     factor_strs.append(f"- **{feat}** — {int(impact * 100)}% of the risk score")
                 return (
-                    "Here's what stood out most:\n\n"
+                    "Here's what stood out to me:\n\n"
                     + "\n".join(factor_strs)
                     + "\n\nNone of these alone would be alarming, but together they're a clear outlier from this source's normal pattern."
                 )
@@ -100,7 +100,7 @@ class FallbackAI:
                 desc = mitre.get("description", "")
                 ti_rep = ti.get("reputation", "unknown") if ti else "unknown"
                 return (
-                    f"Based on the investigation context, this maps to **MITRE ATT&CK {tech_id} – {tech_name}** "
+                    f"One thing that caught my attention is that this maps to **MITRE ATT&CK {tech_id} – {tech_name}** "
                     f"(Tactic: **{tactic}**).\n\n{desc}\n\nThe source reputation is marked as **{ti_rep}**. "
                     f"I'd review recent kernel and container patch levels before closing this case."
                 )
@@ -112,8 +112,7 @@ class FallbackAI:
         else:
             status_suffix = "isolated — no further egress is possible from this node" if is_contained else "still active, so the threat window is open"
             return (
-                f"Right now, **`{source}`** is {status_suffix}. What would you like to look into — "
-                f"the process chain, the network connections, or the MITRE mapping?"
+                f"Right now, **`{source}`** is {status_suffix}. What would you like to focus on next?"
             )
 
     @staticmethod
@@ -140,7 +139,7 @@ class FallbackAI:
         tech_id = mitre.get("technique_id", "N/A")
         tech_name = mitre.get("technique_name", "N/A")
         ti_rep = ti.get("reputation", "unknown")
-        print("⚠️ USING FALLBACK")
+        print("[FALLBACK] Generating report fallback")
         return (
             f"### Executive Summary\n"
             f"I reviewed the security incident involving **{source}** and identified high-risk anomalous activity. "

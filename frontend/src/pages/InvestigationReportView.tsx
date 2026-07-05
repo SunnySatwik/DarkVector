@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   Briefcase,
@@ -9,13 +9,15 @@ import {
   Clock,
   UserCheck,
   CheckCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Badge, Skeleton } from "../components/ui/DesignSystem";
 import { useInvestigation, useTimeline, useInvestigationReport } from "../hooks/useInvestigations";
 import { severityBadgeVariant } from "../lib/severity";
 import { Severity } from "../types";
-
+import { motion, AnimatePresence } from "motion/react";
 interface InvestigationReportViewProps {
   investigationId: string;
   onClose: () => void;
@@ -28,6 +30,20 @@ export default function InvestigationReportView({
   const { data: detailData, isPending: isDetailPending, isError: isDetailError } = useInvestigation(investigationId);
   const { data: timelineData, isPending: isTimelinePending } = useTimeline(investigationId);
   const { data: reportData, isPending: isReportPending } = useInvestigationReport(investigationId);
+
+  const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleCopy = (text: string, section: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedSection(section);
+    setToastMessage("Copied to clipboard");
+    setTimeout(() => {
+      setCopiedSection(null);
+      setToastMessage(null);
+    }, 2000);
+  };
 
   const isPending = isDetailPending || isTimelinePending || isReportPending;
   const isError = isDetailError;
@@ -126,7 +142,7 @@ export default function InvestigationReportView({
       `}</style>
 
       {/* Action bar (Hidden on print) */}
-      <div className="max-w-4xl mx-auto px-6 py-4 no-print flex items-center border-b border-border-custom/12 bg-surface/20 sticky top-0 backdrop-blur-md z-10">
+      <div className="max-w-4xl mx-auto px-6 py-4 no-print flex items-center justify-between border-b border-border-custom/12 bg-surface/20 sticky top-0 backdrop-blur-md z-10">
         <button
           onClick={onClose}
           className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors group cursor-pointer"
@@ -134,12 +150,31 @@ export default function InvestigationReportView({
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform duration-120" />
           <span>Back to Workspace</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => handleCopy(reportData?.report || "", "report")}
+          className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 bg-purple-950/20 border border-purple-500/30 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+          title="Copy Full Markdown Report"
+        >
+          {copiedSection === "report" ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Copied Report!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copy Full Report</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Report Document Area */}
       <div className="max-w-4xl mx-auto px-6 py-8 print-container">
         <div className="bg-[#111317] border border-[#23262F] rounded-xl p-8 shadow-xl space-y-8 print-card print-container">
-          
+
           {/* Header Row */}
           <div className="flex items-start justify-between border-b border-border-custom/25 pb-6 print-header">
             <div className="space-y-2">
@@ -230,16 +265,38 @@ export default function InvestigationReportView({
 
           {/* AI Executive Summary */}
           <div className="space-y-4">
-            <h3 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider print-text-muted">
-              3. AI Executive Summary
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider print-text-muted">
+                3. AI Executive Summary
+              </h3>
+              <button
+                type="button"
+                onClick={() => handleCopy(reportData?.report || investigation.summary || "", "summary")}
+                className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-300 bg-[#161A22] border border-[#23262F] px-2 py-1 rounded transition-colors cursor-pointer no-print"
+                title="Copy Executive Summary"
+              >
+                {copiedSection === "summary" ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Section</span>
+                  </>
+                )}
+              </button>
+            </div>
             <div className="bg-purple-950/5 border border-purple-500/20 rounded-lg p-5 space-y-3 print-card">
               <div className="flex items-center gap-2 text-[10px] font-mono text-purple-400 print-text-dark">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Vector Incident Summarisation</span>
               </div>
-              <div className="text-xs text-gray-300 font-sans leading-relaxed print-text-dark prose prose-invert max-w-none">
-                <ReactMarkdown>{reportData?.report || ""}</ReactMarkdown>
+              <div className="text-xs text-gray-300 font-sans leading-relaxed print-text-dark prose prose-invert max-w-none select-text">
+                <ReactMarkdown>
+                  {reportData?.report || investigation.summary || "Generating AI incident summary and detailed findings based on the event telemetry..."}
+                </ReactMarkdown>
               </div>
             </div>
           </div>
@@ -360,6 +417,21 @@ export default function InvestigationReportView({
           <p>Classification: CONFIDENTIAL // INTERNAL SECURITY USE ONLY</p>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="fixed bottom-6 right-6 bg-[#111317] border border-emerald-500/30 text-gray-200 px-4 py-2 rounded-xl text-xs font-sans shadow-lg z-50 flex items-center gap-2"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

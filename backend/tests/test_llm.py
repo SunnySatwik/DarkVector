@@ -82,4 +82,4 @@ def test_chat_endpoint_missing_investigation():
     })
     # Since investigation doesn't exist, it should return a message indicating that or fallback
     assert response.status_code == 200
-    assert "Error" in response.json()["reply"]
+    assert "not found" in response.json()["reply"].lower()

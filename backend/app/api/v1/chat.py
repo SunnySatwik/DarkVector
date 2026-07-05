@@ -9,9 +9,13 @@ router = APIRouter(
     tags=["Chat"],
 )
 
+from typing import List, Dict, Any, Optional
+
 class ChatRequest(BaseModel):
-    investigation_id: str
+    investigation_id: Optional[str] = None
+    alert_id: Optional[str] = None
     message: str
+    history: List[Dict[str, Any]] = []
 
 class ChatResponse(BaseModel):
     reply: str
@@ -22,7 +26,9 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         reply = LLMService.chat(
             db=db,
             investigation_id=request.investigation_id,
+            alert_id=request.alert_id,
             message=request.message,
+            history=request.history,
         )
         return ChatResponse(reply=reply)
     except Exception as e:
