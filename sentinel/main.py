@@ -14,6 +14,10 @@ Environment overrides (see config.py):
 
 from __future__ import annotations
 
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import signal
 import sys
 import time
@@ -55,10 +59,13 @@ def main() -> None:
     signal.signal(signal.SIGTERM, _handle_signal)
 
     heartbeat_collector = HeartbeatCollector()
+    from collector.process import ProcessCollector
+    process_collector = ProcessCollector()
     transport = APITransport()
 
     try:
         while _running:
+            # 1. Heartbeat cycle
             try:
                 event = heartbeat_collector.collect()
                 delivered = transport.send(event)
@@ -68,10 +75,21 @@ def main() -> None:
                         "Heartbeat delivery failed after all retries — continuing",
                         extra={"event_id": event.id},
                     )
-
             except Exception as exc:
                 logger.error(
-                    "Unexpected error in main loop",
+                    "Unexpected error in heartbeat lifecycle",
+                    extra={"error": str(exc)},
+                    exc_info=True,
+                )
+
+            # 2. Process telemetry cycle (must not affect heartbeat or terminate the agent)
+            try:
+                proc_events = process_collector.collect()
+                for p_evt in proc_events:
+                    transport.send(p_evt)
+            except Exception as exc:
+                logger.error(
+                    "Unexpected error in process telemetry cycle",
                     extra={"error": str(exc)},
                     exc_info=True,
                 )
