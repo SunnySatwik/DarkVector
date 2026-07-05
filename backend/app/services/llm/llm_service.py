@@ -6,8 +6,9 @@ from google import genai
 from app.services.llm.fallback import FallbackAI
 from app.services.context_builder import ContextBuilder
 from app.services.llm.knowledge_pack import KnowledgePack
-from app.services.llm.prompt_builder import PromptBuilder
+from app.services.llm.prompt import PromptBuilder
 from app.services.llm.response_validator import ResponseValidator
+from app.services.llm.citations import EvidenceCitationBuilder
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -118,6 +119,12 @@ class LLMService:
             stage = "Gemini"
             raw_reply = cls._generate(prompt)
 
+            # Append citations
+            citations = EvidenceCitationBuilder.build(context_data)
+            if citations:
+                citation_lines = "\n".join(f"• {c}" for c in citations)
+                raw_reply = f"{raw_reply}\n\nEvidence Used\n{citation_lines}"
+
             stage = "Response Validator"
             reply = ResponseValidator.validate_summary(raw_reply)
             logger.info("[Validator] ✓ Passed")
@@ -139,12 +146,35 @@ class LLMService:
             logger.exception("Summary pipeline failed: [%s] stage failed: %s", stage, str(e))
             logger.info("[Pipeline] Using Fallback AI for summary")
 
-            return FallbackAI.generate_summary(
+            reply = FallbackAI.generate_summary(
                 alert_data,
                 risk_score,
                 severity,
                 anomaly_score,
             )
+
+            # Append citations in fallback
+            try:
+                if 'context_data' not in locals() or not context_data:
+                    context_data = ContextBuilder.build(
+                        db=db,
+                        alert_data=alert_data,
+                        risk_score=risk_score,
+                        severity=severity,
+                        anomaly_score=anomaly_score,
+                        mitre_mapping=mitre_mapping,
+                        threat_intelligence=threat_intelligence,
+                        timeline_events=timeline_events,
+                        current_page="analysis"
+                    )
+                citations = EvidenceCitationBuilder.build(context_data)
+                if citations:
+                    citation_lines = "\n".join(f"• {c}" for c in citations)
+                    reply = f"{reply}\n\nEvidence Used\n{citation_lines}"
+            except Exception:
+                pass
+
+            return reply
 
     ####################################################################
     # CHAT
@@ -180,14 +210,28 @@ class LLMService:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug("\n========== KNOWLEDGE PACK ==========\n%s\n===================================", knowledge_doc)
 
+            stage = "Prompt Router"
+            from app.services.llm.intent.classifier import IntentClassifier
+            from app.services.llm.routing.router import PromptRouter
+
+            intent_result = IntentClassifier().classify(message)
+            route = PromptRouter().route(intent_result.intent)
+            logger.info("[Prompt Router] ✓ Intent: %s -> Route: %s (Confidence: %.2f)", intent_result.intent.value, route.value, intent_result.confidence)
+
             stage = "Prompt Builder"
-            prompt = PromptBuilder.chat(knowledge_doc, message)
+            prompt = PromptBuilder.chat(knowledge_doc, message, route)
             logger.info("[Prompt Builder] ✓ Prompt assembled")
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug("\n========== PROMPT ==========\n%s\n============================", prompt)
 
             stage = "Gemini"
             raw_reply = cls._generate(prompt)
+
+            # Append citations
+            citations = EvidenceCitationBuilder.build(context_data)
+            if citations:
+                citation_lines = "\n".join(f"• {c}" for c in citations)
+                raw_reply = f"{raw_reply}\n\nEvidence Used\n{citation_lines}"
 
             stage = "Response Validator"
             reply = ResponseValidator.validate_chat(raw_reply)
@@ -221,15 +265,35 @@ class LLMService:
                     investigation = InvestigationRepository.get_by_alert_id(db, alert_id)
             
             timeline = []
-            if context_data and context_data.get("timeline"):
+            if 'context_data' in locals() and context_data and context_data.get("timeline"):
                 timeline = context_data.get("timeline")
 
-            return FallbackAI.generate_chat(
+            reply = FallbackAI.generate_chat(
                 investigation,
                 timeline,
                 message,
                 history,
             )
+
+            # Append citations in fallback
+            try:
+                if 'context_data' not in locals() or not context_data:
+                    context_data = ContextBuilder.build(
+                        db=db,
+                        investigation_id=investigation_id,
+                        alert_id=alert_id,
+                        recent_message=message,
+                        history=history,
+                        current_page="chat"
+                    )
+                citations = EvidenceCitationBuilder.build(context_data)
+                if citations:
+                    citation_lines = "\n".join(f"• {c}" for c in citations)
+                    reply = f"{reply}\n\nEvidence Used\n{citation_lines}"
+            except Exception:
+                pass
+
+            return reply
 
     ####################################################################
     # REPORT
@@ -275,6 +339,12 @@ class LLMService:
             stage = "Gemini"
             raw_reply = cls._generate(prompt)
 
+            # Append citations
+            citations = EvidenceCitationBuilder.build(context_data)
+            if citations:
+                citation_lines = "\n".join(f"• {c}" for c in citations)
+                raw_reply = f"{raw_reply}\n\nEvidence Used\n{citation_lines}"
+
             stage = "Response Validator"
             reply = ResponseValidator.validate_report(raw_reply)
             logger.info("[Validator] ✓ Passed")
@@ -305,7 +375,28 @@ class LLMService:
                 }
                 for e_item in timeline_events
             ]
-            return FallbackAI.generate_report(
+            reply = FallbackAI.generate_report(
                 investigation,
                 timeline,
             )
+
+            # Append citations in fallback
+            try:
+                if 'context_data' not in locals() or not context_data:
+                    context_data = ContextBuilder.build(
+                        db=db,
+                        alert_data=investigation.alert_json,
+                        analysis_json=investigation.analysis_json,
+                        risk_score=investigation.risk_score,
+                        severity=str(investigation.severity),
+                        timeline_events=timeline_events,
+                        current_page="report"
+                    )
+                citations = EvidenceCitationBuilder.build(context_data)
+                if citations:
+                    citation_lines = "\n".join(f"• {c}" for c in citations)
+                    reply = f"{reply}\n\nEvidence Used\n{citation_lines}"
+            except Exception:
+                pass
+
+            return reply
