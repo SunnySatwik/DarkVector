@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-
+    SENTINEL_API_KEY: str = "darkvector-dev-key"
     DATABASE_URL: str
 
     LOG_LEVEL: str = "INFO"

@@ -69,18 +69,19 @@ class HeartbeatCollector:
             ip_address = "127.0.0.1"
 
         payload: dict = {
-            "hostname": platform.node(),
-            "os": platform.system(),
-            "os_version": platform.version(),
-            "architecture": platform.machine(),
-            "cpu_usage_percent": cpu_percent,
-            "memory_total_bytes": mem.total,
-            "memory_used_bytes": mem.used,
-            "memory_usage_percent": mem.percent,
-            "uptime_seconds": uptime_seconds,
-            "ip_address": ip_address,
-            "collected_at": datetime.now(timezone.utc).isoformat(),
-        }
+    "hostname": platform.node(),
+    "agent_version": config.AGENT_VERSION,
+    "os": platform.system(),
+    "os_version": platform.version(),
+    "architecture": platform.machine(),
+    "cpu_usage_percent": cpu_percent,
+    "memory_total_bytes": mem.total,
+    "memory_used_bytes": mem.used,
+    "memory_usage_percent": mem.percent,
+    "uptime_seconds": uptime_seconds,
+    "ip_address": ip_address,
+    "collected_at": datetime.now(timezone.utc).isoformat(),
+}
 
         event = TelemetryEvent(
             host_id=_HOST_ID,

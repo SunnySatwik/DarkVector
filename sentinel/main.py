@@ -57,29 +57,34 @@ def main() -> None:
     heartbeat_collector = HeartbeatCollector()
     transport = APITransport()
 
-    while _running:
-        try:
-            event = heartbeat_collector.collect()
-            delivered = transport.send(event)
+    try:
+        while _running:
+            try:
+                event = heartbeat_collector.collect()
+                delivered = transport.send(event)
 
-            if not delivered:
-                logger.warning(
-                    "Heartbeat delivery failed after all retries — continuing",
-                    extra={"event_id": event.id},
+                if not delivered:
+                    logger.warning(
+                        "Heartbeat delivery failed after all retries — continuing",
+                        extra={"event_id": event.id},
+                    )
+
+            except Exception as exc:
+                logger.error(
+                    "Unexpected error in main loop",
+                    extra={"error": str(exc)},
+                    exc_info=True,
                 )
 
-        except Exception as exc:
-            logger.error(
-                "Unexpected error in main loop",
-                extra={"error": str(exc)},
-                exc_info=True,
-            )
+            # Sleep in 1-second ticks so SIGINT is processed promptly
+            for _ in range(config.HEARTBEAT_INTERVAL):
+                if not _running:
+                    break
+                time.sleep(1)
 
-        # Sleep in 1-second ticks so SIGINT is processed promptly
-        for _ in range(config.HEARTBEAT_INTERVAL):
-            if not _running:
-                break
-            time.sleep(1)
+    finally:
+        transport.close()
+        logger.info("HTTP transport closed.")
 
     logger.info("DV Sentinel stopped cleanly.")
     sys.exit(0)

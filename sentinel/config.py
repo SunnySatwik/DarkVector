@@ -6,7 +6,9 @@ All values can be overridden via environment variables.
 """
 
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 # ── Server ────────────────────────────────────────────────────────────────────
 SERVER_URL: str = os.getenv("DV_SERVER_URL", "http://localhost:8000")
 """Base URL of the DarkVector backend (no trailing slash)."""

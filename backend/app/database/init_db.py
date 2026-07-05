@@ -5,7 +5,8 @@ from app.database.session import engine
 from app.models.event import Event
 from app.models.investigation import Investigation
 from app.models.timeline import TimelineEvent
-
+from app.models.telemetry import TelemetryEvent   # <-- ADD THIS
+from app.models.endpoint_agent import EndpointAgent
 
 def init_db():
     Base.metadata.create_all(bind=engine)
