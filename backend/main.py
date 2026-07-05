@@ -1,28 +1,71 @@
+from contextlib import asynccontextmanager
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.api.v1.events import router as event_router
+
 from app.api.v1.analyze import router as analyze_router
 from app.api.v1.chat import router as chat_router
-from app.api.v1.investigations import (
-    router as investigation_router,
-)
-from app.api.v1.telemetry import (
-    router as telemetry_router,
-)
+from app.api.v1.investigations import router as investigation_router
+from app.api.v1.telemetry import router as telemetry_router
+
+from app.services.detection.background_worker import detection_loop
+
+
+background_task = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print(">>> Lifespan started")
+    global background_task
+
+    background_task = asyncio.create_task(
+        detection_loop()
+    )
+
+    yield
+
+    background_task.cancel()
+
+    try:
+        await background_task
+    except asyncio.CancelledError:
+        pass
+
 
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
+    lifespan=lifespan,
 )
+
+# -------------------- Routers --------------------
 
 app.include_router(
     investigation_router,
     prefix="/api/v1",
 )
 
-# Configure CORS
+app.include_router(
+    analyze_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    chat_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    telemetry_router,
+    prefix="/api/v1",
+)
+
+# -------------------- CORS --------------------
+
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -38,18 +81,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(
-    analyze_router,
-    prefix="/api/v1",
-)
-app.include_router(
-    chat_router,
-    prefix="/api/v1",
-)
-app.include_router(
-    telemetry_router,
-    prefix="/api/v1",
-)
+
+# -------------------- Health --------------------
+
 @app.get("/")
 def root():
     return {
