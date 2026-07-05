@@ -7,54 +7,43 @@
 ## High-Level Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                        BROWSER CLIENT                                 │
-│                                                                        │
-│  ┌─────────────┐  ┌──────────────────┐  ┌─────────────────────────┐  │
-│  │  Dashboard  │  │  Investigations  │  │   Investigation         │  │
-│  │  (mockData  │  │  (useInvest-     │  │   Workspace             │  │
-│  │  + live inv)│  │   igations hook) │  │   (useAnalysis +        │  │
-│  └─────────────┘  └──────────────────┘  │    useInvestigations)   │  │
-│                                          └─────────────────────────┘  │
-│  ┌─────────────────────────────────────────────────────────────────┐  │
-│  │              TanStack React Query Cache                          │  │
-│  │   Keys: "investigations" | ["investigation", id] | ["timeline", id] │
-│  └─────────────────────────────────────────────────────────────────┘  │
-│                              │ Axios (baseURL: localhost:8000/api/v1)  │
-└──────────────────────────────┼──────────────────────────────────────-─┘
-                               │ HTTP/JSON
-┌──────────────────────────────▼───────────────────────────────────────┐
-│                         FASTAPI BACKEND                               │
-│                                                                        │
-│  POST /analyze/                                                        │
-│  ├── InferenceService.analyze()                                       │
-│  │   ├── FeatureMapper.from_alert()     → 41 KDD features             │
-│  │   ├── preprocessor.transform()       → scaled + encoded            │
-│  │   ├── IsolationForest.decision_function() → raw score              │
-│  │   ├── RiskScorer.from_score()        → calibrated risk             │
-│  │   ├── SHAP.TreeExplainer.shap_values() → feature attributions      │
-│  │   └── ContextService.enrich()        → MITRE + ThreatIntel         │
-│  └── InvestigationService.create_from_analysis() → DB write           │
-│                                                                        │
-│  GET  /investigations/           → InvestigationService.list()        │
-│  GET  /investigations/{id}       → InvestigationService.get()         │
-│  GET  /investigations/{id}/timeline → TimelineService.get_timeline()  │
-│  PATCH /investigations/{id}/status  → InvestigationService.update()   │
-└──────────────────────────────┬────────────────────────────────────────┘
+                          ┌─────────────────────────────────────────────────────────┐
+                          │                        BROWSER CLIENT                   │
+                          │                                                         │
+                          │  ┌─────────────┐  ┌──────────────────┐  ┌─────────────┐  │
+                          │  │  Dashboard  │  │  Investigations  │  │WorkspaceView│  │
+                          │  │ (alertGen)  │  │  (useInvest-     │  │ (AiAnalyst  │  │
+                          │  └─────────────┘  │   igations hook) │  │  Panel)     │  │
+                          │                   └──────────────────┘  └─────────────┘  │
+                          │  ┌───────────────────────────────────────────────────┐  │
+                          │  │              TanStack React Query Cache           │  │
+                          │  └───────────────────────────────────────────────────┘  │
+                          └────────────────────────────┬────────────────────────────┘
+                                                       │ Axios / Fetch HTTP/JSON
+                                                       │
+  ┌────────────────────────────────────────────────────▼────────────────────────────────────────────────────┐
+  │                                             FASTAPI BACKEND                                             │
+  │                                                                                                         │
+  │  POST /api/v1/analyze                               POST /api/v1/telemetry                              │
+  │  ├── InferenceService.analyze()                     ├── TelemetryIngestionService.ingest()              │
+  │  │   ├── FeatureMapper.from_alert()                 │   └── TelemetryBus.publish()                      │
+  │  │   ├── preprocessor.transform()                   │       ├── Write to TelemetryEvent table           │
+  │  │   ├── IsolationForest.decision_function()        │       └── EndpointRepository.create_or_update()   │
+  │  │   ├── RiskScorer & SHAP Explainer                │                                                   │
+  │  │   └── ContextService.enrich()                    │  GET /api/v1/investigations                       │
+  │  └── AI Context Engine                              │  PATCH /api/v1/investigations/{id}/status         │
+  └────────────────────────────┬────────────────────────────────────────────────────────────────────────────┘
                                │
-          ┌────────────────────┼────────────────────┐
-          │                    │                    │
-   ┌──────▼──────┐    ┌────────▼──────┐   ┌────────▼────────┐
-   │  PostgreSQL  │    │  Model Files  │   │  Context Rules  │
-   │  (SQLAlchemy │    │ (joblib artefacts) │  (mitre_mapping │
-   │   2.0 ORM)  │    │               │   │  threat_intel)  │
-   │             │    │ isolation_    │   │  — no DB, pure  │
-   │ investigations│   │  forest.joblib│   │    Python dicts │
-   │ investigation│   │ preprocessor. │   └─────────────────┘
-   │  _timeline  │    │  joblib       │
-   └─────────────┘    │ model_meta-   │
-                      │  data.json    │
-                      └───────────────┘
+            ┌──────────────────┼──────────────────┐
+     ┌──────▼──────┐    ┌──────▼──────┐    ┌──────▼──────┐
+     │ PostgreSQL  │    │ Model Files │    │     RAG     │
+     │  Database   │    │  (.joblib)  │    │  Foundation │
+     │             │    │             │    │ (Local files│
+     │  Alerts &   │    │  isolation_ │    │  retrieval, │
+     │  Timeline   │    │  forest     │    │  caching &  │
+     │ Telemetry   │    │  preproc    │    │  authority  │
+     │ EndpointAg  │    └─────────────┘    │   ranking)  │
+     └─────────────┘                       └─────────────┘
 ```
 
 ---
@@ -113,7 +102,7 @@ App.tsx
 ├── Reports.tsx               (useInvestigations)
 ├── Models.tsx                (static informational content)
 │
-├── AiAnalystPanel.tsx        (slide-over, managed by App.tsx state)
+├── AiAnalystPanel.tsx        (redesigned slide-over with sticky current assessment, modular layout cards, collapsible accordion panels)
 └── CommandPalette.tsx        (⌘K overlay, managed by App.tsx state)
 ```
 
@@ -152,22 +141,24 @@ These are exposed to Tailwind v4 via `@theme { --color-bg: var(--bg-color); }`.
 ### Layered Architecture
 
 ```
-API Layer (FastAPI routes)
+API Layer (FastAPI routes: analyze.py, telemetry.py)
     ↓
-Service Layer (business logic)
+Service Layer (business logic: llm/, telemetry/)
     ↓
-Repository Layer (database queries)
+Repository Layer (database queries: endpoint_repository.py, etc.)
     ↓
-ORM Models (SQLAlchemy)
+ORM Models (SQLAlchemy: telemetry.py, endpoint_agent.py, etc.)
     ↓
-PostgreSQL
+PostgreSQL / SQLite Database
 ```
 
-**API Layer** (`app/api/v1/`) — FastAPI route handlers. Each route is thin: it validates input via Pydantic, delegates to the service layer, and serialises the response.
+**API Layer** (`app/api/v1/`) — FastAPI route handlers. Each route is thin: it validates input via Pydantic, checks auth/API keys, delegates to the service layer, and serialises the response.
 
 **Service Layer** (`app/services/`) — Contains all business logic. No direct DB queries. Services receive `Session` as a dependency.
+- `app/services/llm/`: Houses the AI Context Engine pipeline, prompt builders, intent classifier/router, and local RAG retrieval.
+- `app/services/telemetry/`: Houses the Telemetry Ingestion Service and Telemetry Bus.
 
-**Repository Layer** (`app/repositories/`) — Isolated DB query functions. `InvestigationRepository` and `TimelineRepository` encapsulate all SQLAlchemy queries.
+**Repository Layer** (`app/repositories/` & `app/services/telemetry/`) — Isolated DB query functions. `EndpointRepository` and others encapsulate all SQLAlchemy queries.
 
 **ORM Models** (`app/models/`) — SQLAlchemy `DeclarativeBase` models with typed `Mapped` columns.
 
@@ -188,303 +179,137 @@ def get_db():
 
 ## Database Schema
 
-### `investigations` table
+In addition to the core `investigations` and `investigation_timeline` tables, the schema incorporates telemetry collection:
+
+### `telemetry_events` table
+
+Tracks every incoming telemetry event published through the Telemetry Bus.
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | INTEGER | Internal auto-increment primary key |
-| `investigation_id` | VARCHAR(50) | Public ID, format: `INV-YYMMDD-XXXXXX` |
-| `alert_id` | VARCHAR(64) | Source alert ID (idempotency key) |
-| `title` | VARCHAR(255) | Alert type string |
-| `status` | ENUM | `NEW`, `INVESTIGATING`, `CONTAINED`, `RESOLVED`, `FALSE_POSITIVE` |
-| `severity` | ENUM | `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` |
-| `risk_score` | FLOAT | Calibrated risk score 0–100 |
-| `confidence` | FLOAT | Nullable; `min(risk_score/100 + 0.20, 0.99)` |
-| `summary` | TEXT | Plain-text AI summary |
-| `alert_json` | JSON | Full original alert payload |
-| `analysis_json` | JSON | Full analysis response including context |
-| `created_at` | TIMESTAMP TZ | Auto-set |
-| `updated_at` | TIMESTAMP TZ | Auto-updated on status change |
+| `id` | VARCHAR | Primary key (UUID4 string) |
+| `host_id` | VARCHAR | Stable, deterministic host identifier (indexed) |
+| `hostname` | VARCHAR | Hostname of the target endpoint |
+| `timestamp` | DATETIME | ISO-8601 creation timestamp |
+| `event_type` | VARCHAR | Event classification (e.g. `heartbeat`) |
+| `severity` | VARCHAR | Severity rating |
+| `source` | VARCHAR | Component origin |
+| `payload` | JSON | Arbitrary raw event payload |
+| `created_at` | DATETIME | Ingestion timestamp |
 
-### `investigation_timeline` table
+### `endpoint_agents` table
+
+Maintains the active inventory and status of all registered endpoint agents.
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | UUID | Auto-generated primary key |
-| `investigation_id` | VARCHAR | FK → `investigations.investigation_id` |
-| `timestamp` | TIMESTAMP TZ | Auto-set on creation |
-| `actor` | ENUM | `system`, `ai`, `analyst` |
-| `event_type` | ENUM | `alert_created`, `analysis_completed`, `status_changed`, etc. |
-| `title` | VARCHAR(150) | Short event title |
-| `description` | TEXT | Human-readable event description |
-
-**Relationship:** `Investigation.timeline` → ordered `TimelineEvent` list (cascade delete-orphan).
-
----
-
-## React Query Data Flow
-
-React Query is the only client-side state management layer for server data. The `QueryClient` is configured in `lib/queryClient.ts`.
-
-### Query Keys
-
-| Key | Data | Staletime |
-|---|---|---|
-| `["investigations"]` | List of all investigations | 30 seconds |
-| `["investigation", id]` | Full detail (alert + analysis + investigation) | `Infinity` (never re-fetches unless invalidated) |
-| `["timeline", id]` | Timeline events for investigation | 10 seconds |
-
-### Mutation Flow: Alert Analysis
-
-```
-useAnalysis hook
-   → mutation.mutate(alert)
-   → POST /api/v1/analyze
-   → Returns AnalysisResponse
-   → InvestigationWorkspace updates displayAlert
-   → Calls onAnalysisReady(alert, analysisData) → feeds AiAnalystPanel
-```
-
-### Mutation Flow: Status Update
-
-```
-useUpdateInvestigationStatus hook
-   → mutation.mutate(status)
-   → PATCH /api/v1/investigations/{id}/status
-   → onSuccess:
-       queryClient.invalidateQueries(["investigation", id])
-       queryClient.invalidateQueries(["timeline", id])
-       queryClient.invalidateQueries(["investigations"])
-```
-
-Invalidating all three keys causes React Query to immediately refetch the investigation detail, the timeline, and the investigations list — ensuring all views reflect the updated status and new timeline event simultaneously.
+| `id` | VARCHAR | Primary key (UUID4 string) |
+| `host_id` | VARCHAR | Unique, indexed stable host identifier |
+| `hostname` | VARCHAR | Current reported hostname |
+| `agent_version`| VARCHAR | Sent version of the agent |
+| `os` | VARCHAR | Operating system family |
+| `architecture` | VARCHAR | CPU architecture |
+| `ip_address` | VARCHAR | Last reported primary IP |
+| `status` | VARCHAR | Agent status (e.g., `connected`, `offline`) |
+| `last_seen` | DATETIME | Ingestion time of the last received heartbeat |
+| `created_at` | DATETIME | Registration timestamp |
+| `updated_at` | DATETIME | Auto-updated on every heartbeat ingestion |
 
 ---
 
-## Investigation Lifecycle
+## AI Context Engine Pipeline
+
+All AI context building, prompt routing, and output validation are modularized underneath a multi-stage architecture:
 
 ```
-[NEW]
-  ↓  (manual: PATCH /status {"status": "INVESTIGATING"})
-  ↓  — OR —  (automatic: on Workspace open, analyst updates)
-[INVESTIGATING]
-  ↓  (automatic: handleIsolate() completes in InvestigationWorkspace.tsx)
-[CONTAINED]
-  ↓  (manual: PATCH /status {"status": "RESOLVED"})
-[RESOLVED]
-
-Alternative path:
-[INVESTIGATING] → [FALSE_POSITIVE] (manual)
+Context Builder ──> Knowledge Pack V2 ──> Intent Classifier ──> Prompt Router
+                                                                    │
+                                                                    ▼
+Fallback AI <── Response Validator V2 <── Citations <── Gemini <── Builders
 ```
 
-**Status transition rules:**
-- `InvestigationService.update_status()` checks `if investigation.status != status` to prevent duplicate timeline events when the same status is set twice.
-- Host isolation in the frontend triggers `updateStatusMutation.mutate("CONTAINED")` when the 5-step progress bar completes.
+### Pipeline Components
+
+1. **Context Builder**: Gathers raw alert details, memory parameters, history logs, SHAP factors, threat intel, and timeline lists into a unified dictionary.
+2. **Knowledge Pack V2**: Transforms the context dump into a coherent natural-language briefing optimized for Gemini reasoning. Sections include:
+   - *Investigation Overview*
+   - *Alert Analysis*
+   - *Attack Assessment*
+   - *Evidence Summary*
+   - *Timeline*
+   - *Conversation History*
+3. **Intent Classifier**: Inspects query keywords to classify user intent (General, Explain Attack, Risk Analysis, Remediation, MITRE, Timeline, Evidence) avoiding unnecessary LLM calls.
+4. **Prompt Router**: Dispatches requests to the appropriate Specialized Prompt Builder based on the intent.
+5. **Specialized Prompt Builders**: Classes implementing a modular inheritance tree (`BasePromptBuilder` -> `GeneralPromptBuilder`, `ExplainAttackPromptBuilder`, `RiskAnalysisPromptBuilder`, `RemediationPromptBuilder`, `MitrePromptBuilder`, `TimelinePromptBuilder`, `EvidencePromptBuilder`). Every child builder only overrides its specific `system_instruction` property, keeping the prompt template and core formatting code shared in `BasePromptBuilder`.
+6. **Gemini**: Submits the generated system instructions and user message to the Gemini API.
+7. **Evidence Citations**: Generates deterministic citations from the raw context elements (MITRE, Threat Intel, SHAP, Timeline, Memory) to ensure every citation represents a real fact, preventing AI hallucinations.
+8. **Response Validator V2**: Inspects response structure and semantic correctness. It:
+   - Rejects responses with generic fallback filler (e.g., "As an AI language model", "I don't have enough context").
+   - Validates context consistency (severity values, technique IDs, and investigation ID references must match the Knowledge Pack).
+9. **Fallback AI**: A deterministic fallback layer that answers the user if the primary model fails or validation fails, preventing service outages.
 
 ---
 
-## Timeline Generation
+## RAG (Retrieval-Augmented Generation) Foundation
 
-Timeline events are always created through `TimelineService.add_event()`, which delegates to `TimelineRepository.create()`.
+The retrieval system is designed for clean, decoupled extensibility. Markdown knowledge documents are stored locally in category directories:
+- `mitre/`
+- `playbooks/`
+- `cis/`
+- `owasp/`
+- `procedures/`
 
-**Automatic events created by the backend:**
-
-| When | Event Type | Actor | Title |
-|---|---|---|---|
-| POST /analyze succeeds | `alert_created` | system | "Alert received" |
-| POST /analyze succeeds | `analysis_completed` | ai | "AI analysis completed" |
-| PATCH /status called with new value | `status_changed` | analyst | "Status changed" |
-
-**Note:** The `InvestigationService.create_from_analysis()` checks for an existing investigation by `alert_id` before creating a new one. If the same alert is re-analyzed, the existing investigation is returned and no duplicate timeline events are created.
-
----
-
-## Context Enrichment
-
-`ContextService.enrich(alert)` is called inside `InferenceService.analyze()` immediately after the ML analysis completes. It calls both lookup functions and combines the results:
-
-```python
-def enrich(alert: dict) -> dict:
-    return {
-        "mitre": mitre_mapping.lookup(alert),
-        "threat_intelligence": threat_intelligence.lookup(alert),
-    }
-```
-
-The result is serialised into `analysis_json` on the Investigation model, so it is available from `GET /investigations/{id}` without re-computing.
-
-### MITRE Mapping — Why Deterministic?
-
-Each alert type string (e.g., `"Unusual Namespace Creation & Exec"`) is controlled by the frontend's `EVENT_PROFILES` list. The backend MITRE rules are written to cover every alert type in that list. This creates a closed, predictable mapping:
-
-- Alert type `"Unusual Namespace Creation & Exec"` → contains "namespace" → T1611 Escape to Host
-- Alert type `"Active Directory Kerberoasting Query"` → contains "kerberoast" → T1558.003
-
-This approach is intentional: it guarantees every investigation has actionable MITRE context without requiring an external API or LLM.
-
-### Threat Intelligence — IP Classification
-
-The IP classification uses hardcoded prefix lists calibrated to match the mock alert data:
-
-- Alert AL-8491 uses IP `194.26.135.84` → matches `194.26.*` → **malicious**
-- Alert AL-7982 uses IP `80.241.128.9` → matches `80.241.*` → **suspicious** (VPN)
-- Alert AL-8310 uses IP `10.240.4.19` → RFC-1918 → **clean** → falls through to hostname
-
-This means every demo alert produces the expected, realistic threat intel classification.
+### Retrieval Mechanism
+- **MarkdownLoader & Parser**: Parses YAML front matter metadata from documents (`id`, `title`, `category`, `tags`, `summary`, `authority`) to hydrate a structured `KnowledgeDocument` object.
+- **In-Memory Cache**: The loader caches parsed documents in-memory to prevent repeated filesystem reads.
+- **KnowledgeRegistry**: Maps every `PromptRoute` to a `RetrievalProfile` specifying category mappings, document limit caps, and routing priorities.
+- **KnowledgeRetriever**: Loads documents, ranks them by authority level (`official` > `internal` > `community`), enforces document limit caps, and returns them to the prompt builders.
+- **ChromaDB / Vector Search Compatibility**: Vector databases and embeddings are **not** implemented in this stage. However, the retrieval layer is structurally isolated; the `KnowledgeRetriever` receives an optional `query` parameter so that when semantic retrieval is integrated, only the retriever implementation needs to change.
 
 ---
 
-## ML Inference Pipeline
+## Telemetry Foundation
 
-### Overview
+To enable EDR functionality, DarkVector introduces a scalable telemetry ingestion pipeline.
 
 ```
-Alert (dict)
-   ↓
-FeatureMapper.from_alert()
-   → 41-feature KDD dict (category-specific field overrides)
-   ↓
-pd.DataFrame([kdd_event])
-   ↓
-preprocessor.transform()        (ColumnTransformer: OHE + StandardScaler)
-   ↓
-pd.DataFrame(processed, columns=feature_names_out)
-   ↓
-IsolationForest.decision_function()
-   → raw_score (float, negative = more anomalous)
-   ↓
-RiskScorer.from_score(raw_score)
-   → RiskAssessment(risk_score, severity, is_anomaly)
-   ↓
-SHAP.TreeExplainer.shap_values(features)
-   → top-5 FeatureContribution objects
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│   DV Sentinel   │ ───>  │  FastAPI Router │ ───>  │  Telemetry Bus  │
+│  Endpoint Agent │       │  /api/v1/telem  │       │   (Publisher)   │
+└─────────────────┘       └─────────────────┘       └────────┬────────┘
+                                                             │
+                                     ┌───────────────────────┴───────────────────────┐
+                                     ▼                                               ▼
+                           ┌───────────────────┐                           ┌───────────────────┐
+                           │ Telemetry Event   │                           │    Endpoint       │
+                           │  Database Table   │                           │  Agent Inventory  │
+                           └───────────────────┘                           └───────────────────┘
 ```
 
-### Feature Mapper
+### Components
 
-`FeatureMapper.from_alert()` bridges the semantic gap between a security domain alert and the 41-column KDD Cup 99 network connection schema expected by the Isolation Forest model.
+- **DV Sentinel**: A cross-platform Python endpoint agent. It runs a background heartbeat daemon that gathers system vitals (hostname, OS, architecture, CPU%, memory%, uptime, IP address) and uploads them.
+- **APITransport**: The HTTP client within the agent utilizing `httpx` with Bearer API Key auth and exponential back-off retries.
+- **FastAPI Telemetry API**: Handled in `api/v1/telemetry.py`. Ingests events and validates requests using the configured API Key.
+- **Telemetry Bus**: The internal event bus that routes events to their targets. Currently writes the event to database storage and updates the endpoint inventory.
+- **Endpoint Inventory**: The `EndpointRepository` manages the `endpoint_agents` records. Every heartbeat ingestion updates the host metadata, last-seen time, and status (`connected`).
 
-It starts from a baseline of "normal" KDD values and overrides specific fields based on the alert's `category`:
+---
 
-| Alert Category | Key Overrides |
+## Honest Assessment: What Is Real vs. Mock
+
+| Aspect | Honest Status |
 |---|---|
-| `process` | `service=private`, `logged_in=0`, for privilege escalation: `root_shell=1`, `su_attempted=1`, `hot=3` |
-| `network` | `src_bytes=bytesTransferred`, `count=250`, `diff_srv_rate=0.95` |
-| `authentication` | `service=login`, `logged_in=0`, for brute force: `num_failed_logins=5` |
-| `system` | `root_shell=1`, `num_compromised=1` |
-
-### Risk Scorer
-
-`RiskScorer` uses percentile thresholds from `model_metadata.json` (computed during training) to convert raw Isolation Forest scores into a discrete risk scale:
-
-| Raw Score Range | Calibrated Risk | Severity |
-|---|---|---|
-| ≤ p1 (1st percentile) | 100 | Critical |
-| ≤ p5 | 95 | Critical |
-| ≤ p10 | 90 | Critical |
-| ≤ p25 | 75 | High |
-| ≤ median | 50 | Medium |
-| ≤ p75 | 25 | Low |
-| > p75 | 10 | Informational |
-
-**Anomaly threshold:** `risk_score >= 75` → `is_anomaly = True`
-
-### SHAP Explainer
-
-`Explainer` uses `shap.TreeExplainer(model)` which supports Isolation Forest directly. For each incoming feature vector:
-
-1. Compute SHAP values for all 41 features
-2. Sort by absolute SHAP magnitude (descending)
-3. Return the top 5 as `FeatureContribution` objects with `direction` ("increase"/"decrease")
-
-**Important:** SHAP values here explain why the Isolation Forest considered this point anomalous — large positive SHAP values for a feature mean that feature strongly pushed toward anomalous classification.
-
-### Confidence Score
-
-Confidence is a heuristic (not calibrated probabilistic output):
-
-```python
-confidence = min(risk_score / 100 + 0.20, 0.99)
-```
-
-This means a risk score of 75 → confidence 0.95, risk score 100 → confidence 0.99. The comment in the source code notes this is "temporary until calibrated confidence".
-
----
-
-## Isolation Forest — How It Works
-
-Isolation Forest is an anomaly detection algorithm that works by:
-
-1. Building an ensemble of random binary trees (isolation trees)
-2. For each data point, measuring the average path length needed to isolate it
-3. Points that are isolated with fewer splits are more anomalous (they are "different" in many feature dimensions simultaneously)
-
-`decision_function()` returns a score where:
-- **Negative values** = anomalous (takes fewer splits to isolate)
-- **Positive values** = normal (requires many splits)
-
-DarkVector's `RiskScorer` inverts and calibrates this into a 0–100 scale using training set percentile thresholds.
-
----
-
-## Evidence Graph Generation
-
-`ThreatGraph.tsx`'s `buildGraphData(alert, context)` function constructs the SVG graph entirely from live investigation data:
-
-```
-alert.source                   → Source node (type: database if "db-", else pod)
-alert.details.username         → User node (if present)
-alert.details.parentProcess    → Parent process node (if present)
-alert.details.processPath      → Process/binary node (if present, severity: critical)
-alert.details.ipAddress        → Remote IP node
-  context.threat_intelligence.reputation
-    → "malicious" → severity: critical
-    → "suspicious" → severity: high
-    → other → severity: none
-```
-
-Edges are:
-- `source → user` (non-threat)
-- `source → parent-process` (non-threat)
-- `parent-process → process` (threat — red edge)
-- `process → remote-ip` (threat — red edge)
-
-**Fallback:** If `activeInvestigationId` is not passed (e.g., navigating directly to Evidence Graph without an open investigation), the page calls `useInvestigations()`, takes `investigations[0]`, and loads that investigation's detail.
-
----
-
-## Report Generation
-
-`InvestigationReportView.tsx` is a purely read-only page. It calls:
-1. `useInvestigation(investigationId)` → `GET /investigations/{id}` → returns `{ investigation, alert, analysis }`
-2. `useTimeline(investigationId)` → `GET /investigations/{id}/timeline`
-
-The entire alert payload and analysis response are stored as JSON columns in the `investigations` table. This means the report does not require re-running any ML models — all data is served from the database exactly as it was at the time of the original analysis.
-
----
-
-## Design Decisions
-
-### Why deterministic MITRE mapping instead of an LLM?
-
-LLM API calls introduce latency, cost, non-determinism, and external dependencies. The alert types are a controlled vocabulary — the `EVENT_PROFILES` list defines every possible alert type. Keyword-based lookup is:
-- **Instant** (microseconds vs. seconds)
-- **100% consistent** (same alert always produces same mapping)
-- **No API key required** (important for an offline SOC demo)
-
-### Why store `alert_json` and `analysis_json` as JSON columns?
-
-This is a deliberate denormalisation for two reasons:
-1. The alert schema can evolve without database migrations
-2. `GET /investigations/{id}` can reconstruct the full workspace and report view from a single query — no joins, no re-analysis
-
-### Why TanStack React Query instead of Zustand or Redux?
-
-Server state and client state have different management requirements. React Query handles caching, invalidation, background refetching, and loading/error states for server data. App.tsx manages all UI state (open tabs, active alert, etc.) with plain `useState`. This avoids the complexity of a global store for what is fundamentally a server-centric application.
-
-### Why inline SVG for the Evidence Graph instead of a library like D3 or Cytoscape?
-
-The graph has at most 5 nodes and 4 edges in any investigation. A full graph library would add 200–500 KB to the bundle for functionality that a purpose-built SVG renderer handles in ~100 lines. Node positions are manually assigned per role (source at x:100, process at x:430, remote-ip at x:610), which is sufficient for a fixed-topology graph.
+| ML model (Isolation Forest) | **Real** — trained on KDD Cup 99, inference on every alert |
+| SHAP explainability | **Real** — exact Shapley values from TreeExplainer |
+| AI Context Engine | **Real** — multi-stage pipeline, narrative Knowledge Pack V2, specialized prompt builders, evidence citations, semantic validator checks, fallback AI |
+| Telemetry Ingestion | **Real** — DV Sentinel agent daemon, API keys, HTTP retry transport, telemetry database table |
+| Endpoint Inventory | **Real** — live agent updates, hostname, OS, IP address, architecture, and last-seen tracking |
+| RAG Retrieval | **Real** filesystem parser, metadata YAML mapping, and authority ranking. **Mock** vector search/semantic embeddings. |
+| Dashboard alert list | **Mock** — `MOCK_ALERTS` hardcoded in `mockData.ts` |
+| Dashboard metrics (threat level, isolation count) | **Mock** — static numbers in `MOCK_METRICS` |
+| World attack map | **Mock** — `MOCK_WORLD_ATTACKS` with hardcoded coordinates |
+| User risk table | **Mock** — `MOCK_USER_RISKS` with hardcoded scores |
 
 ---
 
@@ -494,9 +319,7 @@ The graph has at most 5 nodes and 4 edges in any investigation. A full graph lib
 |---|---|---|
 | Real-time alerts | Poll or manual trigger | WebSocket / SSE event stream |
 | Multi-user | Single analyst | JWT auth + investigation assignment |
-| Alert volume | In-memory analysis | Message queue (Redis/Kafka) + async workers |
-| DB migrations | Manual `init_db()` | Alembic with version-controlled migration scripts |
-| Model updates | Replace `.joblib` files | MLflow model registry + A/B deployment |
-| Context enrichment | Static lookup tables | MITRE ATT&CK STIX API + VirusTotal integration |
-| Reporting | Browser print | Server-side PDF via WeasyPrint or Puppeteer |
-| Frontend routing | State machine in App.tsx | React Router v7 for shareable URLs |
+| Telemetry Volume | SQLite / Postgres write | Message Queue (RabbitMQ/Kafka) + async task workers |
+| Stream Telemetry | Heartbeat only | Process, registry, file, and socket hooks |
+| Detection Engine | Static ML | Sigma rules engines + YARA scanner |
+| Threat Intelligence | Hardcoded lists | Live API queries (VirusTotal, AbuseIPDB) |

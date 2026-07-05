@@ -1,6 +1,6 @@
 # DarkVector
 
-> AI-powered Security Operations Center (SOC) platform for real-time threat detection, investigation, and containment.
+> AI-powered Security Operations Center (SOC) platform for real-time threat detection, enrichment, validation, and endpoint telemetry containment.
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.138-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -13,9 +13,9 @@
 
 ## What is DarkVector?
 
-DarkVector is a full-stack AI cybersecurity platform that transforms raw security alerts into structured, explainable investigations. An analyst submits an alert; a trained **Isolation Forest** model scores its anomaly probability; **SHAP values** explain the top contributing factors; a deterministic **context enrichment** layer maps the alert to MITRE ATT&CK techniques and threat intelligence; and a complete **investigation lifecycle** is persisted with an auditable timeline.
+DarkVector is a full-stack AI-powered cybersecurity platform that transforms raw security alerts and telemetry into structured, explainable investigations. An analyst submits an alert; a trained **Isolation Forest** model scores its anomaly probability; **SHAP values** explain the top contributing factors; a deterministic **context enrichment** layer maps the alert to MITRE ATT&CK techniques and threat intelligence; and a complete **investigation lifecycle** is persisted with an auditable timeline. 
 
-The result is a single workspace where an analyst can detect, investigate, contain, and document an incident without leaving the application.
+DarkVector incorporates an **AI Context Engine** which routes analyst inquiries to specialized prompt builders to validate and format security reasoning before submitting it to Gemini, paired with the **Telemetry Foundation** which leverages a lightweight endpoint agent (**DV Sentinel**) to ingest heartbeats and manage endpoint inventory.
 
 ---
 
@@ -26,7 +26,7 @@ Commercial SOC platforms are opaque. Analysts see a score but not a reason. Dark
 1. **Is this real?** — Isolation Forest anomaly score, calibrated to percentile-based risk.
 2. **Why?** — SHAP feature attributions, MITRE technique mapping, and threat intelligence enrichment, derived deterministically from the alert's content.
 
-This project demonstrates that a production-quality AI detection and investigation workflow can be built with open-source tooling, without requiring external AI API calls for core security reasoning.
+This project demonstrates that a production-quality AI detection, validation, and telemetry workflow can be built with open-source tooling, without requiring opaque AI calls for core security reasoning.
 
 ---
 
@@ -43,7 +43,10 @@ This project demonstrates that a production-quality AI detection and investigati
 | **Timeline** | Auto-generated audit trail (alert created, analysis done, status changed) |
 | **Evidence Graph** | Interactive SVG graph built from live investigation data |
 | **Reports** | Printable investigation report rendered from persisted backend data |
-| **AI Panel** | Conversational analyst assistant contextualised to the active alert |
+| **AI Context Engine** | Context Builder, Knowledge Pack V2 (narrative briefings), Intent Classifier, Prompt Router, Specialized Builders, Evidence Citations, Response Validator V2, and Fallback AI |
+| **RAG Foundation** | Filesystem-based markdown document retrieval (MITRE, Playbooks, CIS, OWASP, Procedures) ranked by authority (Official > Internal > Community) |
+| **Telemetry agent** | DV Sentinel endpoint telemetry collector (heartbeats, uptime, CPU, RAM, primary IP) |
+| **Endpoint Inventory**| Backend database tracking host ID, hostname, OS, IP address, agent version, status, and last seen |
 | **Dark/Light Mode** | Persistent theme toggle via localStorage |
 | **Command Palette** | ⌘K global search and navigation |
 
@@ -56,13 +59,14 @@ This project demonstrates that a production-quality AI detection and investigati
 |---|---|
 | API Framework | FastAPI 0.138 |
 | ORM | SQLAlchemy 2.0 |
-| Database | PostgreSQL (via psycopg2-binary) |
+| Database | PostgreSQL (via psycopg2-binary) / SQLite (development) |
 | Migrations | Alembic |
 | ML Engine | scikit-learn 1.9 — Isolation Forest |
 | Explainability | SHAP 0.52 — TreeExplainer |
 | Feature Processing | pandas 3.0, numpy 2.4 |
 | Settings | pydantic-settings |
 | Server | Uvicorn |
+| AI Pipeline | Gemini 2.5 Flash |
 
 ### Frontend
 | Component | Technology |
@@ -71,38 +75,46 @@ This project demonstrates that a production-quality AI detection and investigati
 | Build Tool | Vite 6 |
 | Styling | Tailwind CSS v4 + custom design system |
 | State / Data | TanStack React Query v5 |
-| HTTP Client | Axios |
+| HTTP Client | Axios / Fetch API |
 | Animations | Motion (Framer Motion) |
 | Icons | Lucide React |
 | Charts | Recharts |
+
+### Endpoint Agent
+| Component | Technology |
+|---|---|
+| Runtime | Python 3.11+ |
+| HTTP Client | httpx |
+| Metrics Collector | psutil |
+| Configuration | python-dotenv |
 
 ---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                  Browser (Vite + React 19)               │
-│   Dashboard → Investigations → Workspace → Report        │
-│               React Query Cache (TanStack)               │
-└─────────────────────┬───────────────────────────────────┘
-                      │ HTTP / JSON  (CORS, port 5173 → 8000)
-┌─────────────────────▼───────────────────────────────────┐
-│                  FastAPI Backend (port 8000)              │
-│  POST /api/v1/analyze                                    │
-│  GET/PATCH /api/v1/investigations/{id}                   │
-│  GET /api/v1/investigations/{id}/timeline                │
-└──────┬────────────────────┬────────────────────┬────────┘
-       │                    │                    │
-┌──────▼──────┐  ┌──────────▼────────┐  ┌───────▼───────┐
-│  ML Pipeline │  │   PostgreSQL DB   │  │Context Service│
-│              │  │                   │  │               │
-│FeatureMapper │  │  investigations   │  │ MITRE Mapping │
-│ Preprocessor │  │  investigation_   │  │ Threat Intel  │
-│IsolationForest│  │   timeline       │  │               │
-│ RiskScorer   │  └───────────────────┘  └───────────────┘
-│ SHAP Explainer│
-└──────────────┘
+                          ┌─────────────────────────────────────────────────────────┐
+                          │                  Browser (Vite + React 19)               │
+                          │   Dashboard → Investigations → Workspace → Report        │
+                          │               React Query Cache (TanStack)               │
+                          └─────────────────────┬───────────────────────────────────┘
+                                                │ HTTP / JSON  (CORS, port 5173 → 8000)
+                                                │
+       ┌────────────────────────────────────────▼────────────────────────────────────────┐
+       │                            FastAPI Backend (port 8000)                          │
+       │                                                                                 │
+       │  POST /api/v1/analyze               POST /api/v1/telemetry                      │
+       │  GET/PATCH /api/v1/investigations   GET /api/v1/investigations/{id}/timeline    │
+       └──────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬────┘
+              │             │             │             │             │             │
+       ┌──────▼──────┐┌─────▼─────┐┌──────▼──────┐┌─────▼─────┐┌──────▼──────┐┌─────▼─────┐
+       │ ML Pipeline ││ PostgreSQL ││  AI Context ││  Telemetry ││     RAG     ││ Endpoint  │
+       │             ││  Database  ││   Engine   ││    Bus    ││  Foundation ││  Agent    │
+       │FeatureMapper││             ││             ││             ││ (Retrieval  ││ (Sentinel │
+       │Preprocessor ││   Alerts    ││ ContextBld  ││ Ingests to  ││  category   ││ Heartbeat │
+       │IsolateForest││  Timeline   ││ IntentRoute ││ DB & updates││   docs via  ││ POSTing to │
+       │Risk / SHAP  ││EndpointAgent││ Gemini/Val  ││  inventory  ││ filesystem) ││ Telemetry)│
+       └─────────────┘└────────────┘└─────────────┘└────────────┘└─────────────┘└───────────┘
 ```
 
 ---
@@ -112,7 +124,7 @@ This project demonstrates that a production-quality AI detection and investigati
 ### Prerequisites
 - Python 3.11+
 - Node.js 20+
-- PostgreSQL 14+
+- PostgreSQL 14+ (or SQLite fallback)
 
 ### Clone
 
@@ -195,6 +207,26 @@ Frontend: `http://localhost:5173`
 
 ---
 
+## Running the Endpoint Agent (DV Sentinel)
+
+```bash
+cd sentinel
+
+# Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate       # Windows
+# source .venv/bin/activate  # macOS/Linux
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure settings (copy and adjust environment variables if needed)
+# Default points to http://localhost:8000 with sentinel-api-key auth
+python main.py
+```
+
+---
+
 ## API Overview
 
 All endpoints use the `/api/v1` prefix.
@@ -216,6 +248,12 @@ All endpoints use the `/api/v1` prefix.
 
 Valid statuses: `NEW`, `INVESTIGATING`, `CONTAINED`, `RESOLVED`, `FALSE_POSITIVE`
 
+### Telemetry
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/telemetry` | Ingest endpoint telemetry payload (requires `X-API-Key` header). |
+
 ---
 
 ## Folder Structure
@@ -224,184 +262,128 @@ Valid statuses: `NEW`, `INVESTIGATING`, `CONTAINED`, `RESOLVED`, `FALSE_POSITIVE
 DarkVector/
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/           # FastAPI route handlers
+│   │   ├── api/v1/           # FastAPI route handlers (including telemetry.py)
 │   │   ├── core/config.py    # pydantic-settings configuration
 │   │   ├── database/         # SQLAlchemy engine, session, init
 │   │   ├── ml/               # Feature mapper, loader, scorer, SHAP
-│   │   ├── models/           # SQLAlchemy ORM models
+│   │   ├── models/           # SQLAlchemy ORM models (telemetry, endpoint_agent)
 │   │   ├── repositories/     # DB query layer
-│   │   ├── schemas/          # Pydantic request/response models
-│   │   └── services/         # Business logic + context enrichment
-│   ├── models/               # Trained model artefacts (git-ignored)
+│   │   ├── schemas/          # Pydantic request/response schemas
+│   │   └── services/         # Business logic
+│   │       ├── llm/          # AI Context Engine
+│   │       │   ├── prompt/   # Modular prompts (Base, General, etc.)
+│   │       │   ├── routing/  # Intent Classifier & Prompt Router
+│   │       │   └── rag/      # RAG Foundation (retriever, loader, registry, parser)
+│   │       └── telemetry/    # Telemetry ingestion, bus, and repository
 │   ├── main.py               # FastAPI app + CORS
 │   └── requirements.txt
 │
 ├── frontend/
 │   └── src/
 │       ├── api/              # Axios client + typed API functions
-│       ├── components/       # Shared UI + workspace sub-components
+│       ├── components/       # Shared UI + workspace sub-components (AiAnalystPanel.tsx)
 │       ├── hooks/            # React Query wrappers
 │       ├── lib/              # Utilities: alertGenerator, mapper, severity
-│       ├── pages/            # Page-level components (12 pages)
+│       ├── pages/            # Page-level components
 │       ├── types.ts          # Shared Alert, Severity, Workspace types
 │       ├── mockData.ts       # Static mock alerts, metrics, world attacks
 │       └── App.tsx           # Root component + routing state machine
 │
-├── ml/                       # Training notebooks and scripts
+├── sentinel/                 # Lightweight endpoint agent
+│   ├── collector/            # Telemetry collectors (HeartbeatCollector)
+│   ├── transport/            # APITransport layer (retry backoff, httpx client)
+│   ├── models/               # Dataclasses (TelemetryEvent)
+│   ├── utils/                # Utilities (structured JSON logging setup)
+│   ├── config.py             # Sentinel configurations
+│   ├── main.py               # Agent daemon entry loop
+│   └── requirements.txt
+│
 ├── datasets/                 # KDD Cup 99 source data
 └── docs/                     # Additional documentation
 ```
 
 ---
 
-## Investigation Workflow
+## Investigation Flow
 
 ```
-1. Alert Generated
-   User clicks "Generate Event" on Dashboard
-   alertGenerator.ts builds an Alert from EVENT_PROFILES
-   Alert is sent to POST /api/v1/analyze
-
-2. ML Analysis (Backend)
-   FeatureMapper → 41 KDD features
-   Preprocessor (ColumnTransformer) → scaled + encoded
-   IsolationForest.decision_function() → raw anomaly score
-   RiskScorer → percentile-calibrated risk score (0–100)
-   SHAP TreeExplainer → top-5 feature attributions
-   ContextService → MITRE ATT&CK + Threat Intel enrichment
-
-3. Investigation Created (Backend, same request)
-   InvestigationService.create_from_analysis()
-   Investigation row written to PostgreSQL
-   Two timeline events auto-created
-
-4. Workspace Opens (Frontend)
-   WorkspaceView renders enriched alert
-   VectorPanel shows risk, SHAP, MITRE, threat intel
-   TimelinePanel loads from GET /investigations/{id}/timeline
-
-5. Status Updates
-   PATCH /investigations/{id}/status
-   New "Status changed" timeline event auto-created
-
-6. Host Isolation
-   Analyst clicks "Isolate Host" → progress bar runs
-   On completion, status → CONTAINED via mutation
-   Timeline event recorded
-
-7. Report
-   InvestigationReportView loads full data + timeline
-   Rendered as printable document via window.print()
+┌───────────────┐     ┌─────────────┐     ┌────────────┐     ┌───────────┐
+│ Alert Trigger │ ──> │ ML Pipeline │ ──> │ Risk/SHAP  │ ──> │ Context   │
+└───────────────┘     │ (KDD Map)   │     │ Scorer     │     │ (MITRE/TI)│
+                      └─────────────┘     └────────────┘     └─────┬─────┘
+                                                                   │
+                                                                   ▼
+┌───────────────┐     ┌─────────────┐     ┌────────────┐     ┌───────────┐
+│   Workspace   │ <── │ AI Context  │ <── │ Timeline & │ <── │ DB Write  │
+│  Interactive  │     │   Engine    │     │ Validation │     │ (Postgres)│
+└───────────────┘     └─────────────┘     └────────────┘     └───────────┘
 ```
 
 ---
 
-## AI Workflow
+## Telemetry Ingestion Flow
 
-DarkVector's AI reasoning is **deterministic, not generative**. No LLM API calls are made. All intelligence comes from:
-
-1. **Isolation Forest** — Trained on KDD Cup 99 data with a custom feature mapping layer.
-2. **SHAP** — `TreeExplainer` computes exact Shapley values for the top 5 features.
-3. **MITRE Mapping** — Keyword lookup: alert `type` → MITRE technique.
-4. **Threat Intelligence** — IP prefix lists + hostname patterns → reputation score.
-5. **AI Chat Panel** — Context-aware response templates adapting to the active alert.
-
----
-
-## MITRE ATT&CK Mapping
-
-| Alert Type Keywords | Technique ID | Technique | Tactic |
-|---|---|---|---|
-| kerberoast | T1558.003 | Kerberoasting | Credential Access |
-| lsass, credential dump | T1003.001 | LSASS Memory | Credential Access |
-| brute force, failed login, impossible travel | T1110 | Brute Force | Credential Access |
-| dns tunnel | T1071.004 | DNS | Command and Control |
-| namespace, container escape | T1611 | Escape to Host | Privilege Escalation |
-| iam, assumerole | T1078.004 | Cloud Accounts | Privilege Escalation |
-| database dump, exfil | T1030 | Data Transfer Size Limits | Exfiltration |
-| api burst, api rate | T1498 | Network Denial of Service | Impact |
-| scan, port scan | T1046 | Network Service Discovery | Discovery |
-| *(fallback)* | T1190 | Exploit Public-Facing Application | Initial Access |
+```
+┌───────────────┐     ┌────────────────┐     ┌──────────────┐
+│  DV Sentinel  │ ──> │ Telemetry API  │ ──> │  Telemetry   │
+│   Heartbeat   │     │ (X-API-Key)    │     │     Bus      │
+└───────────────┘     └────────────────┘     └──────┬───────┘
+                                                    │
+                                                    ▼
+┌───────────────┐     ┌────────────────┐     ┌──────────────┐
+│   Endpoint    │ <── │ Telemetry DB   │ <── │ Ingest Event │
+│   Inventory   │     │ (Agent Status) │     │ (Persist)    │
+└───────────────┘     └────────────────┘     └──────────────┘
+```
 
 ---
 
-## Threat Intelligence
+## AI Context Engine Pipeline
 
-All threat intelligence is derived locally — no external API calls.
+DarkVector runs every AI interaction through a strict, multi-stage pipeline:
 
-**IP Classification:**
-- Malicious prefixes: `194.26.*`, `185.190.*`, `91.92.*`, `45.33.*`, `104.21.*`
-- Suspicious prefixes: `80.241.*`, `5.188.*`, `23.19.*`
-- RFC-1918 addresses → clean
-
-**Hostname Classification:**
-- `srv-k8s*` → "Container / Kubernetes Node"
-- `db-*`, `postgres*` → "Database Server"
-- `corp-ad*` → "Active Directory Infrastructure"
-- `aws-*`, `gcp-*` → "Cloud Infrastructure"
-
----
-
-## Timeline System
-
-Every investigation has an append-only `investigation_timeline` table.
-
-**Event actors:** `system` | `ai` | `analyst`
-
-**Automatic events:**
-- Alert submitted → `alert_created` (system)
-- Analysis complete → `analysis_completed` (ai)
-- Status updated → `status_changed` (analyst)
-- Host isolated → `CONTAINED` status → `status_changed` event
+1. **Context Builder**: Gathers investigation, alerts, memory, timeline, SHAP, and threat intelligence.
+2. **Knowledge Pack V2**: Transforms the context dictionary into a natural-language briefing optimized for Gemini reasoning.
+3. **Intent Classifier**: Maps user queries deterministically via keyword-matching to avoid extra LLM latency.
+4. **Prompt Router**: Directs the intent to the correct specialized builder.
+5. **Specialized Prompt Builders**: Implements modular prompts (General, Explain Attack, Risk, Remediation, MITRE, Timeline, Evidence) sharing a common template.
+6. **Gemini**: Generates the response.
+7. **Evidence Citations**: Generates deterministic citations from the actual investigation context (hallucination-free).
+8. **Response Validator V2**: Performs semantic and formatting checks, rejecting AI-filler statements and checking context consistency.
+9. **Fallback AI**: Executed if the validator flags issues or the primary LLM pipeline fails.
 
 ---
 
-## Investigation Reports
+## RAG (Retrieval-Augmented Generation) Foundation
 
-The report renders from persisted backend data only:
-1. Investigation header (ID, creation time, status)
-2. Executive summary (AI summary string)
-3. Risk overview (risk score, severity, confidence, anomaly score)
-4. MITRE ATT&CK (technique, ID, tactic, description)
-5. Threat Intelligence (reputation, category, confidence, summary)
-6. Timeline (all events in chronological order)
+The RAG foundation loads markdown-formatted documents from localized directories:
+- `mitre/`, `playbooks/`, `cis/`, `owasp/`, `procedures/`
 
-Exported via `window.print()` with `@media print` CSS overrides.
+The retrieval system is fully implemented, utilizing a registry of `RetrievalProfile` templates, caching files in-memory to prevent redundant filesystem I/O, parsing YAML metadata, and ranking documents by authority level (`official` > `internal` > `community`). The retriever interface is designed to support the future plug-in of vector databases (ChromaDB) without changes to the rest of the application.
 
 ---
 
-## Evidence Graph
+## Future Roadmap
 
-The Evidence Graph builds a directed SVG node graph from live investigation data:
-- **Source host** — always rendered
-- **Associated user** — if `details.username` exists
-- **Parent process** — if `details.parentProcess` exists
-- **Spawned binary** — if `details.processPath` exists
-- **Remote IP** — if `details.ipAddress` exists; colour from threat intel
+### Sprint 15
+• Process telemetry collector  
+• Endpoint process tree streaming  
+• Behavior-based local detection rules  
+• Streaming telemetry parser  
 
-If no investigation is selected, the graph loads the most recent one automatically.
+### Sprint 16
+• Behavioral detection engine  
+• Sigma rules parser  
+• Live investigation updates (WebSockets)  
+• SOC Dashboard telemetry graphs  
 
----
-
-## Future Improvements
-
-- Real-time alert ingestion via WebSocket or SSE
-- Analyst assignment and multi-user case management
-- LLM-generated executive summaries (optional integration)
-- External MITRE ATT&CK API for live technique updates
-- VirusTotal / AbuseIPDB integration for live IP reputation
-- Role-based access control (RBAC)
-- Automated containment playbooks
-- PDF export with server-side rendering
-
----
-
-## Credits
-
-- **KDD Cup 99 dataset** — UCI Machine Learning Repository
-- **MITRE ATT&CK** — MITRE Corporation
-- **Isolation Forest** — Liu, Fei Tony, Kai Ming Ting, and Zhi-Hua Zhou (2008)
-- **SHAP** — Lundberg & Lee (2017)
+### Sprint 17
+• ChromaDB / Vector database integration  
+• Embeddings generation  
+• Autonomous investigation playbooks  
+• Native Tool Calling  
+• Enterprise threat feeds (VirusTotal, AbuseIPDB, YARA)  
+• AWS, Azure, and Kubernetes collector agents  
 
 ---
 
