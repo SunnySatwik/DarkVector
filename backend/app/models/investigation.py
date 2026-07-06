@@ -25,7 +25,11 @@ class Investigation(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)
     investigation_id: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    alert_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    alert_id: Mapped[str] = mapped_column(
+    String(128),
+    index=True,
+    nullable=False,
+)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[InvestigationStatus] = mapped_column(
         SQLEnum(InvestigationStatus, name="investigation_status"),

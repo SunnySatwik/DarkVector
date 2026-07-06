@@ -19,7 +19,6 @@ background_task = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(">>> Lifespan started")
     global background_task
 
     background_task = asyncio.create_task(

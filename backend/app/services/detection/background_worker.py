@@ -9,30 +9,40 @@ from app.services.detection.scheduler import DetectionScheduler
 logger = logging.getLogger(__name__)
 
 
-async def detection_loop():
+async def detection_loop() -> None:
+    """
+    Continuously executes autonomous detection cycles.
+
+    A fresh database session is created for every cycle so database
+    sessions are never shared across scheduler executions.
+    """
 
     logger.info("Detection worker started.")
 
-    while True:
-        print(">>> Running detection cycle")
-        db = SessionLocal()
+    try:
+        while True:
+            db = SessionLocal()
 
-        try:
+            try:
+                detection_count = DetectionScheduler.run(db)
 
-            print("===== Detection Cycle =====")
+                logger.info(
+                    "Detection scheduler cycle completed.",
+                    extra={
+                        "detections_processed": detection_count,
+                    },
+                )
 
-            count = DetectionScheduler.run(db)
+            except Exception:
+                logger.exception(
+                    "Detection scheduler cycle failed."
+                )
 
-            print(f"Detections: {count}")
+            finally:
+                db.close()
 
-        except Exception:
+            await asyncio.sleep(5)
 
-            logger.exception(
-                "Detection scheduler failed."
-            )
-
-        finally:
-
-            db.close()
-
-        await asyncio.sleep(5)
+    except asyncio.CancelledError:
+        logger.info("Detection worker stopped.")
+        raise

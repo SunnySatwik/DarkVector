@@ -1,3 +1,4 @@
+from _pytest import debugging
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,11 +13,16 @@ class InvestigationRepository:
         db: Session,
         investigation: Investigation,
     ) -> Investigation:
-        db.add(investigation)
-        db.commit()
-        db.refresh(investigation)
-        return investigation
+        try:
+            db.add(investigation)
+            db.commit()
+            db.refresh(investigation)
+            return investigation
 
+        except Exception:
+            db.rollback()
+            raise
+        
     @staticmethod
     def get_by_id(
         db: Session,

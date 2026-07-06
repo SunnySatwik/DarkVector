@@ -68,3 +68,39 @@ class TelemetryRepository:
             .limit(limit)
             .all()
         )
+    @staticmethod
+    def get_process_events_after(
+        db: Session,
+        after_timestamp,
+        limit: int = 5000,
+    ) -> list[TelemetryEvent]:
+        """
+        Return process events newer than the supplied timestamp.
+
+        Events are returned oldest-first so the detection scheduler processes
+        telemetry in chronological order.
+        """
+
+        query = (
+            db.query(TelemetryEvent)
+            .filter(
+                TelemetryEvent.event_type.in_(
+                    [
+                        "process_start",
+                        "process_exit",
+                    ]
+                )
+            )
+        )
+
+        if after_timestamp is not None:
+            query = query.filter(
+                TelemetryEvent.timestamp > after_timestamp
+            )
+
+        return (
+            query
+            .order_by(TelemetryEvent.timestamp.asc())
+            .limit(limit)
+            .all()
+        )

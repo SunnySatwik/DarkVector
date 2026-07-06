@@ -18,20 +18,26 @@ class DetectionRegistry:
     def register(cls, rule: DetectionRule) -> None:
         """
         Register an instantiated DetectionRule.
+
         Ensures a rule with the same ID is not registered twice.
         """
+
         if not any(r.id == rule.id for r in cls._rules):
             cls._rules.append(rule)
 
     @classmethod
     def get_rules(cls) -> list[DetectionRule]:
         """
-        Return the list of all registered rule instances.
+        Return all registered detection rule instances.
         """
+
         return list(cls._rules)
 
 
-# Auto-register all default rule instances
+# ---------------------------------------------------------
+# Production Detection Rules
+# ---------------------------------------------------------
+
 DetectionRegistry.register(PowerShellEncodedRule())
 DetectionRegistry.register(PowerShellCmdRule())
 DetectionRegistry.register(OfficeSpawnRule())
