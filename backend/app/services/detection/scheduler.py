@@ -9,6 +9,7 @@ from app.models.telemetry import TelemetryEvent
 from app.services.telemetry.telemetry_repository import TelemetryRepository
 from app.services.telemetry.process_tree.builder import ProcessTreeBuilder
 from app.services.detection.engine import DetectionEngine
+from app.services.detection.correlation.engine import DetectionCorrelationEngine
 from app.services.detection.detection_investigation_creator import (
     DetectionInvestigationCreator,
 )
@@ -109,7 +110,7 @@ class DetectionScheduler:
         investigations_processed = 0
 
         # ---------------------------------------------------------
-        # Detection + Investigation Pipeline
+        # Detection + Correlation + Investigation Pipeline
         #
         # Any exception here prevents scheduler state from being
         # committed.
@@ -120,10 +121,17 @@ class DetectionScheduler:
 
             total_detections += len(detections)
 
-            for detection in detections:
-                DetectionInvestigationCreator.create(
+            # Correlate detections deterministically
+            groups = DetectionCorrelationEngine.correlate(
+                detections=detections,
+                tree=tree,
+            )
+
+            for group in groups:
+                DetectionInvestigationCreator.create_from_group(
                     db=db,
-                    detection=detection,
+                    group=group,
+                    tree=tree,
                 )
 
                 investigations_processed += 1

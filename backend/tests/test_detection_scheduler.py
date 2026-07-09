@@ -89,7 +89,11 @@ def test_no_new_events_returns_zero(mock_get_events):
 
 @patch(
     "app.services.detection.scheduler."
-    "DetectionInvestigationCreator.create"
+    "DetectionInvestigationCreator.create_from_group"
+)
+@patch(
+    "app.services.detection.scheduler."
+    "DetectionCorrelationEngine.correlate"
 )
 @patch(
     "app.services.detection.scheduler."
@@ -107,6 +111,7 @@ def test_first_cycle_processes_events_and_advances_cursor(
     mock_get_events,
     mock_build,
     mock_evaluate,
+    mock_correlate,
     mock_create,
 ):
     """
@@ -150,6 +155,11 @@ def test_first_cycle_processes_events_and_advances_cursor(
         fake_detection,
     ]
 
+    fake_group = MagicMock()
+    mock_correlate.return_value = [
+        fake_group,
+    ]
+
     result = DetectionScheduler.run(db)
 
     assert result == 1
@@ -173,9 +183,15 @@ def test_first_cycle_processes_events_and_advances_cursor(
 
     mock_evaluate.assert_called_once_with(fake_tree)
 
+    mock_correlate.assert_called_once_with(
+        detections=[fake_detection],
+        tree=fake_tree,
+    )
+
     mock_create.assert_called_once_with(
         db=db,
-        detection=fake_detection,
+        group=fake_group,
+        tree=fake_tree,
     )
 
     assert DetectionScheduler._last_processed_timestamp == time_2
@@ -183,7 +199,11 @@ def test_first_cycle_processes_events_and_advances_cursor(
 
 @patch(
     "app.services.detection.scheduler."
-    "DetectionInvestigationCreator.create"
+    "DetectionInvestigationCreator.create_from_group"
+)
+@patch(
+    "app.services.detection.scheduler."
+    "DetectionCorrelationEngine.correlate"
 )
 @patch(
     "app.services.detection.scheduler."
@@ -201,6 +221,7 @@ def test_second_cycle_queries_after_previous_cursor(
     mock_get_events,
     mock_build,
     mock_evaluate,
+    mock_correlate,
     mock_create,
 ):
     """
@@ -232,6 +253,7 @@ def test_second_cycle_queries_after_previous_cursor(
     }
 
     mock_evaluate.return_value = []
+    mock_correlate.return_value = []
 
     first_result = DetectionScheduler.run(db)
     second_result = DetectionScheduler.run(db)

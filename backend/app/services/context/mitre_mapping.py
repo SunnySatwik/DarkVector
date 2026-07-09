@@ -197,3 +197,24 @@ def lookup(alert: dict) -> dict:
             return info.to_dict()
 
     return _FALLBACK.to_dict()
+
+
+def lookup_by_id(technique_id: str, default_tactic: str = None) -> dict:
+    """
+    Look up MITRE technique information by technique ID.
+    If the technique ID is matched in static rules, return its metadata.
+    If not matched, preserve the technique ID and default tactic (if provided)
+    but do not add generic fallback names/descriptions.
+    """
+    for _, info in _RULES:
+        if info.technique_id == technique_id:
+            return info.to_dict()
+    if _FALLBACK.technique_id == technique_id:
+        return _FALLBACK.to_dict()
+    return {
+        "technique_id": technique_id,
+        "technique_name": "N/A",
+        "tactic": default_tactic or "N/A",
+        "description": "N/A",
+    }
+

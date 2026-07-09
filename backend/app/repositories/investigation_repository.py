@@ -95,3 +95,37 @@ class InvestigationRepository:
 
         db.delete(investigation)
         db.commit()
+
+    @staticmethod
+    def find_by_detection_ids_or_process_guids(
+        db: Session,
+        detection_ids: list[str],
+        process_guids: list[str],
+    ) -> list[Investigation]:
+        """
+        Locates all investigations containing any of the member detection IDs
+        or related process GUIDs in their detection_json.
+        """
+        stmt = select(Investigation).order_by(Investigation.created_at.desc())
+        invs = list(db.scalars(stmt))
+
+        matches = []
+        for inv in invs:
+            if not inv.detection_json:
+                continue
+
+            # Support both new correlation group and legacy single-detection schemas
+            if "id" in inv.detection_json and "detections" not in inv.detection_json:
+                dets = [inv.detection_json]
+            else:
+                dets = inv.detection_json.get("detections", [])
+
+            for d in dets:
+                det_id = d.get("id")
+                proc_guid = d.get("process_guid")
+                if (det_id and det_id in detection_ids) or (
+                    proc_guid and proc_guid in process_guids
+                ):
+                    matches.append(inv)
+                    break
+        return matches

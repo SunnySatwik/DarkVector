@@ -146,3 +146,59 @@ class InvestigationService:
             )
 
         return investigation
+
+    @staticmethod
+    def get_workspace(
+        db: Session,
+        investigation_id: str,
+    ) -> dict | None:
+        """
+        Builds a frontend-ready dictionary representing the workspace for an investigation.
+        """
+        investigation = InvestigationService.get_investigation(db, investigation_id)
+        if not investigation:
+            return None
+
+        # Load timeline events using TimelineRepository
+        timeline_repo = TimelineRepository(db)
+        timeline_events = timeline_repo.list_for_investigation(investigation_id)
+
+        # Call ContextBuilder.build to reuse canonical normalization layer
+        from app.services.context_builder import ContextBuilder
+        context = ContextBuilder.build(
+            db=db,
+            investigation_id=investigation_id,
+            timeline_events=timeline_events,
+        )
+
+        is_behavioral = context.get("behavioral_context") is not None
+
+        # Extract normalized attributes
+        behavioral_detections = []
+        primary_detection = None
+        correlation = None
+        process_evidence = []
+        mitre_mappings = []
+        recommendations = []
+
+        if is_behavioral:
+            behavioral_detections = context["behavioral_context"].get("detections") or []
+            primary_detection = context["behavioral_context"].get("primary_detection")
+            correlation = context.get("correlation_context")
+            process_evidence = context.get("process_evidence") or []
+            mitre_mappings = context.get("mitre_mappings") or []
+            recommendations = context.get("recommendations") or []
+
+        return {
+            "investigation": investigation,
+            "alert": investigation.alert_json,
+            "analysis": investigation.analysis_json,
+            "is_behavioral": is_behavioral,
+            "behavioral_detections": behavioral_detections,
+            "primary_detection": primary_detection,
+            "correlation": correlation,
+            "process_evidence": process_evidence,
+            "mitre_mappings": mitre_mappings,
+            "recommendations": recommendations,
+            "timeline": timeline_events,
+        }
