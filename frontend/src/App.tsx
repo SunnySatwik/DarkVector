@@ -16,6 +16,7 @@ import AiAnalystPanel from "./components/AiAnalystPanel";
 import { Alert, Workspace } from "./types";
 import { MOCK_WORKSPACES } from "./mockData";
 import { AnalyzeResponse } from "./api/types";
+import { WorkspaceViewModel } from "./lib/workspaceMapper";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
@@ -32,6 +33,7 @@ export default function App() {
   // Updated by callbacks from InvestigationWorkspace; cleared on close.
   const [panelAlert, setPanelAlert] = useState<Alert | null>(null);
   const [panelAnalysis, setPanelAnalysis] = useState<AnalyzeResponse | null>(null);
+  const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceViewModel | null>(null);
 
   // ── Overlays ──────────────────────────────────────────────────────────────
   const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(false);
@@ -106,6 +108,13 @@ export default function App() {
   const handleAnalysisReady = (alert: Alert, analysis: AnalyzeResponse) => {
     setPanelAlert(alert);
     setPanelAnalysis(analysis);
+    setPanelWorkspace(null);
+  };
+
+  const handleWorkspaceReady = (workspace: WorkspaceViewModel) => {
+    setPanelWorkspace(workspace);
+    setPanelAlert(null);
+    setPanelAnalysis(null);
   };
 
   // Subpage router
@@ -127,8 +136,9 @@ export default function App() {
             // Clear transient analysis state on workspace close
             setPanelAlert(null);
             setPanelAnalysis(null);
+            setPanelWorkspace(null);
           }}
-          onAnalysisReady={handleAnalysisReady}
+          onWorkspaceReady={handleWorkspaceReady}
           onOpenReport={setActiveReportId}
         />
       );
@@ -145,6 +155,7 @@ export default function App() {
             // Clear transient analysis state on workspace close
             setPanelAlert(null);
             setPanelAnalysis(null);
+            setPanelWorkspace(null);
           }}
           onAnalysisReady={handleAnalysisReady}
           onOpenReport={setActiveReportId}
@@ -246,6 +257,7 @@ export default function App() {
         onClose={() => setIsAiPanelOpen(false)}
         selectedAlert={panelAlert}
         analysis={panelAnalysis}
+        workspace={panelWorkspace}
       />
     </>
   );

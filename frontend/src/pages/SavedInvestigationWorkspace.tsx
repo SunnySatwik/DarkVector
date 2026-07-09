@@ -1,102 +1,75 @@
 import { useEffect, useMemo } from "react";
-import { Alert, Severity } from "../types";
-import { AnalyzeResponse } from "../api/types";
+import {
+  useInvestigationWorkspace,
+  useUpdateInvestigationStatus,
+} from "../hooks/useInvestigations";
+import {
+  mapWorkspaceResponse,
+  WorkspaceViewModel,
+} from "../lib/workspaceMapper";
 import WorkspaceView from "../components/workspace/WorkspaceView";
-import { useInvestigation, useUpdateInvestigationStatus } from "../hooks/useInvestigations";
 
 interface SavedInvestigationWorkspaceProps {
-    investigationId: string;
-    onCloseWorkspace: () => void;
-    onAnalysisReady?: (alert: Alert, analysis: AnalyzeResponse) => void;
-    onOpenReport?: (id: string) => void;
+  investigationId: string;
+  onCloseWorkspace: () => void;
+  onWorkspaceReady?: (workspace: WorkspaceViewModel) => void;
+  onOpenReport?: (id: string) => void;
 }
 
 export default function SavedInvestigationWorkspace({
-    investigationId,
-    onCloseWorkspace,
-    onAnalysisReady,
-    onOpenReport,
+  investigationId,
+  onCloseWorkspace,
+  onWorkspaceReady,
+  onOpenReport,
 }: SavedInvestigationWorkspaceProps) {
+  const { data, isPending, isError, refetch } =
+    useInvestigationWorkspace(investigationId);
 
-    const {
-        data,
-        isPending,
-        isError,
-        refetch,
-    } = useInvestigation(investigationId);
+  const updateStatusMutation = useUpdateInvestigationStatus(investigationId);
 
-    const updateStatusMutation = useUpdateInvestigationStatus(investigationId);
+  const viewModel = useMemo(() => {
+    if (!data) return null;
+    return mapWorkspaceResponse(data);
+  }, [data]);
 
-    // Derived displayAlert - memoized to keep data derivation and side effects separate
-    const displayAlert: Alert = useMemo(() => {
-        if (!data) return {} as Alert;
-        return {
-            ...data.alert,
-            category: data.alert.category as Alert["category"],
-            score: data.analysis.analysis.risk_score,
-            severity: data.analysis.analysis.severity,
-            status: "investigating",
-        };
-    }, [data]);
-
-    // Side effect to notify parent of analysis once data resolves
-    useEffect(() => {
-        if (data && onAnalysisReady && displayAlert.id) {
-            onAnalysisReady(displayAlert, data.analysis);
-        }
-    }, [displayAlert, data, onAnalysisReady]);
-
-    if (isPending) {
-        return (
-            <div className="p-6 text-gray-400">
-                Loading investigation...
-            </div>
-        );
+  useEffect(() => {
+    if (viewModel && onWorkspaceReady) {
+      onWorkspaceReady(viewModel);
     }
+  }, [viewModel, onWorkspaceReady]);
 
-    if (isError || !data) {
-        return (
-            <div className="p-6 text-red-400">
-                Failed to load investigation.
-            </div>
-        );
-    }
-
+  if (isPending) {
     return (
-        <WorkspaceView
-            displayAlert={displayAlert}
-            detectionSeverity={data.alert.severity}
-            investigationId={investigationId}
-            investigationStatus={data.investigation.status}
-            onUpdateStatus={(status) => updateStatusMutation.mutate(status)}
-            onOpenReport={onOpenReport}
-            analysisContext={data.analysis.context ?? undefined}
-
-            openTabs={[displayAlert]}
-
-            onSelectAlert={() => { }}
-
-            onCloseAlertTab={() => { }}
-
-            onCloseWorkspace={onCloseWorkspace}
-
-            quarantineStatus="active"
-
-            quarantineProgress={0}
-
-            isBlockApplied={false}
-
-            handleIsolate={() => { }}
-
-            onBlockIp={() => { }}
-
-            isPending={false}
-
-            isError={false}
-
-            refetch={refetch}
-
-            relatedAlerts={[]}
-        />
+      <div className="p-6 text-gray-400 font-mono text-xs flex items-center gap-2">
+        <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+        <span>Loading investigation workspace...</span>
+      </div>
     );
+  }
+
+  if (isError || !viewModel) {
+    return (
+      <div className="p-6 text-red-400 font-mono text-xs flex flex-col gap-2">
+        <span>Failed to load investigation workspace.</span>
+        <button
+          onClick={() => refetch()}
+          className="w-fit text-purple-400 hover:text-purple-300 underline cursor-pointer"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <WorkspaceView
+      viewModel={viewModel}
+      investigationId={investigationId}
+      investigationStatus={viewModel.investigation.status}
+      onUpdateStatus={(status) => updateStatusMutation.mutate(status)}
+      onOpenReport={onOpenReport}
+      onCloseWorkspace={onCloseWorkspace}
+      refetch={refetch}
+    />
+  );
 }

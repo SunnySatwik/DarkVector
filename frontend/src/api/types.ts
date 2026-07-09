@@ -73,23 +73,14 @@ export interface AnalyzeResponse {
 
 export interface Investigation {
   investigation_id: string;
-
   alert_id: string;
-
   title: string;
-
   status: string;
-
   severity: Severity;
-
   risk_score: number;
-
-  confidence: number;
-
-  summary: string;
-
+  confidence: number | null;
+  summary: string | null;
   created_at: string;
-
   updated_at: string;
 }
 
@@ -99,8 +90,8 @@ export interface InvestigationListResponse {
 
 export interface InvestigationDetail {
   investigation: Investigation;
-  alert: AnalyzeRequest;
-  analysis: AnalyzeResponse;
+  alert: AnalyzeRequest | null;
+  analysis: AnalyzeResponse | null;
 }
 
 export interface TimelineEvent {
@@ -110,4 +101,69 @@ export interface TimelineEvent {
   event_type: string;
   title: string;
   description: string;
+}
+
+// ─── Behavioral Workspace Interfaces ────────────────────────────────────────
+
+export interface BehavioralDetection {
+  id: string;
+  rule_id: string;
+  title: string;
+  description: string;
+  severity: Severity;
+  confidence: number;
+  host_id: string;
+  process_guid: string;
+  timestamp: number;
+  mitre_technique: string | null;
+  mitre_tactic: string | null;
+  recommendations: string[];
+  evidence: Record<string, any>[];
+  metadata: Record<string, any>;
+}
+
+export interface Correlation {
+  correlation_id: string;
+  number_of_detections: number;
+  first_seen: number;
+  last_seen: number;
+  duration: number;
+  involved_process_guids: string[];
+  mitre_techniques: string[];
+  mitre_tactics: string[];
+  aggregate_severity: Severity;
+  aggregate_confidence: number;
+}
+
+export interface ProcessEvidence {
+  process_guid: string;
+  pid: number | null;
+  ppid: number | null;
+  process_name: string | null;
+  executable: string | null;
+  cmdline: string[] | string | null;
+  username: string | null;
+  parent_info: string | Record<string, any> | null;
+}
+
+export interface MitreMapping {
+  technique_id: string;
+  technique_name: string | null;
+  tactic: string | null;
+  description: string | null;
+  [key: string]: any; // supports extra metadata returned by backend
+}
+
+export interface InvestigationWorkspace {
+  investigation: Investigation;
+  alert: AnalyzeRequest | null;
+  analysis: AnalyzeResponse | null;
+  is_behavioral: boolean;
+  behavioral_detections: BehavioralDetection[];
+  primary_detection: BehavioralDetection | null;
+  correlation: Correlation | null;
+  process_evidence: ProcessEvidence[];
+  mitre_mappings: MitreMapping[];
+  recommendations: string[];
+  timeline: TimelineEvent[];
 }

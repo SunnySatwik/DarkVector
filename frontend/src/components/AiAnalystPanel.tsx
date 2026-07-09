@@ -20,6 +20,7 @@ import ReactMarkdown from "react-markdown";
 import { AnalyzeResponse } from "../api/types";
 import { sendChatMessage } from "../api/investigations";
 import { useInvestigations, useTimeline } from "../hooks/useInvestigations";
+import { WorkspaceViewModel } from "../lib/workspaceMapper";
 
 interface AiAnalystPanelProps {
   isOpen: boolean;
@@ -27,6 +28,8 @@ interface AiAnalystPanelProps {
   selectedAlert: Alert | null;
   analysis: AnalyzeResponse | null;
   onIsolateNode?: (nodeId: string) => void;
+  investigationId?: string | null;
+  workspace?: WorkspaceViewModel | null;
 }
 
 interface ChatMessage {
@@ -95,6 +98,8 @@ export default function AiAnalystPanel({
   selectedAlert,
   analysis,
   onIsolateNode,
+  investigationId,
+  workspace,
 }: AiAnalystPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -121,11 +126,21 @@ export default function AiAnalystPanel({
     (inv: any) => inv.alert_id === selectedAlert?.id
   );
 
-  const investigationId = matchingInvestigation?.investigation_id;
-  const investigationStatus = matchingInvestigation?.status || selectedAlert?.status || "open";
+  const viewInvId = workspace
+    ? workspace.investigation.investigation_id
+    : (investigationId || matchingInvestigation?.investigation_id);
+
+  const investigationStatus = workspace
+    ? workspace.investigation.status
+    : (matchingInvestigation?.status || selectedAlert?.status || "open");
 
   // Fetch timeline data using react-query hook
-  const { data: timelineData, isPending: isTimelinePending } = useTimeline(investigationId);
+  const { data: timelineData, isPending: isTimelinePending } = useTimeline(
+    workspace ? undefined : viewInvId
+  );
+
+  const timeline = workspace ? workspace.timeline : timelineData;
+  const isTimelineLoading = workspace ? false : isTimelinePending;
 
   const handleCopy = (text: string, id: number) => {
     navigator.clipboard.writeText(text);
@@ -137,9 +152,37 @@ export default function AiAnalystPanel({
     }, 2000);
   };
 
-  // Initialize chat when alert changes
+  // Initialize chat when alert or workspace changes
   useEffect(() => {
-    if (selectedAlert) {
+    if (workspace) {
+      const inv = workspace.investigation;
+      let text = `I have loaded the consolidated AI context for **${inv.investigation_id}** ("${inv.title}").`;
+      if (workspace.isBehavioral) {
+        text += `\n\nThis is an autonomous behavioral case containing **${workspace.detections.length}** correlated detections.`;
+        if (workspace.primaryDetection) {
+          text += `\n- **Primary Threat Node:** \`${workspace.primaryDetection.title}\` (Severity: ${workspace.primaryDetection.severity.toUpperCase()})`;
+        }
+        if (workspace.correlation) {
+          text += `\n- **Correlation ID:** \`${workspace.correlation.correlation_id}\``;
+          text += `\n- **Duration Span:** ${workspace.correlation.duration.toFixed(1)}s`;
+        }
+      } else if (workspace.legacyAnalysis) {
+        text += `\n\n### • Analysis Summary\n${workspace.legacyAnalysis.explanation.summary}`;
+      }
+
+      if (workspace.recommendations && workspace.recommendations.length > 0) {
+        text += `\n\n### • Recommended containment playbooks\n` +
+          workspace.recommendations.map((r, i) => `${i + 1}. ${r}`).join("\n");
+      }
+
+      setMessages([
+        {
+          sender: "ai",
+          text,
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
+    } else if (selectedAlert) {
       if (!analysis) {
         setMessages([
           {
@@ -175,16 +218,16 @@ export default function AiAnalystPanel({
           {
             sender: "ai",
             text: `I have completed the analysis of **${selectedAlert.id}** on host \`${selectedAlert.source}\`.
-
+ 
 ### • What I found
 The event was flagged with an anomaly score of **${analysis.analysis.anomaly_score?.toFixed(3) ?? "--"}** and a risk score of **${analysis.analysis.risk_score ?? "--"}**. 
-
+ 
 Here are the key factors that contributed to this anomaly score:
 ${shapExplanations}
-
+ 
 ### • Why it matters
 ${analysis.explanation.summary}
-
+ 
 ### • Recommended next steps
 1. **Isolate host** \`${selectedAlert.source}\` immediately to prevent potential command-and-control (C2) communication or lateral movement.
 2. **Audit process lineage** and parent processes in the process chain to trace execution flow.
@@ -197,12 +240,12 @@ ${analysis.explanation.summary}
       setMessages([
         {
           sender: "ai",
-          text: `I'm ready. Select an alert from the feed and I'll walk you through what I see — the risk factors, the most likely attack pattern, and what I'd recommend doing next.`,
+          text: `I'm ready. Select an alert from the feed or load a case, and I'll walk you through the risk factors, attack patterns, and recommendations.`,
           timestamp: new Date().toLocaleTimeString(),
         },
       ]);
     }
-  }, [selectedAlert, analysis]);
+  }, [selectedAlert, analysis, workspace]);
 
   // Scroll to bottom of chat scroll window when new messages arrive
   useEffect(() => {
@@ -211,7 +254,8 @@ ${analysis.explanation.summary}
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || !selectedAlert) return;
+    if (!inputValue.trim()) return;
+    if (!workspace && !selectedAlert) return;
 
     const userMsgText = inputValue;
     const timestamp = new Date().toLocaleTimeString([], {
@@ -234,10 +278,10 @@ ${analysis.explanation.summary}
 
     try {
       const reply = await sendChatMessage(
-        undefined,
+        viewInvId || undefined,
         userMsgText,
         formattedHistory,
-        selectedAlert.id
+        !viewInvId ? selectedAlert?.id : undefined
       );
       setMessages((prev) => [
         ...prev,
@@ -269,30 +313,66 @@ ${analysis.explanation.summary}
   };
 
   // Extract variables for rendering
-  const severity = analysis?.analysis?.severity ?? selectedAlert?.severity ?? "low";
-  const riskScore = analysis?.analysis?.risk_score ?? selectedAlert?.score ?? 0;
-  const anomalyScore = analysis?.analysis?.anomaly_score ?? (selectedAlert?.score ? selectedAlert.score / 100 : 0);
-  const confidence = analysis?.analysis?.confidence ? Math.round(analysis.analysis.confidence * 100) : null;
+  const severity = workspace
+    ? workspace.investigation.severity
+    : (analysis?.analysis?.severity ?? selectedAlert?.severity ?? "low");
+    
+  const riskScore = workspace
+    ? workspace.investigation.risk_score
+    : (analysis?.analysis?.risk_score ?? selectedAlert?.score ?? 0);
+    
+  const anomalyScore = workspace
+    ? (workspace.investigation.risk_score / 100)
+    : (analysis?.analysis?.anomaly_score ?? (selectedAlert?.score ? selectedAlert.score / 100 : 0));
+
+  let confidence: number | null = null;
+  if (workspace) {
+    const confVal = workspace.investigation.confidence;
+    if (confVal !== null) {
+      confidence = confVal <= 1.0 ? Math.round(confVal * 100) : Math.round(confVal);
+    }
+  } else if (analysis?.analysis?.confidence) {
+    confidence = Math.round(analysis.analysis.confidence * 100);
+  }
 
   // Build list of deterministic citations
   const citations: string[] = [];
-  if (analysis?.context?.mitre?.technique_id && analysis.context.mitre.technique_id !== "N/A") {
-    citations.push(`MITRE ATT&CK ${analysis.context.mitre.technique_id}`);
-  }
-  if (
-    analysis?.context?.threat_intelligence?.reputation &&
-    analysis.context.threat_intelligence.reputation !== "N/A"
-  ) {
-    citations.push("Threat Intelligence");
-  }
-  if (analysis?.explanation?.top_factors && analysis.explanation.top_factors.length > 0) {
-    citations.push("SHAP Feature Attribution");
-  }
-  if (selectedAlert?.details?.processPath || selectedAlert?.details?.commandLine) {
-    citations.push("Evidence Graph");
-  }
-  if (timelineData && timelineData.length > 0) {
-    citations.push("Investigation Timeline");
+  if (workspace) {
+    if (workspace.isBehavioral) {
+      citations.push("Behavioral Detection Evidence");
+      if (workspace.processes.length > 0) {
+        citations.push("Process Execution Evidence");
+      }
+      if (workspace.correlation) {
+        citations.push("Detection Correlation Group");
+      }
+    } else {
+      if (workspace.legacyAlert?.details?.processPath || workspace.legacyAlert?.details?.commandLine) {
+        citations.push("Evidence Graph");
+      }
+    }
+    if (workspace.timeline.length > 0) {
+      citations.push("Investigation Timeline");
+    }
+  } else {
+    if (analysis?.context?.mitre?.technique_id && analysis.context.mitre.technique_id !== "N/A") {
+      citations.push(`MITRE ATT&CK ${analysis.context.mitre.technique_id}`);
+    }
+    if (
+      analysis?.context?.threat_intelligence?.reputation &&
+      analysis.context.threat_intelligence.reputation !== "N/A"
+    ) {
+      citations.push("Threat Intelligence");
+    }
+    if (analysis?.explanation?.top_factors && analysis.explanation.top_factors.length > 0) {
+      citations.push("SHAP Feature Attribution");
+    }
+    if (selectedAlert?.details?.processPath || selectedAlert?.details?.commandLine) {
+      citations.push("Evidence Graph");
+    }
+    if (timeline && timeline.length > 0) {
+      citations.push("Investigation Timeline");
+    }
   }
   if (messages.length > 1) {
     citations.push("Conversation History");
@@ -333,7 +413,7 @@ ${analysis.explanation.summary}
           </div>
 
           {/* Current Assessment - Sticky Banner */}
-          {selectedAlert && (
+          {(workspace || selectedAlert) && (
             <div className="p-4 border-b border-[#1F232B] bg-[#14181F]/80 backdrop-blur-sm shrink-0">
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div className="bg-[#111317] border border-[#1F232B] rounded-lg p-2 flex flex-col justify-center">
@@ -360,7 +440,7 @@ ${analysis.explanation.summary}
                     Risk Score
                   </div>
                   <div className="text-xs font-mono font-bold text-red-400">
-                    {riskScore}
+                    {riskScore.toFixed(0)}%
                   </div>
                 </div>
 
@@ -387,7 +467,268 @@ ${analysis.explanation.summary}
 
           {/* Main Scrollable Feed */}
           <div className="flex-1 overflow-y-auto p-5 space-y-6">
-            {selectedAlert && analysis ? (
+            {workspace ? (
+              <>
+                {/* Findings summary card */}
+                <div className="bg-[#14181F] border border-[#1F232B] rounded-xl p-4 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-semibold text-gray-200 uppercase tracking-wider font-sans">
+                      Investigation Assessment
+                    </h3>
+                    <span className="text-[10px] font-mono text-gray-500">
+                      Score: {riskScore.toFixed(1)}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-300 leading-relaxed font-sans">
+                    {workspace.isBehavioral ? (
+                      <>
+                        This is an autonomous behavioral detection investigation with {workspace.detections.length} correlated detections trigger-analyzed by the security engine.
+                      </>
+                    ) : (
+                      <>
+                        This is a legacy anomaly investigation resolving the details of trigger alert ID {workspace.investigation.alert_id}.
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                {/* Recommendations actions */}
+                {workspace.recommendations && workspace.recommendations.length > 0 && (
+                  <div className="bg-[#14181F] border border-[#1F232B] rounded-xl p-4 space-y-3 shadow-sm">
+                    <h3 className="text-xs font-semibold text-gray-200 uppercase tracking-wider font-sans">
+                      Containment playbooks
+                    </h3>
+                    <div className="space-y-2">
+                      {workspace.recommendations.map((rec, i) => (
+                        <div key={i} className="flex gap-2.5 items-start">
+                          <div className="w-5 h-5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-mono font-bold flex items-center justify-center shrink-0 mt-0.5">
+                            {i + 1}
+                          </div>
+                          <div className="text-xs text-gray-300 font-sans leading-relaxed">
+                            {rec}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Accordion Panels */}
+                <div className="border border-[#1F232B] rounded-xl overflow-hidden bg-[#14181F]/40 shadow-sm">
+                  {/* Evidence Section */}
+                  <CollapsiblePanel
+                    title="Forensic Evidence"
+                    isOpen={isEvidenceOpen}
+                    onToggle={() => setIsEvidenceOpen(!isEvidenceOpen)}
+                    icon={Shield}
+                  >
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 font-sans">
+                          Evidence Citations
+                        </div>
+                        {citations.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {citations.map((cite, i) => (
+                              <span
+                                key={i}
+                                className="text-[10px] font-mono text-purple-400 bg-purple-400/10 border border-purple-500/20 px-2 py-0.5 rounded"
+                              >
+                                {cite}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-500 italic font-sans">
+                            No citations registered.
+                          </span>
+                        )}
+                      </div>
+
+                      {workspace.isBehavioral ? (
+                        <div className="bg-[#111317] border border-[#1F232B] rounded p-2.5 space-y-1.5 font-mono text-[10px] text-gray-400">
+                          <div>
+                            <span className="text-gray-500 font-sans">Detections count:</span>{" "}
+                            <span className="text-gray-200">{workspace.detections.length}</span>
+                          </div>
+                          {workspace.primaryDetection && (
+                            <div>
+                              <span className="text-gray-500 font-sans">Primary technique:</span>{" "}
+                              <span className="text-gray-200">{workspace.primaryDetection.mitre_technique || "N/A"}</span>
+                            </div>
+                          )}
+                          {workspace.processes.length > 0 && (
+                            <div>
+                              <span className="text-gray-500 font-sans">Primary executable:</span>{" "}
+                              <span className="text-gray-200 break-all">{workspace.processes[0].executable || "N/A"}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        workspace.legacyAlert?.details && (
+                          <div className="bg-[#111317] border border-[#1F232B] rounded p-2.5 space-y-1.5 font-mono text-[10px] text-gray-400">
+                            {workspace.legacyAlert.details.processPath && (
+                              <div>
+                                <span className="text-gray-500">process_path:</span>{" "}
+                                <span className="text-gray-300">
+                                  {workspace.legacyAlert.details.processPath}
+                                </span>
+                              </div>
+                            )}
+                            {workspace.legacyAlert.details.commandLine && (
+                              <div>
+                                <span className="text-gray-500">command_line:</span>{" "}
+                                <span className="text-gray-300 break-all">
+                                  {workspace.legacyAlert.details.commandLine}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </CollapsiblePanel>
+
+                  {/* Timeline Section */}
+                  <CollapsiblePanel
+                    title="Audit Timeline"
+                    isOpen={isTimelineOpen}
+                    onToggle={() => setIsTimelineOpen(!isTimelineOpen)}
+                    icon={Activity}
+                  >
+                    {isTimelineLoading ? (
+                      <div className="flex items-center justify-center py-4 gap-2 text-gray-500 font-sans">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Loading chronological logs...</span>
+                      </div>
+                    ) : timeline && timeline.length > 0 ? (
+                      <div className="space-y-3.5 relative pl-1">
+                        {timeline.map((ev, i) => (
+                          <div key={i} className="flex gap-3 items-start">
+                            <div className="flex flex-col items-center mt-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500/80 border border-blue-400/30" />
+                              {i < timeline.length - 1 && (
+                                <div className="w-[1px] bg-[#1F232B] h-6 my-1" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between text-[9px] text-gray-500 mb-0.5 font-mono">
+                                <span>{ev.actor || "System"}</span>
+                                <span>
+                                  {new Date(ev.timestamp).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-200 font-sans">{ev.title}</p>
+                              {ev.description && (
+                                <p className="text-[10px] text-gray-500 mt-0.5 leading-normal">
+                                  {ev.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-3 text-gray-500 italic font-sans">
+                        No events logged in investigation timeline.
+                      </div>
+                    )}
+                  </CollapsiblePanel>
+
+                  {/* MITRE ATT&CK Section */}
+                  <CollapsiblePanel
+                    title="MITRE ATT&CK Assessment"
+                    isOpen={isMitreOpen}
+                    onToggle={() => setIsMitreOpen(!isMitreOpen)}
+                    icon={Target}
+                  >
+                    {workspace.mitreMappings && workspace.mitreMappings.length > 0 ? (
+                      <div className="space-y-3">
+                        {workspace.mitreMappings.map((m, i) => (
+                          <div key={i} className="pb-2.5 border-b border-[#1F232B] last:border-b-0 last:pb-0">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs font-mono font-semibold text-purple-400">
+                                {m.technique_id}
+                              </span>
+                              {m.tactic && (
+                                <span className="text-[9px] font-sans text-gray-400 bg-purple-500/10 px-1.5 py-0.2 rounded border border-purple-500/20">
+                                  {m.tactic}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] font-sans font-semibold text-gray-200 mb-1">
+                              {m.technique_name}
+                            </div>
+                            <p className="text-[10px] text-gray-400 leading-normal font-sans">
+                              {m.description || "No description provided."}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-2 text-gray-500 italic font-sans">
+                        No mapping data loaded.
+                      </div>
+                    )}
+                  </CollapsiblePanel>
+
+                  {/* Threat Intelligence Section */}
+                  {workspace.legacyAnalysis?.context?.threat_intelligence && (
+                    <CollapsiblePanel
+                      title="Threat Intelligence"
+                      isOpen={isThreatIntelOpen}
+                      onToggle={() => setIsThreatIntelOpen(!isThreatIntelOpen)}
+                      icon={Shield}
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between items-center pb-2 border-b border-[#1F232B]">
+                          <div>
+                            <div className="text-[9px] text-gray-500 font-mono uppercase">
+                              Reputation
+                            </div>
+                            <span
+                              className={`text-xs font-mono font-bold capitalize ${
+                                workspace.legacyAnalysis.context.threat_intelligence.reputation === "malicious"
+                                  ? "text-red-400"
+                                  : workspace.legacyAnalysis.context.threat_intelligence.reputation === "suspicious"
+                                  ? "text-orange-400"
+                                  : "text-green-400"
+                              }`}
+                            >
+                              {workspace.legacyAnalysis.context.threat_intelligence.reputation || "unknown"}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[9px] text-gray-500 font-mono uppercase">
+                              Confidence
+                            </div>
+                            <span className="text-xs font-mono font-semibold text-gray-200">
+                              {workspace.legacyAnalysis.context.threat_intelligence.confidence
+                                ? `${Math.round(
+                                    workspace.legacyAnalysis.context.threat_intelligence.confidence * 100
+                                  )}%`
+                                : "--"}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-sans font-semibold text-gray-200 mb-1">
+                            Threat Summary
+                          </div>
+                          <p className="text-xs text-gray-400 leading-relaxed font-sans">
+                            {workspace.legacyAnalysis.context.threat_intelligence.summary ||
+                              "No external intelligence records resolved."}
+                          </p>
+                        </div>
+                      </div>
+                    </CollapsiblePanel>
+                  )}
+                </div>
+              </>
+            ) : selectedAlert && analysis ? (
               <>
                 {/* What I Found Card */}
                 <div className="bg-[#14181F] border border-[#1F232B] rounded-xl p-4 space-y-3 shadow-sm">
@@ -584,18 +925,18 @@ ${analysis.explanation.summary}
                     onToggle={() => setIsTimelineOpen(!isTimelineOpen)}
                     icon={Activity}
                   >
-                    {isTimelinePending ? (
+                    {isTimelineLoading ? (
                       <div className="flex items-center justify-center py-4 gap-2 text-gray-500 font-sans">
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                         <span>Loading chronological logs...</span>
                       </div>
-                    ) : timelineData && timelineData.length > 0 ? (
+                    ) : timeline && timeline.length > 0 ? (
                       <div className="space-y-3.5 relative pl-1">
-                        {timelineData.map((ev, i) => (
+                        {timeline.map((ev, i) => (
                           <div key={i} className="flex gap-3 items-start">
                             <div className="flex flex-col items-center mt-1">
                               <div className="w-1.5 h-1.5 rounded-full bg-blue-500/80 border border-blue-400/30" />
-                              {i < timelineData.length - 1 && (
+                              {i < timeline.length - 1 && (
                                 <div className="w-[1px] bg-[#1F232B] h-6 my-1" />
                               )}
                             </div>
@@ -611,7 +952,7 @@ ${analysis.explanation.summary}
                               </div>
                               <p className="text-xs text-gray-200 font-sans">{ev.title}</p>
                               {ev.description && (
-                                <p className="text-[10px] text-gray-500 mt-0.5">
+                                <p className="text-[10px] text-gray-500 mt-0.5 font-sans leading-relaxed">
                                   {ev.description}
                                 </p>
                               )}
@@ -766,12 +1107,12 @@ ${analysis.explanation.summary}
               <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500 space-y-3">
                 <BrainCircuit className="w-8 h-8 text-gray-600 animate-pulse" />
                 <p className="text-xs font-sans">
-                  Select an alert from the incident feed to trigger automated ML context analysis.
+                  Select an alert from the incident feed or load a case to trigger automated ML context analysis.
                 </p>
               </div>
             )}
 
-            {/* Conversation/Chat Interface Section */}
+            {/* Conversation Interface */}
             {selectedAlert && (
               <div className="space-y-4 pt-4 border-t border-[#1F232B]">
                 <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2 font-sans">
@@ -779,7 +1120,6 @@ ${analysis.explanation.summary}
                 </div>
 
                 <div className="space-y-4">
-                  {/* Slice the welcome analysis message (index 0) to avoid card duplication */}
                   {messages.slice(1).map((msg, i) => (
                     <div
                       key={i}
@@ -853,24 +1193,26 @@ ${analysis.explanation.summary}
           </div>
 
           {/* Chat Input Field (Form) */}
-          <form
-            onSubmit={handleSendMessage}
-            className="p-4 border-t border-[#1F232B] bg-[#111317] flex items-center gap-2 shrink-0"
-          >
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask for network policy, containment command, or log explainers..."
-              className="flex-1 bg-[#09090B] border border-[#1F232B] rounded-lg px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
-            />
-            <button
-              type="submit"
-              className="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors shadow shadow-purple-500/20"
+          {(workspace || selectedAlert) && (
+            <form
+              onSubmit={handleSendMessage}
+              className="p-4 border-t border-[#1F232B] bg-[#111317] flex items-center gap-2 shrink-0"
             >
-              <Send className="w-3.5 h-3.5" />
-            </button>
-          </form>
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Ask for network policy, containment command, or log explainers..."
+                className="flex-1 bg-[#09090B] border border-[#1F232B] rounded-lg px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+              />
+              <button
+                type="submit"
+                className="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors shadow shadow-purple-500/20 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </form>
+          )}
 
           {/* Toast Notification */}
           <AnimatePresence>

@@ -2,15 +2,7 @@
  * VectorPanel
  *
  * AI investigation partner for InvestigationWorkspace.
- *
- * Hierarchy:
- *   Vector (header)
- *   ↓ Summary      — What happened?
- *   ↓ Evidence     — What supports this?
- *   ↓ Reasoning    — Why was it flagged?
- *   ↓ Actions      — Ghost buttons, not CTAs
- *   ↓ Conversation — Lightweight, secondary
- *   ↓ Input        — Always pinned to bottom
+ * Shows consolidated case intelligence and chat capabilities.
  */
 
 import { useState, useEffect, useRef } from "react";
@@ -29,6 +21,7 @@ import type { Alert } from "../../types";
 import type { ContextEnrichment } from "../../api/types";
 import { sendChatMessage } from "../../api/investigations";
 import { Skeleton } from "../ui/DesignSystem";
+import { WorkspaceViewModel } from "../../lib/workspaceMapper";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -42,19 +35,13 @@ export interface VectorPanelProps {
   isAnalysisPending?: boolean;
   isAnalysisError?: boolean;
   onRetryAnalysis?: () => void;
-  /** MITRE + Threat Intel context from the ML pipeline — used to ground AI chat responses */
   analysisContext?: ContextEnrichment;
   investigationId?: string;
+  workspace?: WorkspaceViewModel | null;
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-/** A thin horizontal separator used between sections */
-function Divider() {
-  return <div className="border-t border-border-custom/25 my-4" />;
-}
-
-/** A section label — quiet, uppercase-free, no extra weight */
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p className="text-[10px] tracking-wide text-gray-500 font-sans uppercase mb-2.5">
@@ -77,6 +64,7 @@ export function VectorPanel({
   onRetryAnalysis,
   analysisContext,
   investigationId,
+  workspace,
 }: VectorPanelProps) {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<
@@ -96,7 +84,6 @@ export function VectorPanel({
     }, 2000);
   };
   const [conversationOpen, setConversationOpen] = useState(true);
-  const [isolateToast, setIsolateToast] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // First-person analyst-voice summaries per category
@@ -107,9 +94,12 @@ export function VectorPanel({
     system: "I detected IAM policy changes that opened up privilege escalation paths beyond the expected role boundary. This kind of drift is often the first step in a lateral movement chain.",
   };
 
-  const summaryText =
-    categorySummary[alert.category] ??
-    "I detected anomalous activity that significantly deviates from the established baseline for this source.";
+  const summaryText = workspace
+    ? (workspace.isBehavioral
+        ? `Autonomous behavioral case containing ${workspace.detections.length} correlated detections.`
+        : workspace.legacyAnalysis?.explanation?.summary || "Legacy alert case resolved.")
+    : (categorySummary[alert.category] ??
+      "I detected anomalous activity that significantly deviates from the established baseline for this source.");
 
   // Conversational reasoning from SHAP factors
   const topFactor = alert.details.shapFactors?.[0];
@@ -123,20 +113,49 @@ export function VectorPanel({
       }. Together these pushed the risk score above the critical threshold.`
     : "I flagged this because the overall pattern deviates significantly from what I'd normally expect from this source. There isn't a single dominant signal — it's the combination that's unusual.";
 
-  // Seed initial Vector message when alert changes
+  // Seed initial Vector message when alert or workspace changes
   useEffect(() => {
     const time = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
 
-    const processPath = alert.details.processPath || "anomalous executable";
-    const source = alert.source;
-    const technique = analysisContext?.mitre?.technique_name || "unauthorized execution";
-    const parentProcess = alert.details.parentProcess ? ` parented by \`${alert.details.parentProcess}\`` : "";
-    const outboundStr = alert.details.ipAddress ? ` and outbound traffic to \`${alert.details.ipAddress}\`` : "";
+    if (workspace) {
+      const inv = workspace.investigation;
+      let text = `I have loaded the consolidated AI context for case **${inv.investigation_id}** ("${inv.title}").`;
+      if (workspace.isBehavioral) {
+        text += `\n\nThis is an autonomous behavioral case containing **${workspace.detections.length}** correlated detections.`;
+        if (workspace.primaryDetection) {
+          text += `\n- **Primary Threat Node:** \`${workspace.primaryDetection.title}\` (Severity: ${workspace.primaryDetection.severity.toUpperCase()})`;
+        }
+        if (workspace.correlation) {
+          text += `\n- **Correlation ID:** \`${workspace.correlation.correlation_id}\``;
+          text += `\n- **Duration Span:** ${workspace.correlation.duration.toFixed(1)}s`;
+        }
+      } else if (workspace.legacyAnalysis) {
+        text += `\n\n### • Analysis Summary\n${workspace.legacyAnalysis.explanation.summary}`;
+      }
 
-    const text = `I reviewed this investigation before you opened it.
+      if (workspace.recommendations && workspace.recommendations.length > 0) {
+        text += `\n\n### • Recommended containment playbooks\n` +
+          workspace.recommendations.map((r, i) => `${i + 1}. ${r}`).join("\n");
+      }
+
+      setChatMessages([
+        {
+          sender: "ai",
+          text,
+          time,
+        },
+      ]);
+    } else {
+      const processPath = alert.details.processPath || "anomalous executable";
+      const source = alert.source;
+      const technique = analysisContext?.mitre?.technique_name || "unauthorized execution";
+      const parentProcess = alert.details.parentProcess ? ` parented by \`${alert.details.parentProcess}\`` : "";
+      const outboundStr = alert.details.ipAddress ? ` and outbound traffic to \`${alert.details.ipAddress}\`` : "";
+
+      const text = `I reviewed this investigation before you opened it.
 
 The strongest indicator is an unexpected \`${processPath}\` process that spawned outside the expected execution chain on **${source}**${parentProcess}.
 
@@ -146,14 +165,15 @@ I'd start by verifying the parent process and confirming whether the affected wo
 
 Ask me anything about this investigation.`;
 
-    setChatMessages([
-      {
-        sender: "ai",
-        text,
-        time,
-      },
-    ]);
-  }, [alert, analysisContext]);
+      setChatMessages([
+        {
+          sender: "ai",
+          text,
+          time,
+        },
+      ]);
+    }
+  }, [alert, analysisContext, workspace]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -173,22 +193,21 @@ Ask me anything about this investigation.`;
     setIsResponding(true);
 
     try {
-      if (investigationId) {
+      const currentInvId = workspace ? workspace.investigation.investigation_id : investigationId;
+      if (currentInvId) {
         const formattedHistory = chatMessages.map((m) => ({
           sender: m.sender,
           text: m.text,
         }));
-        const reply = await sendChatMessage(investigationId, text, formattedHistory);
+        const reply = await sendChatMessage(currentInvId, text, formattedHistory);
         setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
       } else {
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            sender: "ai",
-            text: "No active case found. I require an active investigation context to analyze and answer security questions.",
-            time,
-          },
-        ]);
+        const formattedHistory = chatMessages.map((m) => ({
+          sender: m.sender,
+          text: m.text,
+        }));
+        const reply = await sendChatMessage(undefined, text, formattedHistory, alert.id);
+        setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
       }
     } catch (err) {
       console.error("Chat request failed:", err);
@@ -204,6 +223,9 @@ Ask me anything about this investigation.`;
       setIsResponding(false);
     }
   };
+
+  const scoreVal = workspace ? workspace.investigation.risk_score : alert.score;
+  const sourceVal = workspace ? (workspace.detections[0]?.host_id || alert.source) : alert.source;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -236,13 +258,13 @@ Ask me anything about this investigation.`;
             </div>
           ) : (
             <motion.p
-              key={alert.id + "-summary"}
+              key={(workspace ? workspace.investigation.investigation_id : alert.id) + "-summary"}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
               className="text-[13px] text-gray-300 leading-relaxed font-sans"
             >
-              {alert.source} triggered {summaryText}
+              {workspace ? summaryText : `${alert.source} triggered ${summaryText}`}
             </motion.p>
           )}
         </div>
@@ -251,59 +273,94 @@ Ask me anything about this investigation.`;
         <div className="space-y-2">
           <SectionLabel>Evidence</SectionLabel>
           <motion.div
-            key={alert.id + "-evidence"}
+            key={(workspace ? workspace.investigation.investigation_id : alert.id) + "-evidence"}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: 0.04, ease: "easeOut" }}
             className="space-y-1.5"
           >
-            {[
-              alert.details.processPath && {
-                label: "Process",
-                value: alert.details.processPath,
-              },
-              alert.details.commandLine && {
-                label: "Command",
-                value: alert.details.commandLine,
-              },
-              alert.details.ipAddress && {
-                label: "Remote IP",
-                value: `${alert.details.ipAddress}${alert.details.port ? `:${alert.details.port}` : ""}`,
-              },
-              alert.details.username && {
-                label: "User",
-                value: alert.details.username,
-              },
-              alert.details.bytesTransferred && {
-                label: "Transferred",
-                value: `${(alert.details.bytesTransferred / 1024).toFixed(1)} KB`,
-              },
-            ]
-              .filter(Boolean)
-              .map((item, i) => {
-                if (!item) return null;
-                return (
-                  <div key={i} className="flex items-baseline gap-3 py-0.5">
-                    <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
-                      {item.label}
-                    </span>
-                    <span className="text-[11px] font-mono text-gray-300 min-w-0 flex-1 truncate select-all">
-                      {item.value as string}
-                    </span>
-                  </div>
-                );
-              })}
+            {workspace && workspace.isBehavioral ? (
+              [
+                {
+                  label: "Detections",
+                  value: `${workspace.detections.length} correlated items`,
+                },
+                workspace.primaryDetection && {
+                  label: "Primary",
+                  value: workspace.primaryDetection.title,
+                },
+                workspace.processes[0] && {
+                  label: "Process",
+                  value: workspace.processes[0].executable || "",
+                },
+                workspace.correlation && {
+                  label: "Duration",
+                  value: `${workspace.correlation.duration.toFixed(1)}s`,
+                },
+              ]
+                .filter(Boolean)
+                .map((item, i) => {
+                  if (!item) return null;
+                  return (
+                    <div key={i} className="flex items-baseline gap-3 py-0.5">
+                      <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
+                        {item.label}
+                      </span>
+                      <span className="text-[11px] font-mono text-gray-300 min-w-0 flex-1 truncate select-all">
+                        {item.value}
+                      </span>
+                    </div>
+                  );
+                })
+            ) : (
+              [
+                alert.details.processPath && {
+                  label: "Process",
+                  value: alert.details.processPath,
+                },
+                alert.details.commandLine && {
+                  label: "Command",
+                  value: alert.details.commandLine,
+                },
+                alert.details.ipAddress && {
+                  label: "Remote IP",
+                  value: `${alert.details.ipAddress}${alert.details.port ? `:${alert.details.port}` : ""}`,
+                },
+                alert.details.username && {
+                  label: "User",
+                  value: alert.details.username,
+                },
+                alert.details.bytesTransferred && {
+                  label: "Transferred",
+                  value: `${(alert.details.bytesTransferred / 1024).toFixed(1)} KB`,
+                },
+              ]
+                .filter(Boolean)
+                .map((item, i) => {
+                  if (!item) return null;
+                  return (
+                    <div key={i} className="flex items-baseline gap-3 py-0.5">
+                      <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
+                        {item.label}
+                      </span>
+                      <span className="text-[11px] font-mono text-gray-300 min-w-0 flex-1 truncate select-all">
+                        {item.value as string}
+                      </span>
+                    </div>
+                  );
+                })
+            )}
 
-            {/* Anomaly score inline */}
+            {/* Score inline */}
             <div className="flex items-baseline gap-3 py-0.5">
               <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
-                Score
+                Risk Score
               </span>
               {isAnalysisPending ? (
                 <Skeleton width={40} height={11} className="rounded animate-pulse-slow mt-0.5" />
               ) : (
                 <span className="text-[11px] font-mono text-red-400">
-                  {alert.score} / 100
+                  {scoreVal.toFixed(0)}%
                 </span>
               )}
             </div>
@@ -333,18 +390,28 @@ Ask me anything about this investigation.`;
             </div>
           ) : (
             <motion.div
-              key={alert.id + "-reasoning"}
+              key={(workspace ? workspace.investigation.investigation_id : alert.id) + "-reasoning"}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22, delay: 0.08, ease: "easeOut" }}
               className="space-y-2.5"
             >
-              <div className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
-                <ReactMarkdown>{reasoningText}</ReactMarkdown>
-              </div>
+              {workspace && workspace.isBehavioral ? (
+                <div className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch] space-y-2">
+                  {workspace.detections.map((det) => (
+                    <div key={det.id} className="pl-2 border-l border-violet-500/20">
+                      <strong className="text-gray-300">{det.title}:</strong> {det.description}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
+                  <ReactMarkdown>{reasoningText}</ReactMarkdown>
+                </div>
+              )}
 
-              {/* SHAP bar chart — compact */}
-              {alert.details.shapFactors &&
+              {/* SHAP bar chart — compact (only for legacy/alerts) */}
+              {!workspace && alert.details.shapFactors &&
                 alert.details.shapFactors.length > 0 && (
                   <div className="space-y-1.5 pt-1">
                     {alert.details.shapFactors.slice(0, 3).map((f, i) => (
@@ -377,11 +444,11 @@ Ask me anything about this investigation.`;
           )}
         </div>
 
-        {/* 4. Recommended actions — ghost buttons, not CTAs */}
+        {/* 4. Recommended actions — isolation playbooks */}
         <div className="space-y-2">
-          <SectionLabel>Recommended actions</SectionLabel>
+          <SectionLabel>Remediation actions</SectionLabel>
           <motion.div
-            key={alert.id + "-actions"}
+            key={(workspace ? workspace.investigation.investigation_id : alert.id) + "-actions"}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: 0.12, ease: "easeOut" }}
@@ -393,15 +460,14 @@ Ask me anything about this investigation.`;
                 <Unplug className="w-3 h-3 text-red-400/70 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-[12px] text-gray-300 font-sans">
-                    Isolate node
+                    Isolate host
                   </p>
                   <p className="text-[10px] text-gray-600 font-mono truncate">
-                    {alert.source}
+                    {sourceVal}
                   </p>
                 </div>
               </div>
 
-              {/* Progress or ghost button */}
               {quarantineStatus === "quarantining" ? (
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
                   <div className="w-16 h-0.5 bg-border-custom/30 rounded-full overflow-hidden">
@@ -416,7 +482,7 @@ Ask me anything about this investigation.`;
                 </div>
               ) : (
                 <button
-                  onClick={() => { onIsolate(); setIsolateToast(false); }}
+                  onClick={onIsolate}
                   disabled={quarantineStatus !== "active"}
                   className={`shrink-0 ml-2 text-[11px] px-2.5 py-1 rounded-md border transition-all duration-120 cursor-pointer font-sans ${
                     quarantineStatus === "quarantined"
@@ -466,7 +532,7 @@ Ask me anything about this investigation.`;
         <div className="mx-4 mb-0 mt-2 px-3 py-2 rounded-lg bg-emerald-500/8 border border-emerald-500/20 flex items-center gap-2 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
           <p className="text-[11px] text-emerald-400 font-sans">
-            Containment initiated successfully. The affected host has been marked as contained.
+            Containment playbook dispatched. Target network segments successfully quarantined.
           </p>
         </div>
       )}
@@ -479,7 +545,7 @@ Ask me anything about this investigation.`;
           aria-expanded={conversationOpen}
         >
           <p className="text-[10px] tracking-wide text-gray-500 font-sans uppercase">
-            Conversation
+            Case Chat
           </p>
           <ChevronDown
             className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-150 ${

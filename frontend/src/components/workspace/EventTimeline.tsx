@@ -1,70 +1,66 @@
 /**
  * EventTimeline
  *
- * Compact vertical chronological timeline of events for a given alert.
+ * Compact vertical chronological timeline of events.
  * Optimised for scanability — all events readable at a glance.
  * Used in the left column of InvestigationWorkspace.
  */
 
-import { CheckCircle2, Cpu, Network, ShieldAlert } from "lucide-react";
+import { CheckCircle2, Cpu, Network, ShieldAlert, Sparkles, Circle } from "lucide-react";
 import type { Alert } from "../../types";
+import { TimelineEvent } from "../../api/types";
 
-interface TimelineEvent {
+interface LeftTimelineEvent {
   title: string;
   desc: string;
   status: "normal" | "warning" | "error" | "critical";
-  icon: React.ComponentType<{ className?: string }>;
   time: string;
 }
 
-function buildTimeline(alert: Alert): TimelineEvent[] {
+function buildTimeline(alert: Alert): LeftTimelineEvent[] {
   return [
     {
       title: "Baseline established",
       desc: `${alert.source} — all parameters within normal range.`,
       status: "normal",
-      icon: CheckCircle2,
       time: "–4 min",
     },
     {
       title: "Anomalous process spawn",
       desc: `${alert.details.processPath || "Unknown binary"} spawned outside expected path.`,
       status: "warning",
-      icon: Cpu,
       time: "–2 min",
     },
     {
       title: "Outbound connection",
       desc: `Socket to ${alert.details.ipAddress || "external host"}:${alert.details.port || 443}.`,
       status: "error",
-      icon: Network,
       time: "–90 s",
     },
     {
       title: "Alert raised",
       desc: `Anomaly score ${alert.score} — exceeded threshold.`,
       status: "critical",
-      icon: ShieldAlert,
       time: "Now",
     },
   ];
 }
 
-const DOT_CLASSES: Record<TimelineEvent["status"], string> = {
+const DOT_CLASSES: Record<LeftTimelineEvent["status"], string> = {
   normal:   "bg-emerald-500",
   warning:  "bg-yellow-500",
   error:    "bg-orange-500",
   critical: "bg-red-500",
 };
 
-const TIME_CLASSES: Record<TimelineEvent["status"], string> = {
+const TIME_CLASSES: Record<LeftTimelineEvent["status"], string> = {
   normal:   "text-emerald-500/70",
   warning:  "text-yellow-500/70",
   error:    "text-orange-500/70",
   critical: "text-red-500/70",
 };
 
-const TITLE_CLASSES: Record<TimelineEvent["status"], string> = {
+const TITLE_CLASSES: Record<LeftTimelineEvent["status"], string> = {
   normal:   "text-gray-400",
   warning:  "text-yellow-400",
   error:    "text-orange-400",
@@ -72,11 +68,33 @@ const TITLE_CLASSES: Record<TimelineEvent["status"], string> = {
 };
 
 interface EventTimelineProps {
-  alert: Alert;
+  alert?: Alert;
+  timeline?: TimelineEvent[];
 }
 
-export function EventTimeline({ alert }: EventTimelineProps) {
-  const events = buildTimeline(alert);
+export function EventTimeline({ alert, timeline }: EventTimelineProps) {
+  const events = timeline
+    ? timeline.map((e) => {
+        let status: LeftTimelineEvent["status"] = "normal";
+        const actor = e.actor.toLowerCase();
+        if (actor === "system") {
+          status = "critical";
+        } else if (actor === "ai") {
+          status = "warning";
+        }
+        return {
+          title: e.title,
+          desc: e.description,
+          status,
+          time: new Date(e.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+      })
+    : alert
+    ? buildTimeline(alert)
+    : [];
 
   return (
     <div className="relative space-y-1">
@@ -111,7 +129,7 @@ export function EventTimeline({ alert }: EventTimelineProps) {
                   {evt.time}
                 </span>
               </div>
-              <p className="text-[10px] text-gray-500 leading-snug mt-0.5 pr-1">
+              <p className="text-[10px] text-gray-500 leading-snug mt-0.5 pr-1 break-words">
                 {evt.desc}
               </p>
             </div>
