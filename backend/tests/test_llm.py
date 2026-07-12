@@ -1,10 +1,12 @@
 import pytest
-from fastapi.testclient import TestClient
 from main import app
 from app.services.llm.llm_service import LLMService
 from app.services.llm.fallback import FallbackAI
 
-client = TestClient(app)
+# Pure unit tests — no database access, no TestClient
+# These tests do not request db_session or client and therefore
+# do NOT connect to PostgreSQL at all.
+
 
 def test_fallback_ai_summary():
     alert_data = {
@@ -43,7 +45,7 @@ def test_fallback_ai_chat():
                 }
             }
         }
-    
+
     inv = DummyInvestigation()
     reply = FallbackAI.generate_chat(inv, [], "tell me about mitre")
     assert "T1611" in reply
@@ -75,11 +77,17 @@ def test_fallback_ai_report():
     assert "### Technical Findings" in report
     assert "T1611" in report
 
-def test_chat_endpoint_missing_investigation():
+
+# API test — uses isolated db_session and client fixtures from conftest.py.
+# The chat endpoint queries the DB to look up the investigation; using the
+# isolated client ensures the request goes through darkvector_test (empty),
+# so the endpoint correctly returns "not found".
+def test_chat_endpoint_missing_investigation(client):
     response = client.post("/api/v1/chat/", json={
         "investigation_id": "INV-NONEXISTENT",
         "message": "hello"
     })
-    # Since investigation doesn't exist, it should return a message indicating that or fallback
+    # Since investigation doesn't exist, the endpoint should return a reply
+    # that indicates the investigation was not found
     assert response.status_code == 200
     assert "not found" in response.json()["reply"].lower()

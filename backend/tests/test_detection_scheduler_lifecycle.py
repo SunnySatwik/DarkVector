@@ -1,44 +1,46 @@
 import pytest
 from datetime import datetime, timedelta
-from app.database.session import SessionLocal
+
 from app.models.telemetry import TelemetryEvent
-from app.models.investigation import Investigation
-from app.models.timeline import TimelineEvent
 from app.services.detection.scheduler import DetectionScheduler, TelemetryEventDTO
 
+# ─────────────────────────────────────────────────────────────────────────────
+# REMOVED: clean_db autouse fixture
+#
+# The previous fixture was:
+#
+#   @pytest.fixture(autouse=True)
+#   def clean_db():
+#       db = SessionLocal()
+#       db.query(TimelineEvent).delete()
+#       db.query(Investigation).delete()
+#       db.query(TelemetryEvent).delete()
+#       db.commit()
+#       ...
+#
+# This directly committed destructive DELETE operations against the development
+# darkvector PostgreSQL database, permanently destroying real investigation,
+# telemetry, and timeline data every time the test suite ran.
+#
+# Replacement:
+#   - Database cleanup is provided by db_session / db_session_factory fixtures
+#     from tests/conftest.py. All writes go to darkvector_test and are rolled
+#     back after each test via outer transaction rollback.
+#   - Scheduler state reset is provided by the autouse reset_scheduler fixture
+#     in tests/conftest.py (calls DetectionScheduler.reset() before/after each test).
+# ─────────────────────────────────────────────────────────────────────────────
 
-@pytest.fixture(autouse=True)
-def clean_db():
-    """Ensure clean database before and after each test."""
-    db = SessionLocal()
-    try:
-        db.query(TimelineEvent).delete()
-        db.query(Investigation).delete()
-        db.query(TelemetryEvent).delete()
-        db.commit()
-    finally:
-        db.close()
 
-    DetectionScheduler.reset()
-    yield
-    DetectionScheduler.reset()
-
-    db = SessionLocal()
-    try:
-        db.query(TimelineEvent).delete()
-        db.query(Investigation).delete()
-        db.query(TelemetryEvent).delete()
-        db.commit()
-    finally:
-        db.close()
-
-
-def test_dto_conversion_and_decoupling():
+def test_dto_conversion_and_decoupling(db_session_factory):
     """
     Test 1: Verify TelemetryEventDTO correctly extracts parameters
     and remains usable after session close.
+
+    Uses db_session_factory to obtain a session so the test can call
+    session.close() to simulate object detachment without affecting the
+    conftest fixture's lifecycle management.
     """
-    db = SessionLocal()
+    db = db_session_factory()
     try:
         event = TelemetryEvent(
             id="event-1",
@@ -61,13 +63,13 @@ def test_dto_conversion_and_decoupling():
         db.commit()
         db.refresh(event)
 
-        # Map to DTO
+        # Map to DTO while session is still active
         dto = TelemetryEventDTO.from_event(event)
 
-        # Close session (simulating object detachment)
+        # Close session (simulating object detachment from SQLAlchemy session)
         db.close()
 
-        # Access attributes on DTO - must succeed and not raise DetachedInstanceError
+        # Access attributes on DTO — must succeed without raising DetachedInstanceError
         assert dto.id == "event-1"
         assert dto.host_id == "host-1"
         assert dto.event_type == "process_start"
@@ -78,14 +80,25 @@ def test_dto_conversion_and_decoupling():
         raise
 
 
-def test_scheduler_lifecycle_across_sessions():
+def test_scheduler_lifecycle_across_sessions(db_session_factory):
     """
     Test 2: Simulate multi-cycle detection scheduler worker.
-    Cycle 1: Load process telemetry, construct trees, close session (detach).
-    Cycle 2: Load new process telemetry, reconstruct tree using context, without DetachedInstanceError.
+
+    Cycle 1: Load process telemetry, construct trees, close session.
+    Cycle 2: Load new process telemetry, reconstruct tree using context
+             (which includes Cycle 1 data from the in-memory process context),
+             without raising DetachedInstanceError.
+
+    Session isolation semantics:
+        - db1 and db2 are separate Session objects, mirroring real scheduler behaviour
+        - Both are bound to the same db_connection outer transaction (from conftest.py)
+        - Data committed in db1 (SAVEPOINT released) is visible to db2 via the shared
+          connection; the outer transaction is rolled back after the test
+        - DetectionScheduler._process_context (in-memory) accumulates across cycles
+          and is reset by the autouse reset_scheduler fixture in conftest.py
     """
     # Cycle 1
-    db1 = SessionLocal()
+    db1 = db_session_factory()
     try:
         event1 = TelemetryEvent(
             id="event-parent",
@@ -112,7 +125,7 @@ def test_scheduler_lifecycle_across_sessions():
         db1.close()
 
     # Cycle 2
-    db2 = SessionLocal()
+    db2 = db_session_factory()
     try:
         event2 = TelemetryEvent(
             id="event-child",
@@ -132,23 +145,24 @@ def test_scheduler_lifecycle_across_sessions():
         db2.add(event2)
         db2.commit()
 
-        # Run cycle 2 - must successfully build process tree referencing both parent and child, without DetachedInstanceError
+        # Run cycle 2 — must successfully build process tree referencing both
+        # parent and child without raising DetachedInstanceError
         res2 = DetectionScheduler.run(db2)
         assert res2 >= 0
     finally:
         db2.close()
 
-    # Verify context survives
+    # Verify both events are in the in-memory process context after two cycles
     assert "event-parent" in DetectionScheduler._process_context
     assert "event-child" in DetectionScheduler._process_context
 
 
-def test_scheduler_failure_does_not_advance_cursor():
+def test_scheduler_failure_does_not_advance_cursor(db_session_factory):
     """
     Test 3: Verify that a downstream scheduler failure (e.g. exception during run)
     does not advance the timestamp cursor or commit the new context.
     """
-    db = SessionLocal()
+    db = db_session_factory()
     try:
         event = TelemetryEvent(
             id="event-fail",
@@ -174,7 +188,7 @@ def test_scheduler_failure_does_not_advance_cursor():
             with pytest.raises(RuntimeError, match="Builder failed"):
                 DetectionScheduler.run(db)
 
-        # Cursor and context must not be updated
+        # Cursor and context must not be updated after a failed cycle
         assert DetectionScheduler._last_processed_timestamp is None
         assert DetectionScheduler._process_context == {}
     finally:

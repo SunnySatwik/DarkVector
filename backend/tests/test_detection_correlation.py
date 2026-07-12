@@ -3,7 +3,6 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.database.session import SessionLocal
 from app.models.investigation import Investigation, InvestigationSeverity, InvestigationStatus
 from app.models.timeline import TimelineEvent, TimelineEventType
 from app.repositories.investigation_repository import InvestigationRepository
@@ -14,20 +13,11 @@ from app.services.detection.detection_investigation_creator import DetectionInve
 from app.services.telemetry.process_tree.models import ProcessTree, ProcessNode
 from app.services.telemetry.process_tree.builder import ProcessTreeBuilder
 
+# db_session fixture is provided by tests/conftest.py
+# It connects to darkvector_test (not the development darkvector database)
+# and rolls back all changes after each test.
 
-@pytest.fixture
-def db_session():
-    """Provides a transactional database session that rolls back after each test."""
-    db = SessionLocal()
-    try:
-        # Clear database records to ensure isolated test environment
-        db.query(TimelineEvent).delete()
-        db.query(Investigation).delete()
-        db.commit()
-        yield db
-    finally:
-        db.rollback()
-        db.close()
+
 
 
 def make_test_node(process_name, pid, ppid, create_time, host_id="host-1"):

@@ -1,56 +1,97 @@
+"""
+Status lifecycle tests.
+
+Uses db_session and client fixtures from tests/conftest.py so:
+- All writes go to darkvector_test (not the development darkvector database)
+- Test data is rolled back after each test
+- The investigation created here is never persisted permanently
+"""
+import pytest
+from datetime import datetime, UTC
 from fastapi.testclient import TestClient
+
 from main import app
-from app.models.investigation import InvestigationStatus
-from app.models.timeline import TimelineEventType
+from app.models.investigation import Investigation, InvestigationSeverity, InvestigationStatus
+from app.models.timeline import TimelineEvent, TimelineEventType, TimelineActor
 
-client = TestClient(app)
 
-def test_investigation_status_lifecycle():
-    # 1. Get investigations
-    res = client.get("/api/v1/investigations")
-    assert res.status_code == 200
-    data = res.json()
-    investigations = data.get("investigations", [])
-    
-    # If no investigations exist, we can't test lifecycle on an existing one.
-    # But usually seed data or mock investigations are available during run.
-    if not investigations:
-        # Let's verify status patch returns 404 for a dummy ID
-        patch_res = client.patch("/api/v1/investigations/INV-DUMMY/status", json={"status": "INVESTIGATING"})
-        assert patch_res.status_code == 404
-        return
+def test_investigation_status_lifecycle(db_session, client):
+    """
+    Tests the full investigation status lifecycle:
+    1. Create investigation via db_session (isolated test DB)
+    2. Verify initial state via API
+    3. Patch status → INVESTIGATING
+    4. Verify timeline has a STATUS_CHANGED event
+    5. Verify idempotency: patching same status again creates NO new timeline event
+    """
+    # Create a test investigation in the isolated database
+    inv = Investigation(
+        investigation_id="INV-STATUS-LIFECYCLE",
+        alert_id="alert-status-lifecycle",
+        title="Status Lifecycle Test",
+        status=InvestigationStatus.NEW,
+        severity=InvestigationSeverity.HIGH,
+        risk_score=90.0,
+        confidence=0.9,
+        summary="Test investigation for status lifecycle",
+    )
+    db_session.add(inv)
+    db_session.commit()
 
-    target = investigations[0]
-    inv_id = target["investigation_id"]
-    original_status = target["status"]
+    # 1. Verify initial status
+    get_res = client.get("/api/v1/investigations/INV-STATUS-LIFECYCLE")
+    assert get_res.status_code == 200
+    assert get_res.json()["investigation"]["status"] == "NEW"
 
-    # 2. Patch status to a new status (e.g. INVESTIGATING, or CONTAINED if it is already INVESTIGATING)
-    new_status = "INVESTIGATING" if original_status != "INVESTIGATING" else "CONTAINED"
-    patch_res = client.patch(f"/api/v1/investigations/{inv_id}/status", json={"status": new_status})
+    # 2. Patch status to INVESTIGATING
+    patch_res = client.patch(
+        "/api/v1/investigations/INV-STATUS-LIFECYCLE/status",
+        json={"status": "INVESTIGATING"},
+    )
     assert patch_res.status_code == 200
-    updated_data = patch_res.json()
-    assert updated_data["status"] == new_status
+    assert patch_res.json()["status"] == "INVESTIGATING"
 
-    # 3. Check timeline
-    timeline_res = client.get(f"/api/v1/investigations/{inv_id}/timeline")
+    # 3. Verify timeline has status_changed event
+    timeline_res = client.get("/api/v1/investigations/INV-STATUS-LIFECYCLE/timeline")
     assert timeline_res.status_code == 200
     timeline = timeline_res.json()
-    
-    # Verify at least one status_changed event exists with the correct description
-    status_events = [e for e in timeline if e["event_type"] == TimelineEventType.STATUS_CHANGED.value]
-    assert len(status_events) >= 1
-    
-    # The last status event should be our new transition
+
+    status_events = [
+        e for e in timeline
+        if e["event_type"] == TimelineEventType.STATUS_CHANGED.value
+    ]
+    assert len(status_events) >= 1, "Expected at least one STATUS_CHANGED timeline event"
+
     latest_event = status_events[-1]
     assert latest_event["title"] == "Status changed"
-    assert latest_event["description"] == f"Investigation marked as {new_status.title()}."
+    assert latest_event["description"] == "Investigation marked as Investigating."
 
-    # 4. Check idempotency (patching same status again should NOT add another event)
-    initial_event_count = len(status_events)
-    patch_res_dup = client.patch(f"/api/v1/investigations/{inv_id}/status", json={"status": new_status})
+    # 4. Idempotency: patching same status again must NOT add another event
+    patch_res_dup = client.patch(
+        "/api/v1/investigations/INV-STATUS-LIFECYCLE/status",
+        json={"status": "INVESTIGATING"},
+    )
     assert patch_res_dup.status_code == 200
-    
-    timeline_res_dup = client.get(f"/api/v1/investigations/{inv_id}/timeline")
+
+    timeline_res_dup = client.get("/api/v1/investigations/INV-STATUS-LIFECYCLE/timeline")
+    assert timeline_res_dup.status_code == 200
     timeline_dup = timeline_res_dup.json()
-    status_events_dup = [e for e in timeline_dup if e["event_type"] == TimelineEventType.STATUS_CHANGED.value]
-    assert len(status_events_dup) == initial_event_count
+
+    status_events_dup = [
+        e for e in timeline_dup
+        if e["event_type"] == TimelineEventType.STATUS_CHANGED.value
+    ]
+    assert len(status_events_dup) == len(status_events), (
+        "Patching the same status a second time must not add a duplicate STATUS_CHANGED event"
+    )
+
+
+def test_investigation_status_404(client):
+    """
+    Verifies that patching a non-existent investigation returns 404.
+    """
+    patch_res = client.patch(
+        "/api/v1/investigations/INV-NONEXISTENT-STATUS/status",
+        json={"status": "INVESTIGATING"},
+    )
+    assert patch_res.status_code == 404
