@@ -84,6 +84,8 @@ export async function sendChatMessage(
     alert_id: alertId,
     message,
     history,
+  }, {
+    timeout: 60000,
   });
   return response.data.reply;
 }

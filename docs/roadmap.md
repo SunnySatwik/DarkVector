@@ -143,3 +143,28 @@ Investigation Workspace
 ↓
 
 Investigation Report
+
+Capability	Current State
+Real endpoint agent	✅ Working
+Heartbeat telemetry	✅ Working
+Process telemetry	✅ Working
+Telemetry API	✅ Working
+Database persistence	✅ Working
+Behavioral rules	✅ Working
+PowerShell detection	✅ Runtime verified
+Detection correlation	✅ Working
+Automatic investigations	✅ Working
+Investigation workspace	✅ Working
+MITRE enrichment	✅ Implemented
+AI Context Engine	✅ Implemented
+Grounded Vector chat	🟡 Needs final runtime verification
+Evidence Graph	🟡 Needs final runtime verification
+Network collection	❌ Not implemented
+File monitoring	❌ Not implemented
+Registry monitoring	❌ Not implemented
+Windows Event Logs	❌ Not implemented
+Advanced process-tree detection	🟡 Early architecture
+Multi-host correlation	❌ Not mature
+Unknown threat detection	🟡 Legacy ML foundation exists
+Automated containment	🟡 Mostly platform/UI architecture
+Production endpoint deployment	❌ Not yet

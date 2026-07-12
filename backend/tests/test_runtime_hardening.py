@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from app.services.llm.response_validator import ResponseValidator
 from app.services.context.mitre_mapping import lookup_by_id
 from app.services.detection.rules.powershell_encoded import PowerShellEncodedRule
@@ -126,3 +126,14 @@ class TestFallbackAIContract:
         reply = FallbackAI.generate_chat(BehavioralMockInv(), [], "tell me about this")
         assert isinstance(reply, str)
         assert len(reply.strip()) > 0
+
+
+class TestChatRequestHarden:
+    def test_chat_request_default_factory(self):
+        from app.api.v1.chat import ChatRequest
+        req1 = ChatRequest(message="hello")
+        req2 = ChatRequest(message="world")
+        assert req1.history == []
+        assert req2.history == []
+        assert req1.history is not req2.history
+

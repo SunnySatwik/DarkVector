@@ -17,6 +17,7 @@ import {
   Check,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import axios from "axios";
 import type { Alert } from "../../types";
 import type { ContextEnrichment } from "../../api/types";
 import { sendChatMessage } from "../../api/investigations";
@@ -191,7 +192,7 @@ Ask me anything about this investigation.`;
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
+    if (isResponding || !chatInput.trim()) return;
 
     const text = chatInput.trim();
     setChatInput("");
@@ -221,11 +222,19 @@ Ask me anything about this investigation.`;
       }
     } catch (err) {
       console.error("Chat request failed:", err);
+      let errorReply = "Vector could not connect to the reasoning service. Check that the backend is running.";
+      if (axios.isAxiosError(err)) {
+        if (err.code === "ECONNABORTED" || err.message?.toLowerCase().includes("timeout")) {
+          errorReply = "The reasoning request took longer than expected. Please try again.";
+        } else if (err.response) {
+          errorReply = "Vector could not complete the reasoning request. Please try again.";
+        }
+      }
       setChatMessages((prev) => [
         ...prev,
         {
           sender: "ai",
-          text: "I experienced a network error trying to connect to my reasoning service. Please check your backend connection.",
+          text: errorReply,
           time,
         },
       ]);
@@ -655,12 +664,13 @@ Ask me anything about this investigation.`;
           type="text"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          placeholder="Ask Vector..."
-          className="flex-1 bg-transparent border border-border-custom/20 focus:border-violet-500/30 focus:outline-none rounded-lg px-3 py-1.5 text-[12px] text-gray-200 placeholder-gray-600 transition-colors duration-150 font-sans"
+          disabled={isResponding}
+          placeholder={isResponding ? "Vector is thinking..." : "Ask Vector..."}
+          className="flex-1 bg-transparent border border-border-custom/20 focus:border-violet-500/30 focus:outline-none rounded-lg px-3 py-1.5 text-[12px] text-gray-200 placeholder-gray-600 transition-colors duration-150 font-sans disabled:opacity-50"
         />
         <button
           type="submit"
-          disabled={!chatInput.trim()}
+          disabled={isResponding || !chatInput.trim()}
           className="p-1.5 text-gray-500 hover:text-violet-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-120 cursor-pointer shrink-0"
         >
           <Send className="w-3.5 h-3.5" />
