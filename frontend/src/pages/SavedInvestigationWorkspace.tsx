@@ -12,14 +12,12 @@ import WorkspaceView from "../components/workspace/WorkspaceView";
 interface SavedInvestigationWorkspaceProps {
   investigationId: string;
   onCloseWorkspace: () => void;
-  onWorkspaceReady?: (workspace: WorkspaceViewModel) => void;
   onOpenReport?: (id: string) => void;
 }
 
 export default function SavedInvestigationWorkspace({
   investigationId,
   onCloseWorkspace,
-  onWorkspaceReady,
   onOpenReport,
 }: SavedInvestigationWorkspaceProps) {
   const { data, isPending, isError, refetch } =
@@ -31,12 +29,6 @@ export default function SavedInvestigationWorkspace({
     if (!data) return null;
     return mapWorkspaceResponse(data);
   }, [data]);
-
-  useEffect(() => {
-    if (viewModel && onWorkspaceReady) {
-      onWorkspaceReady(viewModel);
-    }
-  }, [viewModel, onWorkspaceReady]);
 
   if (isPending) {
     return (

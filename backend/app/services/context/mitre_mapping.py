@@ -144,6 +144,20 @@ _RULES: list[tuple[list[str], MitreInfo]] = [
         ),
     ),
 
+    # ── Execution ─────────────────────────────────────────────────────────────
+
+    (
+        ["powershell", "encoded command", "encodedcommand", "bypass execution"],
+        MitreInfo(
+            "T1059.001",
+            "PowerShell",
+            "Execution",
+            "Adversaries abuse PowerShell commands and scripts to execute commands. "
+            "Encoded parameters (-EncodedCommand) are commonly used to obfuscate "
+            "command-line activity and evade command-line logging.",
+        ),
+    ),
+
     # ── Discovery ────────────────────────────────────────────────────────────
 
     (

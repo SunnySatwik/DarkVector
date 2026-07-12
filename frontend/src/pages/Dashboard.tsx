@@ -26,7 +26,6 @@ import { generateRandomAlert } from "../lib/alertGenerator";
 import {
   ChevronRight,
   Sparkles,
-  ArrowRight,
   Clock,
   ShieldAlert,
   Activity,
@@ -39,7 +38,6 @@ import { Badge, Skeleton } from "../components/ui/DesignSystem";
 
 interface DashboardProps {
   onSelectAlert: (alert: Alert) => void;
-  onOpenAiPanel: () => void;
   isRefreshing: boolean;
   onOpenInvestigation?: (id: string) => void;
 }
@@ -191,23 +189,37 @@ function PageHeader({
 
 // ─── 1. Priority Investigation ───────────────────────────────────────────────
 
+interface PriorityItem {
+  id: string;
+  severity: Severity;
+  timestamp: string;
+  type: string;
+  description: string;
+  source: string;
+  score: number;
+  isInvestigation: boolean;
+  rawAlert?: Alert;
+}
+
 function PriorityInvestigation({
-  alert,
-  onInvestigate,
+  item,
+  onInvestigateAlert,
+  onInvestigateInvestigation,
   isPending = false,
 }: {
-  alert: Alert | null | undefined;
-  onInvestigate: (a: Alert) => void;
+  item: PriorityItem | null;
+  onInvestigateAlert: (a: Alert) => void;
+  onInvestigateInvestigation: (id: string) => void;
   isPending?: boolean;
 }) {
-  if (!alert) {
+  if (!item) {
     return (
       <motion.section {...fadeUp(0.06)}>
         <p className="text-[10px] text-gray-600 font-sans tracking-widest uppercase mb-3">
           Priority investigation
         </p>
         <div className="rounded-xl border border-border-custom/12 px-6 py-8 text-center bg-surface/5">
-          <p className="text-xs text-gray-500 font-sans">No alerts available to investigate. Seed demo alerts or generate an event to start.</p>
+          <p className="text-xs text-gray-500 font-sans">No investigations or alerts available to review. Generate telemetry to start.</p>
         </div>
       </motion.section>
     );
@@ -238,13 +250,13 @@ function PriorityInvestigation({
                 {isPending ? (
                   <Skeleton width={48} height={16} className="rounded-md animate-pulse-slow" />
                 ) : (
-                  <Badge variant={severityVariant(alert.severity)}>{alert.severity}</Badge>
+                  <Badge variant={severityVariant(item.severity)}>{item.severity}</Badge>
                 )}
-                <span className="text-[10px] font-mono text-gray-500">{alert.id}</span>
+                <span className="text-[10px] font-mono text-gray-500">{item.id}</span>
                 <span className="text-gray-700">·</span>
                 <span className="flex items-center gap-1 text-[10px] font-mono text-gray-500">
                   <Clock className="w-3 h-3" />
-                  {new Date(alert.timestamp).toLocaleTimeString([], {
+                  {new Date(item.timestamp).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
@@ -253,12 +265,12 @@ function PriorityInvestigation({
 
               {/* Title */}
               <h2 className="text-[18px] font-semibold text-gray-100 leading-snug tracking-tight font-sans mb-2">
-                {alert.type}
+                {item.type}
               </h2>
 
               {/* Description */}
               <p className="text-[13px] text-gray-400 leading-relaxed font-sans mb-3 max-w-[65ch]">
-                {alert.description}
+                {item.description}
               </p>
 
               {/* Inline metadata */}
@@ -266,7 +278,7 @@ function PriorityInvestigation({
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-gray-600 font-sans">Source</span>
                   <code className="text-[10px] font-mono text-blue-300/80 bg-blue-500/5 border border-blue-500/10 px-1.5 py-0.5 rounded">
-                    {alert.source}
+                    {item.source}
                   </code>
                 </div>
                 <div className="flex items-center gap-1.5 h-[14px]">
@@ -274,7 +286,7 @@ function PriorityInvestigation({
                   {isPending ? (
                     <Skeleton width={40} height={12} className="rounded animate-pulse-slow" />
                   ) : (
-                    <span className="text-[10px] font-mono text-red-400">{alert.score} / 100</span>
+                    <span className="text-[10px] font-mono text-red-400">{item.score.toFixed(0)}%</span>
                   )}
                 </div>
               </div>
@@ -283,7 +295,13 @@ function PriorityInvestigation({
 
           {/* CTA */}
           <button
-            onClick={() => onInvestigate(alert)}
+            onClick={() => {
+              if (item.isInvestigation) {
+                onInvestigateInvestigation(item.id);
+              } else if (item.rawAlert) {
+                onInvestigateAlert(item.rawAlert);
+              }
+            }}
             className="shrink-0 self-start md:self-center flex items-center gap-1.5 text-[12px] font-sans font-medium text-red-400 border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/30 px-4 py-2 rounded-lg transition-all duration-120 cursor-pointer group"
           >
             Investigate
@@ -299,10 +317,8 @@ function PriorityInvestigation({
 
 function VectorBriefing({
   briefing,
-  onOpenAiPanel,
 }: {
   briefing: string;
-  onOpenAiPanel: () => void;
 }) {
   return (
     <motion.section {...fadeUp(0.12)}>
@@ -319,14 +335,6 @@ function VectorBriefing({
       <p className="text-[14px] text-gray-300 leading-relaxed font-sans max-w-[72ch] ml-9">
         <InlineMarkdown text={briefing} />
       </p>
-
-      <button
-        onClick={onOpenAiPanel}
-        className="ml-9 mt-3 flex items-center gap-1.5 text-[11px] text-violet-400 hover:text-violet-300 transition-colors font-medium cursor-pointer group"
-      >
-        Open full analysis
-        <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-      </button>
     </motion.section>
   );
 }
@@ -530,7 +538,6 @@ function DashboardSkeleton() {
 
 export default function Dashboard({
   onSelectAlert,
-  onOpenAiPanel,
   isRefreshing,
   onOpenInvestigation,
 }: DashboardProps) {
@@ -576,15 +583,52 @@ export default function Dashboard({
     return text;
   }, [investigations]);
 
-  const topAlert =
-    alerts.find((a) => a.severity === "critical") ??
-    alerts.find((a) => a.severity === "high") ??
-    alerts.find((a) => a.severity === "medium") ??
-    alerts.find((a) => a.severity === "low") ??
-    alerts[0];
+  const priorityItem = useMemo(() => {
+    // 1. Prioritize active (non-resolved) backend investigations
+    const activeInvs = (investigations || []).filter(
+      (inv) => inv.status.toUpperCase() !== "RESOLVED"
+    );
+    if (activeInvs.length > 0) {
+      // Get the highest risk score active investigation
+      const topInv = [...activeInvs].sort((a, b) => b.risk_score - a.risk_score)[0];
+      return {
+        id: topInv.investigation_id,
+        severity: topInv.severity.toLowerCase() as Severity,
+        timestamp: topInv.created_at,
+        type: topInv.title,
+        description: topInv.summary || "Review the correlated execution paths, process telemetry, and behavioral AI reasoning for this case.",
+        source: "Correlated",
+        score: topInv.risk_score,
+        isInvestigation: true,
+      };
+    }
 
-  const displayAlert = topAlert;
-  const isPending = false;
+    // 2. Fallback to legacy alerts
+    const topAlert =
+      alerts.find((a) => a.severity === "critical") ??
+      alerts.find((a) => a.severity === "high") ??
+      alerts.find((a) => a.severity === "medium") ??
+      alerts.find((a) => a.severity === "low") ??
+      alerts[0];
+
+    if (topAlert) {
+      return {
+        id: topAlert.id,
+        severity: topAlert.severity,
+        timestamp: topAlert.timestamp,
+        type: topAlert.type,
+        description: topAlert.description,
+        source: topAlert.source,
+        score: topAlert.score,
+        isInvestigation: false,
+        rawAlert: topAlert,
+      };
+    }
+
+    return null;
+  }, [investigations, alerts]);
+
+  const isPending = isInvestigationsPending;
 
   const criticalCount = alerts.filter(
     (a) => (a.status === "open" || a.status === "investigating") && a.severity === "critical"
@@ -612,13 +656,18 @@ export default function Dashboard({
       />
 
       {/* 1 — Current highest priority investigation */}
-      <PriorityInvestigation alert={displayAlert} onInvestigate={onSelectAlert} isPending={isPending} />
+      <PriorityInvestigation
+        item={priorityItem}
+        onInvestigateAlert={onSelectAlert}
+        onInvestigateInvestigation={onOpenInvestigation ?? (() => {})}
+        isPending={isPending}
+      />
 
       {/* Thin section divider */}
       <div className="border-t border-border-custom/12" />
 
       {/* 2 — Vector's briefing */}
-      <VectorBriefing briefing={dynamicBriefing} onOpenAiPanel={onOpenAiPanel} />
+      <VectorBriefing briefing={dynamicBriefing} />
 
       <div className="border-t border-border-custom/12" />
 

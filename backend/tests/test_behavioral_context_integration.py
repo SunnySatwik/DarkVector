@@ -420,10 +420,10 @@ def test_aggregate_vs_member_severity_validation():
     
     # Case A: Response claiming the overall investigation is LOW (Expected aggregate is CRITICAL)
     # This should be REJECTED!
-    bad_response = "The overall investigation carries a LOW severity rating."
+    bad_response = "The investigation severity is LOW."
     with pytest.raises(ValueError) as exc_info:
         ResponseValidator.validate_severity_consistency(bad_response, knowledge_doc)
-    assert "Contradicting severity 'LOW' detected for the overall investigation" in str(exc_info.value)
+    assert "explicitly asserts aggregate" in str(exc_info.value)
 
     # Case B: Response describing the local member detection as LOW severity
     # This should be ALLOWED!
@@ -432,7 +432,7 @@ def test_aggregate_vs_member_severity_validation():
     ResponseValidator.validate_severity_consistency(good_response, knowledge_doc)
 
     # Case C: Response discussing member detection LOW severity without writing the aggregate severity word
-    # This is still ALLOWED because the word "detection" / "alert" is explicitly in the sentence!
+    # This is still ALLOWED because the sentence does not match any explicit aggregate pattern!
     good_response_local_only = "The member detection rule-1 was categorized as LOW severity."
     ResponseValidator.validate_severity_consistency(good_response_local_only, knowledge_doc)
 

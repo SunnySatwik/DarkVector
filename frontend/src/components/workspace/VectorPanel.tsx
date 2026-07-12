@@ -113,8 +113,18 @@ export function VectorPanel({
       }. Together these pushed the risk score above the critical threshold.`
     : "I flagged this because the overall pattern deviates significantly from what I'd normally expect from this source. There isn't a single dominant signal — it's the combination that's unusual.";
 
-  // Seed initial Vector message when alert or workspace changes
+  const currentKey = workspace?.investigation?.investigation_id || investigationId || alert?.id;
+
+  // Reset messages and input when switching investigations
   useEffect(() => {
+    setChatMessages([]);
+    setChatInput("");
+  }, [currentKey]);
+
+  // Seed initial Vector message when alert or workspace is loaded and chatMessages is empty
+  useEffect(() => {
+    if (chatMessages.length > 0) return;
+
     const time = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -148,7 +158,7 @@ export function VectorPanel({
           time,
         },
       ]);
-    } else {
+    } else if (alert) {
       const processPath = alert.details.processPath || "anomalous executable";
       const source = alert.source;
       const technique = analysisContext?.mitre?.technique_name || "unauthorized execution";
@@ -173,7 +183,7 @@ Ask me anything about this investigation.`;
         },
       ]);
     }
-  }, [alert, analysisContext, workspace]);
+  }, [currentKey, chatMessages.length, workspace, alert, analysisContext]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });

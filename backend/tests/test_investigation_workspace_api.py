@@ -2,30 +2,61 @@ import time
 import pytest
 from datetime import datetime, UTC
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 
 from main import app
-from app.database.session import SessionLocal
+from app.database.session import SessionLocal, engine
+from app.dependencies.database import get_db
 from app.models.investigation import Investigation, InvestigationSeverity, InvestigationStatus
 from app.models.timeline import TimelineEvent, TimelineEventType, TimelineActor
 from app.services.investigation_service import InvestigationService
 from app.services.context_builder import ContextBuilder
 
-client = TestClient(app)
-
 
 @pytest.fixture
 def db_session():
-    """Provides a transactional database session that rolls back after each test."""
-    db = SessionLocal()
-    try:
-        db.query(TimelineEvent).delete()
-        db.query(Investigation).delete()
-        db.commit()
-        yield db
-    finally:
-        db.rollback()
-        db.close()
+    """
+    Provides a fully isolated transactional database session.
 
+    All writes are wrapped in a nested transaction (savepoint) and rolled back
+    after each test — ensuring zero test data persists in the development database.
+
+    The FastAPI get_db dependency is overridden so that TestClient requests use
+    the same session, making test data visible to the API during the test.
+    """
+    connection = engine.connect()
+    trans = connection.begin()
+    session = SessionLocal(bind=connection)
+
+    # Begin a nested transaction (savepoint) so we can roll back after the test
+    session.begin_nested()
+
+    @event.listens_for(session, "after_transaction_end")
+    def restart_savepoint(session, transaction):
+        if transaction.nested and not transaction._parent.nested:
+            session.begin_nested()
+
+    # Override FastAPI's get_db to use our isolated session
+    def override_get_db():
+        try:
+            yield session
+        finally:
+            pass  # session lifecycle managed by fixture
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        yield session
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        session.close()
+        trans.rollback()
+        connection.close()
+
+
+# TestClient shares the same app instance — dependency_overrides set by db_session
+# are active for all requests made inside a test that uses the db_session fixture.
+client = TestClient(app)
 
 def get_valid_alert_data():
     return {

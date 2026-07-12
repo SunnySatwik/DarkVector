@@ -12,11 +12,9 @@ import ThreatGraph from "./pages/ThreatGraph";
 import SavedInvestigationWorkspace from "./pages/SavedInvestigationWorkspace";
 import InvestigationReportView from "./pages/InvestigationReportView";
 import CommandPalette from "./components/CommandPalette";
-import AiAnalystPanel from "./components/AiAnalystPanel";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { Alert, Workspace } from "./types";
 import { MOCK_WORKSPACES } from "./mockData";
-import { AnalyzeResponse } from "./api/types";
-import { WorkspaceViewModel } from "./lib/workspaceMapper";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
@@ -29,14 +27,7 @@ export default function App() {
   const [activeInvestigationId, setActiveInvestigationId] = useState<string | null>(null);
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
 
-  // ── AI Panel state — presentational only, never triggers inference ────────
-  // Updated by callbacks from InvestigationWorkspace; cleared on close.
-  const [panelAlert, setPanelAlert] = useState<Alert | null>(null);
-  const [panelAnalysis, setPanelAnalysis] = useState<AnalyzeResponse | null>(null);
-  const [panelWorkspace, setPanelWorkspace] = useState<WorkspaceViewModel | null>(null);
-
   // ── Overlays ──────────────────────────────────────────────────────────────
-  const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
 
   // ── UI state ──────────────────────────────────────────────────────────────
@@ -82,9 +73,6 @@ export default function App() {
       setOpenWorkspaceAlerts((prev) => [...prev, alert]);
     }
     setActiveWorkspaceAlert(alert);
-    // Update panel alert immediately; analysis arrives via onAnalysisReady callback
-    setPanelAlert(alert);
-    setPanelAnalysis(null);
   };
 
   const handleCloseAlertTab = (alertId: string) => {
@@ -93,28 +81,10 @@ export default function App() {
     if (activeWorkspaceAlert?.id === alertId) {
       if (remaining.length > 0) {
         setActiveWorkspaceAlert(remaining[0]);
-        setPanelAlert(remaining[0]);
-        setPanelAnalysis(null);
       } else {
         setActiveWorkspaceAlert(null);
-        // Clear panel state — no stale alert should linger
-        setPanelAlert(null);
-        setPanelAnalysis(null);
       }
     }
-  };
-
-  // Called by InvestigationWorkspace whenever analysis resolves
-  const handleAnalysisReady = (alert: Alert, analysis: AnalyzeResponse) => {
-    setPanelAlert(alert);
-    setPanelAnalysis(analysis);
-    setPanelWorkspace(null);
-  };
-
-  const handleWorkspaceReady = (workspace: WorkspaceViewModel) => {
-    setPanelWorkspace(workspace);
-    setPanelAlert(null);
-    setPanelAnalysis(null);
   };
 
   // Subpage router
@@ -131,14 +101,7 @@ export default function App() {
       return (
         <SavedInvestigationWorkspace
           investigationId={activeInvestigationId}
-          onCloseWorkspace={() => {
-            setActiveInvestigationId(null);
-            // Clear transient analysis state on workspace close
-            setPanelAlert(null);
-            setPanelAnalysis(null);
-            setPanelWorkspace(null);
-          }}
-          onWorkspaceReady={handleWorkspaceReady}
+          onCloseWorkspace={() => setActiveInvestigationId(null)}
           onOpenReport={setActiveReportId}
         />
       );
@@ -150,14 +113,7 @@ export default function App() {
           openTabs={openWorkspaceAlerts}
           onSelectAlert={handleOpenAlertInWorkspace}
           onCloseAlertTab={handleCloseAlertTab}
-          onCloseWorkspace={() => {
-            setActiveWorkspaceAlert(null);
-            // Clear transient analysis state on workspace close
-            setPanelAlert(null);
-            setPanelAnalysis(null);
-            setPanelWorkspace(null);
-          }}
-          onAnalysisReady={handleAnalysisReady}
+          onCloseWorkspace={() => setActiveWorkspaceAlert(null)}
           onOpenReport={setActiveReportId}
         />
       );
@@ -168,7 +124,6 @@ export default function App() {
         return (
           <Dashboard
             onSelectAlert={handleOpenAlertInWorkspace}
-            onOpenAiPanel={() => setIsAiPanelOpen(true)}
             isRefreshing={isRefreshing}
             onOpenInvestigation={(id) => {
               setActiveWorkspaceAlert(null);
@@ -180,15 +135,16 @@ export default function App() {
         return (
           <ThreatFeed
             onSelectAlert={handleOpenAlertInWorkspace}
-            onOpenAiPanel={() => setIsAiPanelOpen(true)}
           />
         );
       case "graph":
         return (
-          <ThreatGraph
-            activeAlert={activeWorkspaceAlert}
-            activeInvestigationId={activeInvestigationId}
-          />
+          <ErrorBoundary>
+            <ThreatGraph
+              activeAlert={activeWorkspaceAlert}
+              activeInvestigationId={activeInvestigationId}
+            />
+          </ErrorBoundary>
         );
       case "investigations":
         return (
@@ -210,7 +166,6 @@ export default function App() {
         return (
           <Dashboard
             onSelectAlert={handleOpenAlertInWorkspace}
-            onOpenAiPanel={() => setIsAiPanelOpen(true)}
             isRefreshing={isRefreshing}
           />
         );
@@ -250,14 +205,6 @@ export default function App() {
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         onNavigate={setActiveTab}
-      />
-
-      <AiAnalystPanel
-        isOpen={isAiPanelOpen}
-        onClose={() => setIsAiPanelOpen(false)}
-        selectedAlert={panelAlert}
-        analysis={panelAnalysis}
-        workspace={panelWorkspace}
       />
     </>
   );

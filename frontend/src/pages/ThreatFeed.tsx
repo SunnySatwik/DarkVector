@@ -6,7 +6,6 @@ import {
   ShieldAlert,
   Search,
   Filter,
-  BrainCircuit,
   Terminal,
   Clock,
   HardDrive,
@@ -21,10 +20,9 @@ import { severityBadgeClass } from "../lib/severity";
 
 interface ThreatFeedProps {
   onSelectAlert: (alert: Alert) => void;
-  onOpenAiPanel: () => void;
 }
 
-export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedProps) {
+export default function ThreatFeed({ onSelectAlert }: ThreatFeedProps) {
   const { alerts } = useAlerts();
   console.log("Dashboard alerts:", alerts.length);
   const [search, setSearch] = useState("");
@@ -56,12 +54,6 @@ export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedP
       default:
         return <HardDrive className="w-4 h-4 text-green-400" />;
     }
-  };
-
-  const handleExplainWithAI = (e: React.MouseEvent, alert: Alert) => {
-    e.stopPropagation();
-    onSelectAlert(alert);
-    onOpenAiPanel();
   };
 
   const toggleExpand = (id: string) => {
@@ -176,14 +168,6 @@ export default function ThreatFeed({ onSelectAlert, onOpenAiPanel }: ThreatFeedP
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>Investigate</span>
-                  </button>
-
-                  <button
-                    onClick={(e) => handleExplainWithAI(e, alert)}
-                    className="flex items-center gap-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 font-mono text-[10px] px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <BrainCircuit className="w-3.5 h-3.5" />
-                    <span>Explain Anomaly</span>
                   </button>
 
                   <div className="text-gray-500">

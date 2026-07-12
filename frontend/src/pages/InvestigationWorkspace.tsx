@@ -4,7 +4,6 @@ import { Alert, Severity } from "../types";
 import { MOCK_ALERTS } from "../mockData";
 import { useAnalysis } from "../hooks/useAnalysis";
 import { useInvestigations, useUpdateInvestigationStatus } from "../hooks/useInvestigations";
-import { AnalyzeResponse } from "../api/types";
 import WorkspaceView from "../components/workspace/WorkspaceView";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -20,11 +19,6 @@ interface InvestigationWorkspaceProps {
 
   onCloseWorkspace: () => void;
 
-  /**
-   * Called once when the ML analysis for the active alert resolves.
-   * App.tsx uses this to populate the AiAnalystPanel without owning useAnalysis itself.
-   */
-  onAnalysisReady?: (alert: Alert, analysis: AnalyzeResponse) => void;
   onOpenReport?: (id: string) => void;
 }
 
@@ -36,7 +30,6 @@ export default function InvestigationWorkspace({
   onSelectAlert,
   onCloseAlertTab,
   onCloseWorkspace,
-  onAnalysisReady,
   onOpenReport,
 }: InvestigationWorkspaceProps) {
   const [quarantineStatus, setQuarantineStatus] = useState<
@@ -81,13 +74,6 @@ export default function InvestigationWorkspace({
       severity: analysisData.analysis.severity.toLowerCase() as Severity,
     }
     : activeAlert;
-
-  // Notify parent once analysis resolves so it can feed AiAnalystPanel
-  useEffect(() => {
-    if (analysisData) {
-      onAnalysisReady?.(activeAlert, analysisData);
-    }
-  }, [analysisData, activeAlert]);
 
   // Reset remediation state when the active alert changes
   useEffect(() => {

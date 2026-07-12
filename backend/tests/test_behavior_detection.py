@@ -56,7 +56,7 @@ def test_powershell_encoded_rule():
     # Verify properties
     assert ps_enc_dets[0].severity == Severity.HIGH
     assert ps_enc_dets[0].confidence == 95
-    assert ps_enc_dets[0].mitre_technique == "T1059"
+    assert ps_enc_dets[0].mitre_technique == "T1059.001"
     assert "powershell.exe" in ps_enc_dets[0].metadata["matched_processes"]
     assert "-enc" in ps_enc_dets[0].metadata["matched_keywords"] or "-EncodedCommand" in ps_enc_dets[0].metadata["matched_keywords"]
 
@@ -440,6 +440,8 @@ def test_engine_sorting_precedence():
     for h in high_indices:
         for m in medium_indices:
             assert h < m
+
+
 
 
 def test_fault_tolerance():

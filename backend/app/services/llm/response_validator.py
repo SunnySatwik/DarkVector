@@ -43,58 +43,91 @@ class ResponseValidator:
                 )
 
     @staticmethod
+    def _extract_canonical_severity(knowledge_doc: str) -> str | None:
+        """
+        Extracts the canonical aggregate severity deterministically from the Knowledge Document.
+        Prioritizes the explicit severity under the "## Investigation Overview" section,
+        falling back to the first line-level severity declaration, and finally any first occurrence.
+        This prevents accidentally matching a member detection severity if it appears elsewhere.
+        """
+        # 1. Look specifically within ## Investigation Overview if it exists
+        overview_match = re.search(
+            r"## Investigation Overview.*?(?:severity:\s*(low|medium|high|critical))",
+            knowledge_doc,
+            re.DOTALL | re.IGNORECASE
+        )
+        if overview_match:
+            return overview_match.group(1).upper()
+
+        # 2. Look for severity: at the start of a line/document
+        line_match = re.search(
+            r"(?:^|\n)(?:investigation\s+)?severity:\s*(low|medium|high|critical)",
+            knowledge_doc,
+            re.IGNORECASE
+        )
+        if line_match:
+            return line_match.group(1).upper()
+
+        # 3. Fallback to any first occurrence
+        general_match = re.search(
+            r"severity:\s*(low|medium|high|critical)",
+            knowledge_doc,
+            re.IGNORECASE
+        )
+        if general_match:
+            return general_match.group(1).upper()
+
+        return None
+
+    @staticmethod
     def validate_severity_consistency(text: str, knowledge_doc: str) -> None:
         """
-        Rejects responses that assert a severity level contradicting the expected aggregate one.
-        Allows other severity levels if they are explicitly qualified as belonging to individual detections.
+        Rejects responses that explicitly assert an aggregate investigation severity that
+        contradicts the expected one. Only rejects explicit overall-severity assertion
+        patterns — not contextual, comparative, or per-detection severity language.
         """
         if not knowledge_doc:
             return
 
-        match = re.search(
-            r"severity:\s*(low|medium|high|critical)",
-            knowledge_doc,
-            re.IGNORECASE,
-        )
-        if not match:
+        expected_severity = ResponseValidator._extract_canonical_severity(knowledge_doc)
+        if not expected_severity:
             return
 
-        expected_severity = match.group(1).upper()
-        expected_lower = expected_severity.lower()
         severities = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
         other_severities = severities - {expected_severity}
 
-        # Split text into sentences for context analysis
-        sentences = re.split(r"[.!?\n]+", text)
+        # Explicit aggregate severity assertion patterns — only these are checked.
+        # Each pattern captures one severity word in the assertion context.
+        _AGGREGATE_PATTERNS = [
+            # 1. The overall/investigation is/has/carries [a] severity
+            r"\bthe\s+(?:overall\s+)?investigation\s+(?:severity\s+)?(?:is|has\s+been|was|has|carries)\s+(?:a\s+)?{sev}(?:\s+severity)?(?:\s+rating)?\b",
+            # 2. Overall severity [is/:/...] severity
+            r"\boverall\s+severity\s*(?:is|has\s+been|was|has|classified\s+as|assessed\s+as)?\s*(?::\s*)?{sev}\b",
+            # 3. This is a severity severity investigation
+            r"\bthis\s+is\s+a\s+{sev}\s+(?:severity\s+)?investigation\b",
+            # 4. The overall/case [severity] is/has [a] severity
+            r"\bthe\s+(?:overall\s+)?case\s+(?:severity\s+)?(?:is|has\s+been|was|has)\s+(?:a\s+)?{sev}(?:\s+severity)?\b",
+            # 5. I/we assess the overall/investigation/case as severity
+            r"\b(?:i|we)\s+assess\s+the\s+(?:overall\s+)?(?:investigation|case)\s+as\s+{sev}(?:\s+severity)?\b",
+            # 6. overall case severity is/was...
+            r"\boverall\s+case\s+severity\s+is\s+{sev}\b",
+            # 7. case severity : severity
+            r"\bcase\s+severity\s*:\s*{sev}\b",
+            # 8. investigation is classified as...
+            r"\binvestigation\s+is\s+classified\s+as\s+{sev}\b"
+        ]
 
+        text_lower = text.lower()
         for sev in other_severities:
             sev_lower = sev.lower()
-            for sentence in sentences:
-                sentence_lower = sentence.lower()
-                if sev_lower in sentence_lower:
-                    # Check if the sentence explicitly discusses individual local objects
-                    local_keywords = [
-                        "detection",
-                        "rule",
-                        "alert",
-                        "member",
-                        "under",
-                        "for",
-                        "process",
-                        "activity",
-                    ]
-                    is_local = any(
-                        kw in sentence_lower for kw in local_keywords
-                    ) or re.search(r"\bt\d{4}\b", sentence_lower)
-
-                    # If it doesn't refer to a local object, it's an overall investigation assertion
-                    if not is_local:
-                        # Reject if the expected aggregate severity is not in the sentence
-                        if expected_lower not in sentence_lower:
-                            raise ValueError(
-                                f"Response validator failed: Contradicting severity '{sev}' detected for the overall investigation. "
-                                f"Expected '{expected_severity}'."
-                            )
+            for pattern_template in _AGGREGATE_PATTERNS:
+                pattern = pattern_template.format(sev=sev_lower)
+                if re.search(pattern, text_lower):
+                    raise ValueError(
+                        f"Response validator failed: Response explicitly asserts aggregate "
+                        f"investigation severity as '{sev}' (Contradicting severity '{sev}' "
+                        f"detected for the overall investigation). Expected '{expected_severity}'."
+                    )
 
     @staticmethod
     def validate_mitre_consistency(text: str, knowledge_doc: str) -> None:

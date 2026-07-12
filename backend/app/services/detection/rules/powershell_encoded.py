@@ -26,7 +26,7 @@ class PowerShellEncodedRule(DetectionRule):
 
     @property
     def mitre_technique(self) -> str:
-        return "T1059"
+        return "T1059.001"
 
     @property
     def mitre_tactic(self) -> str:
