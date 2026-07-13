@@ -1,5 +1,7 @@
 import { motion } from "motion/react";
 import { Alert, Severity } from "../../types";
+import { parseUtcDate } from "../../lib/timeFormatter";
+
 import { ContextEnrichment, TimelineEvent } from "../../api/types";
 import {
   ChevronRight,
@@ -628,7 +630,7 @@ export default function WorkspaceView({
                 <span className="text-gray-700">·</span>
                 <span className="flex items-center gap-1 text-[10px] text-gray-500 font-sans">
                   <Clock className="w-3 h-3" />
-                  {new Date(viewTimestamp).toLocaleString([], {
+                  {parseUtcDate(viewTimestamp).toLocaleString([], {
                     month: "short",
                     day: "numeric",
                     hour: "2-digit",

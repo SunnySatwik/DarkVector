@@ -81,6 +81,7 @@ export function VectorPanel({
   const compactInputRef = useRef<HTMLInputElement>(null);
   const expandedInputRef = useRef<HTMLTextAreaElement>(null);
   const expandedChatEndRef = useRef<HTMLDivElement>(null);
+  const ignoreNextFocusRef = useRef(false);
 
   const handleCopy = (text: string, id: number) => {
     navigator.clipboard.writeText(text);
@@ -109,13 +110,19 @@ export function VectorPanel({
   // Focus restoration to compact composer
   useEffect(() => {
     if (!isExpanded) {
+      ignoreNextFocusRef.current = true;
       compactInputRef.current?.focus();
+      const timer = setTimeout(() => {
+        ignoreNextFocusRef.current = false;
+      }, 100);
+      return () => clearTimeout(timer);
     } else {
       setTimeout(() => {
         expandedInputRef.current?.focus();
       }, 50);
     }
   }, [isExpanded]);
+
 
   // First-person analyst-voice summaries per category
   const categorySummary: Record<string, string> = {
@@ -782,8 +789,13 @@ Ask me anything about this investigation.`;
           type="text"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          onFocus={() => setIsExpanded(true)}
-          onClick={() => setIsExpanded(true)}
+          onFocus={() => {
+            if (ignoreNextFocusRef.current) {
+              ignoreNextFocusRef.current = false;
+              return;
+            }
+            setIsExpanded(true);
+          }}
           disabled={isResponding}
           placeholder={isResponding ? "Vector is thinking..." : "Ask Vector..."}
           className="flex-1 bg-transparent border border-border-custom/20 focus:border-violet-500/30 focus:outline-none rounded-lg px-3 py-1.5 text-[12px] text-gray-200 placeholder-gray-600 transition-colors duration-150 font-sans disabled:opacity-50"

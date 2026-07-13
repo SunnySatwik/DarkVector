@@ -2,6 +2,8 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { useAlerts } from "../hooks/useAlerts";
 import { Alert } from "../types";
+import { formatLocalTimeOnly } from "../lib/timeFormatter";
+
 import {
   ShieldAlert,
   Search,
@@ -145,7 +147,7 @@ export default function ThreatFeed({ onSelectAlert }: ThreatFeedProps) {
                       </span>
                       <span className="text-[10px] font-mono text-gray-500 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {new Date(alert.timestamp).toLocaleTimeString()}
+                        {formatLocalTimeOnly(alert.timestamp)}
                       </span>
                     </div>
                     <h3 className="text-sm font-semibold text-gray-100 mt-1">{alert.type}</h3>

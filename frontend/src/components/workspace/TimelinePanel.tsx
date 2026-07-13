@@ -2,6 +2,8 @@ import { motion } from "motion/react";
 import { Shield, Sparkles, Circle, Clock } from "lucide-react";
 import { TimelineEvent } from "../../api/types";
 import { Skeleton } from "../ui/DesignSystem";
+import { parseUtcDate } from "../../lib/timeFormatter";
+
 
 const fadeIn = (delay = 0) => ({
   initial: { opacity: 0, y: 6 },
@@ -48,7 +50,7 @@ function getActorColor(actor: string) {
 
 function formatTimestamp(dateStr: string) {
   try {
-    const d = new Date(dateStr);
+    const d = parseUtcDate(dateStr);
     return d.toLocaleString([], {
       month: "short",
       day: "numeric",

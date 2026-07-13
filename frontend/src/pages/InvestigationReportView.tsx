@@ -18,6 +18,8 @@ import { useInvestigation, useTimeline, useInvestigationReport } from "../hooks/
 import { severityBadgeVariant } from "../lib/severity";
 import { Severity } from "../types";
 import { motion, AnimatePresence } from "motion/react";
+import { parseUtcDate, formatLocalLocale, formatLocalDateOnly } from "../lib/timeFormatter";
+
 interface InvestigationReportViewProps {
   investigationId: string;
   onClose: () => void;
@@ -50,10 +52,15 @@ export default function InvestigationReportView({
 
   const formattedDate = useMemo(() => {
     if (!detailData?.investigation.created_at) return "";
-    return new Date(detailData.investigation.created_at).toLocaleString([], {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
+    try {
+      const d = parseUtcDate(detailData.investigation.created_at);
+      return d.toLocaleString([], {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+    } catch (e) {
+      return detailData.investigation.created_at;
+    }
   }, [detailData]);
 
   if (isPending) {
@@ -190,7 +197,7 @@ export default function InvestigationReportView({
                 Security Incident Investigation Report
               </h1>
               <p className="text-xs text-gray-500 font-sans print-text-muted">
-                Document Generated: {new Date().toLocaleString()} · Case Initiated: {formattedDate}
+                Document Generated: {formatLocalLocale(new Date())} · Case Initiated: {formattedDate}
               </p>
             </div>
 
@@ -257,7 +264,7 @@ export default function InvestigationReportView({
 
                 <div className="border-t border-border-custom/10 pt-3 flex justify-between items-center text-[10px] font-mono text-gray-500 print-divider print-text-muted">
                   <span>Owner: SYSTEM ANALYST</span>
-                  <span>Updated: {new Date(investigation.updated_at).toLocaleDateString()}</span>
+                  <span>Updated: {formatLocalDateOnly(investigation.updated_at)}</span>
                 </div>
               </div>
             </div>
@@ -389,7 +396,7 @@ export default function InvestigationReportView({
                         </span>
                         <span className="text-[9px] text-gray-600 font-mono print-text-muted">•</span>
                         <span className="text-[9px] text-gray-500 font-mono print-text-muted">
-                          {new Date(event.timestamp).toLocaleString()}
+                          {formatLocalLocale(event.timestamp)}
                         </span>
                         <span className="text-[9px] text-gray-600 font-mono print-text-muted">•</span>
                         <span className="text-[9px] font-mono bg-surface/80 border border-border-custom/10 text-gray-400 px-1 rounded uppercase print-badge">

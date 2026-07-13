@@ -18,6 +18,8 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAlerts } from "../hooks/useAlerts";
+import { formatLocalTimeOnly } from "../lib/timeFormatter";
+
 import { useInvestigations } from "../hooks/useInvestigations";
 import { Alert, Severity } from "../types";
 import { Investigation } from "../api/types";
@@ -256,10 +258,7 @@ function PriorityInvestigation({
                 <span className="text-gray-700">·</span>
                 <span className="flex items-center gap-1 text-[10px] font-mono text-gray-500">
                   <Clock className="w-3 h-3" />
-                  {new Date(item.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatLocalTimeOnly(item.timestamp)}
                 </span>
               </div>
 
@@ -383,10 +382,7 @@ function RecentAlerts({
                   <span className="text-[10px] text-gray-500 font-mono">Source: {alert.source}</span>
                   <span className="text-gray-700">·</span>
                   <span className="text-[10px] text-gray-500 font-mono">
-                    {new Date(alert.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatLocalTimeOnly(alert.timestamp)}
                   </span>
                 </div>
               </div>

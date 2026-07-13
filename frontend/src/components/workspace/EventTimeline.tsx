@@ -9,6 +9,7 @@
 import { CheckCircle2, Cpu, Network, ShieldAlert, Sparkles, Circle } from "lucide-react";
 import type { Alert } from "../../types";
 import { TimelineEvent } from "../../api/types";
+import { formatLocalTimeOnly } from "../../lib/timeFormatter";
 
 interface LeftTimelineEvent {
   title: string;
@@ -16,6 +17,7 @@ interface LeftTimelineEvent {
   status: "normal" | "warning" | "error" | "critical";
   time: string;
 }
+
 
 function buildTimeline(alert: Alert): LeftTimelineEvent[] {
   return [
@@ -86,10 +88,7 @@ export function EventTimeline({ alert, timeline }: EventTimelineProps) {
           title: e.title,
           desc: e.description,
           status,
-          time: new Date(e.timestamp).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+          time: formatLocalTimeOnly(e.timestamp),
         };
       })
     : alert

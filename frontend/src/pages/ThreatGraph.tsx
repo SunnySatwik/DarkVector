@@ -21,6 +21,7 @@ import {
   buildGraphData,
   buildBehavioralGraphData
 } from "../lib/graphBuilder";
+import { computeTargetId } from "../lib/graphSelector";
 
 interface ThreatGraphProps {
   activeAlert?: Alert | null;
@@ -35,16 +36,33 @@ export default function ThreatGraph({
   // Query investigations queue
   const { data: investigations, isPending: isListPending, isError: isListError } = useInvestigations();
 
-  // Determine target investigation ID: use props if present, else fallback to the latest in the queue
-  const targetId = useMemo(() => {
-    if (activeInvestigationId) return activeInvestigationId;
-    if (investigations && investigations.length > 0) {
-      return investigations[0].investigation_id;
-    }
-    return undefined;
-  }, [activeInvestigationId, investigations]);
+  // Explicitly selected investigation ID state
+  const [selectedInvestigationId, setSelectedInvestigationId] = useState<string | undefined>(undefined);
 
-  // Load detailed investigation workspace state (including alerts, processes, detections, and context)
+  // Sync state if activeInvestigationId changes from parent/nav context
+  useEffect(() => {
+    if (activeInvestigationId) {
+      setSelectedInvestigationId(activeInvestigationId);
+    }
+  }, [activeInvestigationId]);
+
+  // Determine target investigation ID using explicit requirements
+  const targetId = useMemo(() => {
+    let storedSelectedId: string | null = null;
+    try {
+      storedSelectedId = localStorage.getItem("last_selected_investigation_id");
+    } catch (e) {}
+
+    return computeTargetId({
+      selectedInvestigationId,
+      activeInvestigationId: activeInvestigationId || undefined,
+      storedSelectedId,
+      investigations,
+    });
+  }, [selectedInvestigationId, activeInvestigationId, investigations]);
+
+
+  // Load detailed investigation workspace state
   const { data: detailData, isPending: isDetailPending, isError: isDetailError } = useInvestigationWorkspace(targetId);
 
   const isPending = isListPending || isDetailPending;
@@ -54,19 +72,16 @@ export default function ThreatGraph({
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isolatedNodes, setIsolatedNodes] = useState<string[]>([]);
 
-  // Dynamically build graph data when detailed investigation completes loading.
-  // For behavioral investigations (null alert), use the behavioral graph builder.
+  // Dynamically build graph data when detailed investigation completes loading
   const graph = useMemo(() => {
     if (!detailData) return { nodes: [], links: [] };
     const alertData = detailData.alert as Alert | null;
     if (!alertData) {
-      // Behavioral investigation — alert is null, build from investigation metadata and telemetry evidence
       return buildBehavioralGraphData(detailData);
     }
     const contextData = detailData.analysis?.context;
     return buildGraphData(alertData, contextData);
   }, [detailData]);
-
 
   // Default to selecting the source or process node when graph is loaded
   useEffect(() => {
@@ -77,6 +92,16 @@ export default function ThreatGraph({
       setSelectedNode(null);
     }
   }, [graph]);
+
+  // Handler for explicit selection dropdown
+  const handleSelectInvestigation = (id: string) => {
+    setSelectedInvestigationId(id);
+    setSelectedNode(null); // clear stale selected graph nodes
+    setIsolatedNodes([]); // clear containment states
+    try {
+      localStorage.setItem("last_selected_investigation_id", id);
+    } catch (e) {}
+  };
 
   const handleIsolate = (nodeId: string) => {
     if (isolatedNodes.includes(nodeId)) {
@@ -101,6 +126,25 @@ export default function ThreatGraph({
     );
   }
 
+  // Proper empty state when there are genuinely no investigations in system
+  if (!isPending && (!investigations || investigations.length === 0)) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Evidence Graph"
+          subtitle="Visualize relationships between container processes, socket files, and active network connections in an interactive evidence map."
+        />
+        <div className="flex flex-col items-center justify-center h-80 text-gray-500 font-mono text-xs gap-3 p-8 border border-dashed border-[#23262F]/30 rounded-xl bg-black/10">
+          <AlertTriangle className="w-8 h-8 text-purple-400 animate-pulse" />
+          <span className="font-bold text-gray-300 text-sm">No Investigations Found</span>
+          <span className="text-gray-500 max-w-xs text-center leading-relaxed">
+            There are currently no active or archived investigations in the database. Please trigger behavioral detections to populate this view.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   if (isError || !detailData) {
     return (
       <div className="space-y-6">
@@ -110,7 +154,7 @@ export default function ThreatGraph({
         />
         <div className="flex flex-col items-center justify-center h-64 text-red-400 font-mono text-xs gap-3">
           <AlertTriangle className="w-6 h-6 text-red-500 animate-pulse" />
-          <span>No active investigation data available to map. Please trigger an alert.</span>
+          <span>Failed to load selected investigation workspace data. Please verify database availability.</span>
         </div>
       </div>
     );
@@ -123,35 +167,56 @@ export default function ThreatGraph({
         subtitle="Visualize relationships between container processes, socket files, and active network connections in an interactive evidence map."
       />
 
-      <div className="bg-[#161A22]/20 border border-border-custom/20 rounded-xl p-5 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-gray-300 font-sans">
-        <div className="space-y-1">
-          {activeInvestigationId ? (
-            <>
-              <p className="text-xs text-gray-500 font-mono">Showing evidence for:</p>
-              <h2 className="text-base font-bold text-gray-100 font-mono tracking-tight">
-                {detailData.investigation.investigation_id}
-              </h2>
-              <p className="text-sm font-medium text-purple-400">
-                {detailData.investigation.title}
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-xs font-semibold text-orange-400 uppercase tracking-wider font-mono">
-                ⚠ No investigation selected.
-              </p>
-              <p className="text-xs text-gray-500">
-                Displaying the most recent investigation.
-              </p>
-              <h2 className="text-sm font-bold text-gray-200 font-mono mt-1">
-                {detailData.investigation.investigation_id} · {detailData.investigation.title}
-              </h2>
-            </>
-          )}
+      <div className="bg-[#161A22]/20 border border-border-custom/20 rounded-xl p-5 text-sm flex flex-col md:flex-row md:items-center justify-between gap-4 text-gray-300 font-sans">
+        <div className="space-y-1 flex-1">
+          <p className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">Active Context</p>
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2">
+            <h2 className="text-base font-bold text-gray-100 font-mono tracking-tight break-all">
+              {detailData.investigation.investigation_id}
+            </h2>
+            <span className="hidden sm:inline text-gray-600">·</span>
+            <span className="text-sm font-semibold text-purple-400">
+              {detailData.investigation.title}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            <Badge variant={detailData.investigation.status.toLowerCase() === "resolved" ? "success" : "default"}>
+              {detailData.investigation.status}
+            </Badge>
+            <span className="text-xs text-gray-500 font-mono">
+              Severity: <span className="font-semibold text-orange-400">{detailData.investigation.severity.toUpperCase()}</span>
+            </span>
+            <span className="text-xs text-gray-500 font-mono">
+              Risk: <span className="font-semibold text-red-400">{detailData.investigation.risk_score.toFixed(0)}%</span>
+            </span>
+            {!activeInvestigationId && (
+              <span className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/15 px-2 py-0.5 rounded font-mono">
+                Fallback Selection
+              </span>
+            )}
+          </div>
         </div>
-        <Badge variant={detailData.investigation.status.toLowerCase() === "resolved" ? "success" : "default"} className="self-start sm:self-center">
-          {detailData.investigation.status}
-        </Badge>
+
+        {/* Dropdown Selector */}
+        {investigations && investigations.length > 0 && (
+          <div className="flex flex-col gap-1.5 shrink-0 min-w-[280px]">
+            <label htmlFor="investigation-select" className="text-[10px] text-gray-500 font-mono uppercase tracking-wide">
+              Select Investigation Context
+            </label>
+            <select
+              id="investigation-select"
+              value={detailData.investigation.investigation_id}
+              onChange={(e) => handleSelectInvestigation(e.target.value)}
+              className="w-full bg-[#111317] border border-[#23262F]/30 hover:border-gray-500/40 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-purple-500/50 transition-colors font-mono cursor-pointer"
+            >
+              {investigations.map((inv) => (
+                <option key={inv.investigation_id} value={inv.investigation_id}>
+                  {inv.investigation_id} · {inv.title.length > 25 ? `${inv.title.slice(0, 22)}...` : inv.title} [{inv.severity.toUpperCase()}]
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">

@@ -1,5 +1,7 @@
 import { Investigation } from "../api/types";
 import { Severity } from "../types";
+import { formatLocalLocale } from "./timeFormatter";
+
 
 // ─── View Model ───────────────────────────────────────────────────────────────
 // CaseItem is the UI-facing representation of an Investigation summary.
@@ -60,6 +62,6 @@ export function mapInvestigationToCase(
         severity: mapSeverity(investigation.severity),
         riskScore: investigation.risk_score,
         summary: investigation.summary ?? null,
-        createdTime: new Date(investigation.created_at).toLocaleString(),
+        createdTime: formatLocalLocale(investigation.created_at),
     };
 }

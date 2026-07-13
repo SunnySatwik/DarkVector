@@ -15,6 +15,8 @@ import {
   PageHeader,
 } from "../components/ui/DesignSystem";
 import { useInvestigations } from "../hooks/useInvestigations";
+import { formatLocalLocale } from "../lib/timeFormatter";
+
 
 interface ReportsProps {
   onOpenReport?: (investigationId: string) => void;
@@ -92,7 +94,7 @@ export default function Reports({ onOpenReport }: ReportsProps) {
                         Incident Report: {inv.title}
                       </div>
                       <div className="text-caption text-gray-500 font-mono mt-0.5">
-                        Created: {new Date(inv.created_at).toLocaleString()}
+                        Created: {formatLocalLocale(inv.created_at)}
                       </div>
                     </TableCell>
                     <TableCell>

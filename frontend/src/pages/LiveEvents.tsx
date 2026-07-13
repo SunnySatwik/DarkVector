@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Play, Pause, Trash2, Terminal, ShieldCheck, Database, Search } from "lucide-react";
 import { PageHeader } from "../components/ui/DesignSystem";
+import { formatLocalTimeOnly } from "../lib/timeFormatter";
+
 
 interface LogLine {
   id: string;
@@ -206,7 +208,7 @@ export default function LiveEvents() {
               className="hover:bg-[#161A22]/30 px-2 py-0.5 rounded transition-colors flex items-start gap-2.5"
             >
               <span className="text-gray-500 shrink-0">
-                [{new Date(log.timestamp).toLocaleTimeString()}]
+                [{formatLocalTimeOnly(log.timestamp)}]
               </span>
               <span className={`uppercase font-bold shrink-0 w-16 ${getLogLevelStyle(log.level)}`}>
                 {log.level}

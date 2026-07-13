@@ -77,9 +77,23 @@ class FallbackAI:
         # Check for focused scope severity/risk explanations (Requirement 9)
         from app.services.llm.policy import ResponseScope
         if policy and (policy.scope == ResponseScope.FOCUSED or policy.route.value == "risk_analysis"):
-            # Exclude compliance/remediation details unless explicitly requested
-            title = alert_json.get("type", "Anomalous Behavior")
-            sev = str(getattr(investigation, "severity", "HIGH")).upper() if hasattr(investigation, "severity") else str(investigation.get("severity", "HIGH")).upper()
+            # Resolve title from investigation title, falling back to alert_json
+            title = getattr(investigation, "title", None)
+            if not title and alert_json:
+                title = alert_json.get("type")
+            if not title:
+                title = "Anomalous Behavior"
+                
+            # Safely extract raw string value of severity enum
+            sev_attr = getattr(investigation, "severity", "HIGH")
+            if hasattr(sev_attr, "value"):
+                sev_attr = sev_attr.value
+            elif isinstance(sev_attr, dict) and "value" in sev_attr:
+                sev_attr = sev_attr["value"]
+            sev = str(sev_attr).upper()
+            if "SEVERITY." in sev:
+                sev = sev.split("SEVERITY.")[-1]
+
             risk = getattr(investigation, "risk_score", 90.0) if hasattr(investigation, "risk_score") else investigation.get("risk_score", 90.0)
             
             # Safely fetch detection confidence
@@ -106,10 +120,11 @@ class FallbackAI:
             return (
                 f"This investigation was classified as {sev} severity with a risk score of {risk:.1f}% "
                 f"because the detected activity matched the behavioral pattern for '{title}'{mitre_str}.\n\n"
-                f"The underlying detection has{conf_str}. "
+                f"The underlying detection was identified{conf_str}. "
                 f"The classification reflects the risk of the observed behavioral pattern. "
                 f"The available evidence confirms the execution, but does not by itself establish malicious intent or host compromise."
             )
+
 
 
         if "isolate" in q or "quarantine" in q:

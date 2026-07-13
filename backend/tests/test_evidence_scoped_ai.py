@@ -688,3 +688,50 @@ def test_fallback_ai_preserves_confidence_and_threat_semantics():
     assert "probability of compromise" not in reply.lower()
 
 
+def test_fallback_presentation_correctness():
+    """
+    Verifies Issue 4 fixes: severity enum representation parses as HIGH,
+    title does not degrade to Anomalous Behavior, and grammar has no 'has with'.
+    """
+    from app.models.investigation import InvestigationSeverity
+
+    class MockInvestigation:
+        title = "PowerShell Encoded Command"
+        severity = InvestigationSeverity.HIGH
+        risk_score = 95.0
+        status = "NEW"
+        confidence = 0.95
+        alert_json = {}
+        analysis_json = {
+            "context": {
+                "mitre": {"technique_id": "T1059.001", "technique_name": "PowerShell"}
+            }
+        }
+
+    policy = ResponsePolicy(
+        route=PromptRoute.RISK_ANALYSIS,
+        scope=ResponseScope.FOCUSED,
+        retrieval_decision=RetrievalDecision.SKIP,
+        required_evidence=frozenset(),
+        optional_evidence=frozenset(),
+        excluded_evidence=frozenset(),
+        allowed_sections=frozenset(["Direct Explanation"]),
+        forbidden_sections=frozenset(["### Business Impact"]),
+    )
+
+    reply = FallbackAI.generate_chat(
+        MockInvestigation(),
+        timeline=[],
+        message="Why is it high?",
+        policy=policy,
+    )
+
+    assert "HIGH" in reply
+    assert "INVESTIGATIONSEVERITY" not in reply
+    assert "PowerShell Encoded Command" in reply
+    assert "Anomalous Behavior" not in reply
+    assert "was identified with 95% detection confidence" in reply
+    assert "has with" not in reply
+
+
+
