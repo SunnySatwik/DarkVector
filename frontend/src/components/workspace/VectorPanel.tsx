@@ -5,8 +5,9 @@
  * Shows consolidated case intelligence and chat capabilities.
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { createPortal } from "react-dom";
 import {
   Sparkles,
   Send,
@@ -21,7 +22,8 @@ import axios from "axios";
 import type { Alert } from "../../types";
 import type { ContextEnrichment } from "../../api/types";
 import { sendChatMessage } from "../../api/investigations";
-import { Skeleton } from "../ui/DesignSystem";
+import { Skeleton, Badge } from "../ui/DesignSystem";
+
 import { WorkspaceViewModel } from "../../lib/workspaceMapper";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -74,6 +76,11 @@ export function VectorPanel({
   const [isResponding, setIsResponding] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const compactInputRef = useRef<HTMLInputElement>(null);
+  const expandedInputRef = useRef<HTMLTextAreaElement>(null);
+  const expandedChatEndRef = useRef<HTMLDivElement>(null);
 
   const handleCopy = (text: string, id: number) => {
     navigator.clipboard.writeText(text);
@@ -86,6 +93,29 @@ export function VectorPanel({
   };
   const [conversationOpen, setConversationOpen] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Escape key close listener
+  useEffect(() => {
+    if (!isExpanded) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsExpanded(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isExpanded]);
+
+  // Focus restoration to compact composer
+  useEffect(() => {
+    if (!isExpanded) {
+      compactInputRef.current?.focus();
+    } else {
+      setTimeout(() => {
+        expandedInputRef.current?.focus();
+      }, 50);
+    }
+  }, [isExpanded]);
 
   // First-person analyst-voice summaries per category
   const categorySummary: Record<string, string> = {
@@ -120,6 +150,7 @@ export function VectorPanel({
   useEffect(() => {
     setChatMessages([]);
     setChatInput("");
+    setIsExpanded(false);
   }, [currentKey]);
 
   // Seed initial Vector message when alert or workspace is loaded and chatMessages is empty
@@ -190,12 +221,72 @@ Ask me anything about this investigation.`;
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isResponding]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isResponding || !chatInput.trim()) return;
+  useEffect(() => {
+    if (isExpanded) {
+      expandedChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, isResponding, isExpanded]);
 
-    const text = chatInput.trim();
-    setChatInput("");
+  // Context indicator chips
+  const contextChips = useMemo(() => {
+    const chips: string[] = [];
+    if (workspace) {
+      if (workspace.isBehavioral) {
+        chips.push("Behavioral Case");
+        if (workspace.processes && workspace.processes.length > 0) {
+          chips.push("Process Evidence");
+        }
+        if (workspace.correlation) {
+          chips.push("Correlation Context");
+        }
+        if (workspace.recommendations && workspace.recommendations.length > 0) {
+          chips.push("Remediation");
+        }
+        if (workspace.legacyAnalysis?.context?.mitre?.technique_id) {
+          chips.push(workspace.legacyAnalysis.context.mitre.technique_id);
+        } else if (workspace.primaryDetection?.mitre_technique) {
+          chips.push(workspace.primaryDetection.mitre_technique);
+        }
+      } else {
+        chips.push("Standard Alert");
+        if (workspace.legacyAnalysis) {
+          chips.push("Anomaly Model");
+        }
+        if (workspace.recommendations && workspace.recommendations.length > 0) {
+          chips.push("Remediation");
+        }
+      }
+    } else if (alert) {
+      chips.push("Standard Alert");
+      if (alert.details.processPath) {
+        chips.push("Process Evidence");
+      }
+      if (alert.details.ipAddress) {
+        chips.push("Network Connection");
+      }
+      if (analysisContext?.mitre?.technique_id) {
+        chips.push(analysisContext.mitre.technique_id);
+      }
+    }
+    return chips;
+  }, [workspace, alert, analysisContext]);
+
+  // Suggested Prompts
+  const suggestedPrompts = useMemo(() => {
+    const prompts = [
+      "Explain the strongest evidence",
+      `Why is this severity ${alert ? alert.severity.toUpperCase() : "HIGH"}?`,
+      "What should I investigate next?",
+    ];
+    const mitreTech = workspace?.legacyAnalysis?.context?.mitre?.technique_id || workspace?.primaryDetection?.mitre_technique || analysisContext?.mitre?.technique_id;
+    if (mitreTech) {
+      prompts.push("Explain the MITRE mapping");
+    }
+    return prompts;
+  }, [workspace, alert, analysisContext]);
+
+  // Shared submit message action
+  const submitMessage = async (text: string) => {
     const time = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -205,21 +296,21 @@ Ask me anything about this investigation.`;
 
     try {
       const currentInvId = workspace ? workspace.investigation.investigation_id : investigationId;
+      let reply = "";
       if (currentInvId) {
         const formattedHistory = chatMessages.map((m) => ({
           sender: m.sender,
           text: m.text,
         }));
-        const reply = await sendChatMessage(currentInvId, text, formattedHistory);
-        setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
+        reply = await sendChatMessage(currentInvId, text, formattedHistory);
       } else {
         const formattedHistory = chatMessages.map((m) => ({
           sender: m.sender,
           text: m.text,
         }));
-        const reply = await sendChatMessage(undefined, text, formattedHistory, alert.id);
-        setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
+        reply = await sendChatMessage(undefined, text, formattedHistory, alert.id);
       }
+      setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
     } catch (err) {
       console.error("Chat request failed:", err);
       let errorReply = "Vector could not connect to the reasoning service. Check that the backend is running.";
@@ -242,6 +333,32 @@ Ask me anything about this investigation.`;
       setIsResponding(false);
     }
   };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isResponding || !chatInput.trim()) return;
+
+    const text = chatInput.trim();
+    setChatInput("");
+    await submitMessage(text);
+  };
+
+  const handleSuggestionClick = async (promptText: string) => {
+    if (isResponding) return;
+    await submitMessage(promptText);
+  };
+
+  const handleKeyDownExpanded = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!isResponding && chatInput.trim()) {
+        const text = chatInput.trim();
+        setChatInput("");
+        submitMessage(text);
+      }
+    }
+  };
+
 
   const scoreVal = workspace ? workspace.investigation.risk_score : alert.score;
   const sourceVal = workspace ? (workspace.detections[0]?.host_id || alert.source) : alert.source;
@@ -661,9 +778,12 @@ Ask me anything about this investigation.`;
         className="px-4 py-3 border-t border-border-custom/15 flex items-center gap-2 shrink-0 bg-surface/10"
       >
         <input
+          ref={compactInputRef}
           type="text"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
+          onFocus={() => setIsExpanded(true)}
+          onClick={() => setIsExpanded(true)}
           disabled={isResponding}
           placeholder={isResponding ? "Vector is thinking..." : "Ask Vector..."}
           className="flex-1 bg-transparent border border-border-custom/20 focus:border-violet-500/30 focus:outline-none rounded-lg px-3 py-1.5 text-[12px] text-gray-200 placeholder-gray-600 transition-colors duration-150 font-sans disabled:opacity-50"
@@ -676,6 +796,7 @@ Ask me anything about this investigation.`;
           <Send className="w-3.5 h-3.5" />
         </button>
       </form>
+
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -690,6 +811,196 @@ Ask me anything about this investigation.`;
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Expanded Conversation Portal */}
+      {isExpanded && createPortal(
+        <AnimatePresence mode="wait">
+          <div className="fixed inset-0 z-50 flex items-center justify-end p-6 font-sans">
+            {/* Backdrop overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsExpanded(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-[4px] cursor-pointer"
+            />
+
+            {/* Expanded conversation container (unfolding from the right rail) */}
+            <motion.div
+              initial={{ opacity: 0, x: 200, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 200, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="relative w-[75vw] h-[86vh] max-w-[1200px] bg-[#0C0E14] border border-[#23262F]/35 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            >
+              {/* TOP HEADER */}
+              <div className="px-6 py-4 border-b border-[#23262F]/35 bg-[#161A22]/20 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-md bg-violet-500/12 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-100 font-sans">AI Investigation Partner</span>
+                      <span className="text-xs text-gray-500 font-mono">({workspace?.investigation?.investigation_id || alert?.id})</span>
+                    </div>
+                    <div className="text-xs text-purple-400 mt-0.5 max-w-[400px] truncate font-sans">
+                      {workspace?.investigation?.title || alert?.type}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Badge variant={workspace?.investigation?.severity || alert?.severity}>
+                    {(workspace?.investigation?.severity || alert?.severity || "low").toUpperCase()}
+                  </Badge>
+                  <span className="text-xs font-mono text-gray-500">
+                    Risk: <span className="text-red-400">{((workspace?.investigation?.risk_score || alert?.score || 0)).toFixed(0)}%</span>
+                  </span>
+                  <button
+                    onClick={() => setIsExpanded(false)}
+                    className="p-1.5 text-gray-500 hover:text-gray-300 hover:bg-[#1C1F26] rounded-lg transition-colors cursor-pointer ml-2"
+                    title="Minimize"
+                  >
+                    <ChevronDown className="w-5 h-5 rotate-90" />
+                  </button>
+                </div>
+              </div>
+
+              {/* CONTEXT INDICATORS */}
+              {contextChips.length > 0 && (
+                <div className="px-6 py-2 bg-[#0E1118] border-b border-[#23262F]/20 flex flex-wrap gap-2 items-center shrink-0">
+                  <span className="text-[10px] text-gray-500 font-mono uppercase mr-1">Available Context:</span>
+                  {contextChips.map((chip, idx) => (
+                    <span key={idx} className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-500/10 text-violet-400 border border-violet-500/15">
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* MAIN CONVERSATION AREA */}
+              <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6 space-y-4 scrollbar-thin bg-black/10">
+                <div className="max-w-[800px] mx-auto space-y-6">
+                  {chatMessages.map((msg, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className={`flex flex-col ${
+                        msg.sender === "user" ? "items-end" : "items-start"
+                      }`}
+                    >
+                      <span className="text-[10px] text-gray-500 mb-1 px-1 font-sans">
+                        {msg.sender === "ai" ? "Vector" : "You"} · {msg.time}
+                      </span>
+                      <div className="flex items-start gap-3 max-w-[90%] group relative">
+                        <div
+                          className={`rounded-xl px-4 py-3 text-[13px] leading-relaxed shadow-sm ${
+                            msg.sender === "user"
+                              ? "bg-violet-500/8 text-gray-200 border border-violet-500/15"
+                              : "bg-[#161A22]/55 text-gray-300 border border-[#23262F]/30"
+                          }`}
+                        >
+                          <div className="prose prose-invert prose-sm max-w-none [&_p]:my-2 [&_strong]:text-gray-100 font-sans select-text">
+                            <ReactMarkdown>{msg.text}</ReactMarkdown>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(msg.text, i)}
+                          className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-300 p-1.5 rounded transition-opacity cursor-pointer shrink-0 mt-1"
+                          title="Copy message"
+                        >
+                          {copiedId === i ? (
+                            <Check className="w-4 h-4 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+
+                  {isResponding && (
+                    <div className="flex flex-col items-start">
+                      <span className="text-[10px] text-gray-500 mb-1 px-1 font-sans">
+                        Vector
+                      </span>
+                      <div className="bg-[#161A22]/55 border border-[#23262F]/30 rounded-xl px-4 py-3 flex items-center gap-1.5">
+                        {[0, 100, 200].map((delay) => (
+                          <motion.span
+                            key={delay}
+                            className="w-1.5 h-1.5 rounded-full bg-violet-400/70"
+                            animate={{ opacity: [0.3, 1, 0.3] }}
+                            transition={{
+                              duration: 1.2,
+                              repeat: Infinity,
+                              delay: delay / 1000,
+                              ease: "easeInOut",
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div ref={expandedChatEndRef} />
+                </div>
+              </div>
+
+              {/* SUGGESTED QUESTIONS */}
+              {!isResponding && suggestedPrompts.length > 0 && (
+                <div className="px-8 py-3 border-t border-[#23262F]/20 bg-[#0E1118]/80 shrink-0 flex flex-wrap gap-2 justify-center">
+                  {suggestedPrompts.map((promptText, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSuggestionClick(promptText)}
+                      className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 bg-[#161A22]/65 hover:bg-[#1C1F26] border border-[#23262F]/35 hover:border-gray-500/40 rounded-full transition-all duration-120 cursor-pointer shadow-sm font-sans"
+                    >
+                      {promptText}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* COMPOSER */}
+              <div className="px-8 py-4 border-t border-[#23262F]/35 bg-[#161A22]/10 shrink-0">
+                <div className="max-w-[800px] mx-auto flex gap-3 items-end">
+                  <textarea
+                    ref={expandedInputRef}
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={handleKeyDownExpanded}
+                    disabled={isResponding}
+                    placeholder={isResponding ? "Vector is thinking..." : "Ask Vector to explain rules, suggest queries, or verify timeline artifacts..."}
+                    className="flex-1 min-h-[44px] max-h-[160px] bg-transparent border border-[#23262F]/45 focus:border-violet-500/40 focus:outline-none rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 transition-colors duration-150 font-sans disabled:opacity-50 resize-none scrollbar-thin"
+                    rows={1}
+                  />
+                  <button
+                    onClick={() => {
+                      if (!isResponding && chatInput.trim()) {
+                        const text = chatInput.trim();
+                        setChatInput("");
+                        submitMessage(text);
+                      }
+                    }}
+                    disabled={isResponding || !chatInput.trim()}
+                    className="p-3 bg-violet-600 hover:bg-violet-500 disabled:bg-[#1C1F26] text-white disabled:text-gray-600 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-120 cursor-pointer shrink-0 shadow-md"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
+
+
+
