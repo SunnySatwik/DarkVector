@@ -191,6 +191,29 @@ class ResponseValidator:
                     f"Response validator failed: Prohibited absolute certainty claim detected: '{phrase}'"
                 )
 
+        forbidden_reinterpretations = [
+            "my analysis confidence",
+            "my confidence is",
+            "analysis confidence is",
+            "analyst confidence is",
+            "analysis confidence rating",
+            "analyst confidence rating",
+            "probability of compromise",
+            "probability of attacker activity",
+            "probability of malicious activity",
+            "probability of malicious intent",
+            "confidence that this is an attack",
+            "confident that this is an attack",
+            "confident that this is compromise",
+        ]
+
+        for phrase in forbidden_reinterpretations:
+            if phrase in text_lower:
+                raise ValueError(
+                    f"Response validator failed: Prohibited aggregate confidence reinterpretation detected: '{phrase}'"
+                )
+
+
     @staticmethod
     def validate_evidence_references(text: str) -> None:
         """

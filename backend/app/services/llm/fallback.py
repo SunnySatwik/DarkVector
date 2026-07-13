@@ -82,6 +82,22 @@ class FallbackAI:
             sev = str(getattr(investigation, "severity", "HIGH")).upper() if hasattr(investigation, "severity") else str(investigation.get("severity", "HIGH")).upper()
             risk = getattr(investigation, "risk_score", 90.0) if hasattr(investigation, "risk_score") else investigation.get("risk_score", 90.0)
             
+            # Safely fetch detection confidence
+            det_conf = None
+            if hasattr(investigation, "confidence") and getattr(investigation, "confidence") is not None:
+                det_conf = getattr(investigation, "confidence")
+            elif "confidence" in alert_json:
+                det_conf = alert_json["confidence"]
+            elif "confidence" in alert_details:
+                det_conf = alert_details["confidence"]
+            
+            conf_str = ""
+            if det_conf is not None:
+                val = float(det_conf)
+                if val <= 1.0:
+                    val = val * 100
+                conf_str = f" with {val:.0f}% detection confidence"
+
             mitre = context.get("mitre") or {}
             tech_id = mitre.get("technique_id")
             tech_name = mitre.get("technique_name")
@@ -90,9 +106,11 @@ class FallbackAI:
             return (
                 f"This investigation was classified as {sev} severity with a risk score of {risk:.1f}% "
                 f"because the detected activity matched the behavioral pattern for '{title}'{mitre_str}.\n\n"
+                f"The underlying detection has{conf_str}. "
                 f"The classification reflects the risk of the observed behavioral pattern. "
-                f"The available evidence confirms the execution, but does not by itself establish malicious intent."
+                f"The available evidence confirms the execution, but does not by itself establish malicious intent or host compromise."
             )
+
 
         if "isolate" in q or "quarantine" in q:
             return (

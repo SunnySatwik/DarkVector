@@ -12,146 +12,21 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Card, Button, Badge, PageHeader } from "../components/ui/DesignSystem";
-import { useInvestigation, useInvestigations } from "../hooks/useInvestigations";
+import { useInvestigationWorkspace, useInvestigations } from "../hooks/useInvestigations";
 import { Alert, Severity } from "../types";
 import { ContextEnrichment } from "../api/types";
-
-interface Node {
-  id: string;
-  label: string;
-  type: "pod" | "process" | "database" | "external-ip";
-  severity: Severity | "none";
-  x: number;
-  y: number;
-  details: string;
-}
-
-interface Link {
-  source: string;
-  target: string;
-  isThreat: boolean;
-}
+import {
+  Node,
+  Link,
+  buildGraphData,
+  buildBehavioralGraphData
+} from "../lib/graphBuilder";
 
 interface ThreatGraphProps {
   activeAlert?: Alert | null;
   activeInvestigationId?: string | null;
 }
 
-function buildGraphData(alert: Alert, context?: ContextEnrichment): { nodes: Node[]; links: Link[] } {
-  const nodes: Node[] = [];
-  const links: Link[] = [];
-
-  // 1. Source Node (always exists)
-  nodes.push({
-    id: "source",
-    label: alert.source,
-    type: alert.source.includes("db-") ? "database" : "pod",
-    severity: alert.severity,
-    x: 100,
-    y: 150,
-    details: `Incident origin source asset node '${alert.source}'. Initial classification: ${alert.severity.toUpperCase()}. Category: ${alert.category}.`,
-  });
-
-  let lastNodeId = "source";
-
-  // 2. User Node (if username exists)
-  if (alert.details?.username) {
-    nodes.push({
-      id: "user",
-      label: alert.details.username,
-      type: "pod",
-      severity: "none",
-      x: 250,
-      y: 70,
-      details: `Associated credential account session: ${alert.details.username}. Verified alignment with historic location profile.`,
-    });
-    links.push({ source: "source", target: "user", isThreat: false });
-  }
-
-  // 3. Parent Process Node (if parentProcess exists)
-  if (alert.details?.parentProcess) {
-    nodes.push({
-      id: "parent-process",
-      label: alert.details.parentProcess,
-      type: "pod",
-      severity: "none",
-      x: 250,
-      y: 230,
-      details: `Parent execution process lineage node: ${alert.details.parentProcess}. Spawned by container initialization sequence.`,
-    });
-    links.push({ source: "source", target: "parent-process", isThreat: false });
-    lastNodeId = "parent-process";
-  }
-
-  // 4. Spawned Binary Node (if processPath exists)
-  if (alert.details?.processPath) {
-    nodes.push({
-      id: "process",
-      label: alert.details.processPath,
-      type: "process",
-      severity: "critical",
-      x: 430,
-      y: 150,
-      details: `Flagged anomalous execution node: ${alert.details.processPath}. Command line arguments: "${alert.details.commandLine || 'none'}". Isolation Forest score: ${alert.score}/100.`,
-    });
-    links.push({ source: lastNodeId, target: "process", isThreat: true });
-    lastNodeId = "process";
-  }
-
-  // 5. Remote Destination Node (if ipAddress exists)
-  if (alert.details?.ipAddress) {
-    const rep = context?.threat_intelligence.reputation || "unknown";
-    const sev = rep === "malicious" ? "critical" : rep === "suspicious" ? "high" : "none";
-    nodes.push({
-      id: "remote-ip",
-      label: `${alert.details.ipAddress}${alert.details.port ? `:${alert.details.port}` : ""}`,
-      type: "external-ip",
-      severity: sev as any,
-      x: 610,
-      y: 150,
-      details: `Remote connection endpoint: ${alert.details.ipAddress} on port ${alert.details.port || 'N/A'}. Reputation: ${rep.toUpperCase()}. Category: ${context?.threat_intelligence.category || 'Unclassified'}. Summary: ${context?.threat_intelligence.summary || 'No threat details.'}`,
-    });
-    links.push({ source: lastNodeId, target: "remote-ip", isThreat: true });
-  }
-
-  return { nodes, links };
-}
-
-/**
- * Build graph from a behavioral investigation where alert may be null.
- * Uses process evidence and detection data from the investigation workspace API.
- */
-function buildBehavioralGraphData(
-  investigation: { investigation_id: string; title: string; severity: string },
-): { nodes: Node[]; links: Link[] } {
-  const nodes: Node[] = [];
-  const links: Link[] = [];
-
-  // Investigation root node
-  nodes.push({
-    id: "investigation",
-    label: investigation.title,
-    type: "pod",
-    severity: investigation.severity.toLowerCase() as Severity,
-    x: 100,
-    y: 150,
-    details: `Behavioral investigation ${investigation.investigation_id}: ${investigation.title}. Detected via deterministic rule-based engine.`,
-  });
-
-  // Detection node
-  nodes.push({
-    id: "detection",
-    label: "Behavioral Detection",
-    type: "process",
-    severity: investigation.severity.toLowerCase() as Severity,
-    x: 360,
-    y: 150,
-    details: `Correlated behavioral detection group. Risk elevated by process execution patterns and MITRE-mapped techniques.`,
-  });
-  links.push({ source: "investigation", target: "detection", isThreat: true });
-
-  return { nodes, links };
-}
 
 export default function ThreatGraph({
   activeAlert,
@@ -169,8 +44,8 @@ export default function ThreatGraph({
     return undefined;
   }, [activeInvestigationId, investigations]);
 
-  // Load detailed investigation state (including alerts and context lookups)
-  const { data: detailData, isPending: isDetailPending, isError: isDetailError } = useInvestigation(targetId);
+  // Load detailed investigation workspace state (including alerts, processes, detections, and context)
+  const { data: detailData, isPending: isDetailPending, isError: isDetailError } = useInvestigationWorkspace(targetId);
 
   const isPending = isListPending || isDetailPending;
   const isError = isListError || isDetailError;
@@ -185,12 +60,13 @@ export default function ThreatGraph({
     if (!detailData) return { nodes: [], links: [] };
     const alertData = detailData.alert as Alert | null;
     if (!alertData) {
-      // Behavioral investigation — alert is null, build from investigation metadata
-      return buildBehavioralGraphData(detailData.investigation);
+      // Behavioral investigation — alert is null, build from investigation metadata and telemetry evidence
+      return buildBehavioralGraphData(detailData);
     }
     const contextData = detailData.analysis?.context;
     return buildGraphData(alertData, contextData);
   }, [detailData]);
+
 
   // Default to selecting the source or process node when graph is loaded
   useEffect(() => {
@@ -340,12 +216,19 @@ export default function ThreatGraph({
                   // Node icons
                   const renderIcon = (type: string) => {
                     switch (type) {
+                      case "investigation":
+                        return <Shield className="w-4 h-4" />;
+                      case "detection":
+                        return <AlertTriangle className="w-4 h-4" />;
+                      case "host":
                       case "pod":
                         return <Server className="w-4 h-4" />;
                       case "process":
                         return <Cpu className="w-4 h-4" />;
                       case "database":
                         return <Database className="w-4 h-4" />;
+                      case "mitre":
+                        return <Network className="w-4 h-4" />;
                       default:
                         return <ExternalLink className="w-4 h-4" />;
                     }
@@ -365,9 +248,11 @@ export default function ThreatGraph({
                           r="28"
                           fill="none"
                           stroke={
-                            node.severity === "critical"
+                            node.type === "detection" || node.severity === "critical"
                               ? "rgba(239, 68, 68, 0.25)"
-                              : "rgba(59, 130, 246, 0.25)"
+                              : node.type === "investigation"
+                                ? "rgba(168, 85, 247, 0.25)"
+                                : "rgba(59, 130, 246, 0.25)"
                           }
                           strokeWidth="2"
                         />
@@ -382,13 +267,21 @@ export default function ThreatGraph({
                         stroke={
                           isIsolated
                             ? "#23262F"
-                            : node.severity === "critical"
-                              ? "#EF4444"
-                              : node.severity === "high"
-                                ? "#F59E0B"
-                                : node.severity === "medium"
+                            : node.type === "investigation"
+                              ? "#A855F7"
+                              : node.type === "detection"
+                                ? "#EF4444"
+                                : node.type === "process"
                                   ? "#3B82F6"
-                                  : "#23262F"
+                                  : node.type === "mitre"
+                                    ? "#F59E0B"
+                                    : node.severity === "critical"
+                                      ? "#EF4444"
+                                      : node.severity === "high"
+                                        ? "#F59E0B"
+                                        : node.severity === "medium"
+                                          ? "#3B82F6"
+                                          : "#23262F"
                         }
                         strokeWidth={isSelected ? "2" : "1.2"}
                       />
@@ -399,7 +292,23 @@ export default function ThreatGraph({
                         y={node.y - 8}
                         width="16"
                         height="16"
-                        className={`pointer-events-none ${isIsolated ? "text-gray-600" : node.severity === "critical" ? "text-red-400" : node.severity === "medium" ? "text-blue-400" : "text-gray-400"}`}
+                        className={`pointer-events-none ${
+                          isIsolated 
+                            ? "text-gray-600" 
+                            : node.type === "investigation"
+                              ? "text-purple-400"
+                              : node.type === "detection"
+                                ? "text-red-400"
+                                : node.type === "process"
+                                  ? "text-blue-400"
+                                  : node.type === "mitre"
+                                    ? "text-yellow-400"
+                                    : node.severity === "critical" 
+                                      ? "text-red-400" 
+                                      : node.severity === "medium" 
+                                        ? "text-blue-400" 
+                                        : "text-gray-400"
+                        }`}
                       >
                         <div className="flex items-center justify-center">
                           {renderIcon(node.type)}
@@ -435,27 +344,24 @@ export default function ThreatGraph({
 
             {/* Quick legend footer */}
             <div className="px-4 py-3 border-t border-[#23262F]/40 bg-[#161A22]/20 flex items-center justify-between text-[10px] font-mono text-gray-500">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <span className="flex items-center gap-1">
-                  <circle cx="4" cy="4" r="3" fill="#EF4444" /> Target Host / Threat Vector
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500 inline-block" /> Investigation
                 </span>
                 <span className="flex items-center gap-1">
-                  <circle cx="4" cy="4" r="3" fill="#3B82F6" /> Connected Pod / Asset
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" /> Detection
                 </span>
                 <span className="flex items-center gap-1">
-                  <line
-                    x1="0"
-                    y1="4"
-                    x2="8"
-                    y2="4"
-                    stroke="#EF4444"
-                    strokeWidth="2"
-                    strokeDasharray="2,2"
-                  />{" "}
-                  Socket egress connection
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" /> Process
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" /> MITRE ATT&CK
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block" /> Host
                 </span>
               </div>
-              <span>Click nodes to inspect telemetry metadata</span>
+              <span>Click nodes to inspect metadata</span>
             </div>
           </Card>
         </div>
@@ -475,7 +381,7 @@ export default function ThreatGraph({
                   <div className="flex items-center justify-between border-b border-[#23262F]/40 pb-3">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-blue-400" />
-                      <span className="font-mono text-xs font-bold text-gray-200">Asset Audit</span>
+                      <span className="font-mono text-xs font-bold text-gray-200">Evidence Inspector</span>
                     </div>
                     <Badge
                       variant={selectedNode.severity === "none" ? "default" : selectedNode.severity}
@@ -487,7 +393,7 @@ export default function ThreatGraph({
                   <div className="space-y-3">
                     <div>
                       <div className="text-[10px] font-mono text-gray-500">
-                        Asset Name
+                        Entity Name
                       </div>
                       <div className="text-xs font-mono font-bold text-gray-200 mt-0.5 break-all">
                         {selectedNode.label}
@@ -496,7 +402,7 @@ export default function ThreatGraph({
 
                     <div>
                       <div className="text-[10px] font-mono text-gray-500">
-                        Asset Category
+                        Entity Category
                       </div>
                       <div className="text-xs text-gray-400 capitalize font-medium mt-0.5">
                         {selectedNode.type}
@@ -507,31 +413,34 @@ export default function ThreatGraph({
                       <div className="text-[10px] font-mono text-gray-500">
                         Technical Forensic Details
                       </div>
-                      <p className="text-[11px] text-gray-400 leading-relaxed mt-1 font-sans bg-[#09090B] border border-[#23262F]/50 rounded-lg p-2.5">
+                      <p className="whitespace-pre-line text-[11px] text-gray-400 leading-relaxed mt-1 font-sans bg-[#09090B] border border-[#23262F]/50 rounded-lg p-2.5 break-all">
                         {selectedNode.details}
                       </p>
                     </div>
                   </div>
 
-                  <div className="border-t border-[#23262F]/40 pt-3.5">
-                    {isolatedNodes.includes(selectedNode.id) ? (
-                      <Button
-                        variant="success"
-                        onClick={() => handleIsolate(selectedNode.id)}
-                        className="w-full py-2 cursor-pointer font-bold"
-                      >
-                        Re-establish Asset Trust
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="danger"
-                        onClick={() => handleIsolate(selectedNode.id)}
-                        className="w-full py-2 cursor-pointer font-bold"
-                      >
-                        Isolate / Contain Asset
-                      </Button>
-                    )}
-                  </div>
+                  {/* Containment actions only appear where supported (host or process or legacy pod/source) */}
+                  {(selectedNode.type === "host" || selectedNode.type === "process" || selectedNode.type === "pod" || selectedNode.id === "source") && (
+                    <div className="border-t border-[#23262F]/40 pt-3.5">
+                      {isolatedNodes.includes(selectedNode.id) ? (
+                        <Button
+                          variant="success"
+                          onClick={() => handleIsolate(selectedNode.id)}
+                          className="w-full py-2 cursor-pointer font-bold text-xs font-mono"
+                        >
+                          {selectedNode.type === "process" ? "Re-enable Process" : "Re-establish Host Trust"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="danger"
+                          onClick={() => handleIsolate(selectedNode.id)}
+                          className="w-full py-2 cursor-pointer font-bold text-xs font-mono"
+                        >
+                          {selectedNode.type === "process" ? "Terminate Process" : "Isolate Host"}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </Card>
               </motion.div>
             ) : (
@@ -548,3 +457,4 @@ export default function ThreatGraph({
     </div>
   );
 }
+
