@@ -1,6 +1,8 @@
 # response_validator.py
 
 import re
+from typing import Any
+
 
 
 class ResponseValidator:
@@ -211,7 +213,36 @@ class ResponseValidator:
                 )
 
     @classmethod
-    def _validate_all(cls, text: str, knowledge_doc: str = None) -> None:
+    def validate_policy_conformance(cls, text: str, policy: Any = None) -> None:
+        """
+        Enforces policy restrictions structurally on the output.
+        - Checks for forbidden headers (e.g. "### Business Impact").
+        - If SHAP is excluded, rejects headers containing SHAP.
+        """
+        if not policy:
+            return
+
+        text_lower = text.lower()
+        
+        # Check explicit forbidden section headings
+        for forbidden in policy.forbidden_sections:
+            if forbidden.lower() in text_lower:
+                # Match exact section header string
+                raise ValueError(
+                    f"Response validator failed: Forbidden section header or keyword '{forbidden}' detected in response."
+                )
+
+        # If SHAP is excluded, make sure we do not have a SHAP attribution section header
+        from app.services.llm.policy import EvidenceCategory
+        if EvidenceCategory.SHAP_EVIDENCE in policy.excluded_evidence:
+            shap_header_pattern = r"(?:^|\n)\s*#+\s*[^#\n]*\bshap\b"
+            if re.search(shap_header_pattern, text_lower):
+                raise ValueError(
+                    "Response validator failed: Response contains a SHAP section header, but SHAP evidence is excluded."
+                )
+
+    @classmethod
+    def _validate_all(cls, text: str, knowledge_doc: str = None, policy: Any = None) -> None:
         """
         Runs formatting and semantic checks sequentially.
         """
@@ -240,20 +271,21 @@ class ResponseValidator:
             cls.validate_process_claims(text, knowledge_doc)
         cls.validate_confidence_semantics(text)
         cls.validate_evidence_references(text)
+        cls.validate_policy_conformance(text, policy)
 
     @classmethod
-    def validate_chat(cls, text: str, knowledge_doc: str = None) -> str:
+    def validate_chat(cls, text: str, knowledge_doc: str = None, policy: Any = None) -> str:
         """
         Validates a generated chat response.
         """
         if not text or not text.strip():
             raise ValueError("Response validator failed: Chat response is empty.")
 
-        cls._validate_all(text, knowledge_doc)
+        cls._validate_all(text, knowledge_doc, policy)
         return text.strip()
 
     @classmethod
-    def validate_summary(cls, text: str, knowledge_doc: str = None) -> str:
+    def validate_summary(cls, text: str, knowledge_doc: str = None, policy: Any = None) -> str:
         """
         Validates a generated investigation summary.
         """
@@ -262,11 +294,11 @@ class ResponseValidator:
                 "Response validator failed: Summary response is empty."
             )
 
-        cls._validate_all(text, knowledge_doc)
+        cls._validate_all(text, knowledge_doc, policy)
         return text.strip()
 
     @classmethod
-    def validate_report(cls, text: str, knowledge_doc: str = None) -> str:
+    def validate_report(cls, text: str, knowledge_doc: str = None, policy: Any = None) -> str:
         """
         Validates a generated markdown report.
         """
@@ -303,5 +335,6 @@ class ResponseValidator:
                 f"Response validator failed: Required markdown sections missing: {missing}"
             )
 
-        cls._validate_all(text, knowledge_doc)
+        cls._validate_all(text, knowledge_doc, policy)
         return text.strip()
+

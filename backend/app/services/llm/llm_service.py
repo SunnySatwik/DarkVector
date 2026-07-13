@@ -1,9 +1,11 @@
 import logging
 import os
 import time
+from typing import Any
 
 from google import genai
 from dotenv import load_dotenv
+
 
 from app.services.llm.fallback import FallbackAI
 from app.services.context_builder import ContextBuilder
@@ -75,35 +77,62 @@ class LLMService:
         context_data: dict,
         analyst_question: str | None,
         route: PromptRoute,
-    ) -> tuple[BehavioralReasoningContext, str, list]:
+        policy: Any = None,
+    ) -> tuple[BehavioralReasoningContext, str, list, dict]:
         """
         Shared behavioral reasoning preparation logic.
-        Instantiates context, builds retrieval query, retrieves RAG documents,
-        enriches knowledge doc and context data.
+        Resolves policy, projects scoped context, builds retrieval query,
+        retrieves RAG documents, and enriches knowledge doc.
         """
+        # 1. Resolve policy if not provided
+        if not policy:
+            from app.services.llm.policy import PolicyResolver
+            policy = PolicyResolver.resolve(route, analyst_question, context_data)
+
+        # Log policy constraints for observability (Requirement 11 & 12)
+        logger.info("[AI Scope] Resolved policy: %s", policy.to_log_dict())
+
+        # 2. Project scoped context to guarantee canonical context immutability (Requirement 2)
+        from app.services.llm.scoping import ContextScoper
+        scoped_context = ContextScoper.project(context_data, policy)
+
+        # 3. Instantiate BehavioralReasoningContext from scoped context
+        behavioral_context = BehavioralReasoningContext.from_context(scoped_context)
+
+        # 4. Generate KnowledgePack using scoped context
+        knowledge_doc = KnowledgePack.generate(scoped_context)
+
+        # 5. Build query using RetrievalQueryBuilder
         from app.services.llm.rag.query_builder import RetrievalQueryBuilder
-        from app.services.llm.rag.retriever import KnowledgeRetriever
-
-        # 1. Instantiate BehavioralReasoningContext
-        behavioral_context = BehavioralReasoningContext.from_context(context_data)
-
-        # 2. Generate standard KnowledgePack
-        knowledge_doc = KnowledgePack.generate(context_data)
-
-        # 3. Build query using RetrievalQueryBuilder
         query = RetrievalQueryBuilder.build(analyst_question, behavioral_context)
 
-        # 4. Fetch RAG documents using query (or None if query is empty)
+        # 6. Fetch RAG documents using query (or None if query is empty)
         retrieved_docs = []
-        if query or not behavioral_context.is_behavioral:
-            retrieved_docs = KnowledgeRetriever.retrieve(route, query)
-        else:
-            retrieved_docs = KnowledgeRetriever.retrieve(route, None)
+        from app.services.llm.policy import RetrievalDecision
+        if policy.retrieval_decision != RetrievalDecision.SKIP:
+            from app.services.llm.rag.retriever import KnowledgeRetriever
+            if query or not behavioral_context.is_behavioral:
+                raw_docs = KnowledgeRetriever.retrieve(route, query, policy=policy)
+            else:
+                raw_docs = KnowledgeRetriever.retrieve(route, None, policy=policy)
+                
+            # Category and tag-based RAG filtering (Requirement 8)
+            # Remove any document that has a lexical score of 0.0 or is otherwise irrelevant
+            from app.services.llm.policy import PolicyResolver
+            retrieved_docs = PolicyResolver.filter_retrieved_documents(raw_docs, route, analyst_question)
+            
+            logger.info(
+                "[AI Retrieval] profile=%s documents_retrieved=%d documents_accepted=%d documents_rejected=%d",
+                route.value,
+                len(raw_docs),
+                len(retrieved_docs),
+                len(raw_docs) - len(retrieved_docs),
+            )
 
-        # 5. Enrich context_data for citations
-        context_data["retrieved_documents"] = retrieved_docs
+        # 7. Enrich scoped context for citations
+        scoped_context["retrieved_documents"] = retrieved_docs
 
-        # 6. Integrate retrieved documents into the knowledge doc
+        # 8. Integrate retrieved documents into the knowledge doc
         if retrieved_docs:
             doc_blocks = []
             for doc in retrieved_docs:
@@ -115,7 +144,7 @@ class LLMService:
             integrated_text = "\n\n## Retrieved Reference Material\n" + "\n\n".join(doc_blocks)
             knowledge_doc = f"{knowledge_doc}\n\n{integrated_text}"
 
-        return behavioral_context, knowledge_doc, retrieved_docs
+        return behavioral_context, knowledge_doc, retrieved_docs, scoped_context
 
     ####################################################################
     # SUMMARY
@@ -153,7 +182,7 @@ class LLMService:
             logger.info("[Context Builder] ✓ Context built")
 
             stage = "Behavioral Reasoning Prep"
-            beh_ctx, knowledge_doc, retrieved_docs = cls._prepare_reasoning(
+            beh_ctx, knowledge_doc, retrieved_docs, scoped_context = cls._prepare_reasoning(
                 context_data, analyst_question=None, route=PromptRoute.GENERAL
             )
             logger.info("[Reasoning Prep] ✓ Completed")
@@ -257,27 +286,31 @@ class LLMService:
             route = PromptRouter().route(intent_result.intent)
             logger.info("[Prompt Router] ✓ Intent: %s -> Route: %s (Confidence: %.2f)", intent_result.intent.value, route.value, intent_result.confidence)
 
+            # Resolve policy here (Requirement 3)
+            from app.services.llm.policy import PolicyResolver
+            policy = PolicyResolver.resolve(route, message, context_data)
+
             stage = "Behavioral Reasoning Prep"
-            beh_ctx, knowledge_doc, retrieved_docs = cls._prepare_reasoning(
-                context_data, analyst_question=message, route=route
+            beh_ctx, knowledge_doc, retrieved_docs, scoped_context = cls._prepare_reasoning(
+                context_data, analyst_question=message, route=route, policy=policy
             )
             logger.info("[Reasoning Prep] ✓ Completed")
 
             stage = "Prompt Builder"
-            prompt = PromptBuilder.chat(knowledge_doc, message, route, behavioral_context=beh_ctx)
+            prompt = PromptBuilder.chat(knowledge_doc, message, route, behavioral_context=beh_ctx, policy=policy)
             logger.info("[Prompt Builder] ✓ Prompt assembled")
 
             stage = "Gemini"
             raw_reply = cls._generate(prompt)
 
-            # Append citations
-            citations = EvidenceCitationBuilder.build(context_data)
+            # Append citations using scoped_context & policy (Requirement 8)
+            citations = EvidenceCitationBuilder.build(scoped_context, policy=policy, route=route)
             if citations:
                 citation_lines = "\n".join(f"• {c}" for c in citations)
                 raw_reply = f"{raw_reply}\n\nEvidence Used\n{citation_lines}"
 
             stage = "Response Validator"
-            reply = ResponseValidator.validate_chat(raw_reply, knowledge_doc)
+            reply = ResponseValidator.validate_chat(raw_reply, knowledge_doc, policy=policy)
             logger.info("[Validator] ✓ Passed")
 
             # Timing and Metrics Logging
@@ -319,6 +352,7 @@ class LLMService:
                 timeline,
                 message,
                 history,
+                policy=policy if 'policy' in locals() else None,
             )
 
             # Append citations in fallback
@@ -370,7 +404,7 @@ class LLMService:
             logger.info("[Context Builder] ✓ Context built")
 
             stage = "Behavioral Reasoning Prep"
-            beh_ctx, knowledge_doc, retrieved_docs = cls._prepare_reasoning(
+            beh_ctx, knowledge_doc, retrieved_docs, scoped_context = cls._prepare_reasoning(
                 context_data, analyst_question=None, route=PromptRoute.GENERAL
             )
             logger.info("[Reasoning Prep] ✓ Completed")

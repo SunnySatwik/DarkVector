@@ -1,6 +1,8 @@
 # prompt_builder.py
 
+from typing import Any
 from app.services.llm.routing.route import PromptRoute
+
 from app.services.llm.behavioral_context import BehavioralReasoningContext
 from .builders.general import GeneralPromptBuilder
 from .builders.explain_attack import ExplainAttackPromptBuilder
@@ -18,11 +20,13 @@ class PromptBuilder:
         question: str,
         route: PromptRoute = PromptRoute.GENERAL,
         behavioral_context: BehavioralReasoningContext | None = None,
+        policy: Any = None,
     ) -> str:
         """
         Instantiates the correct specialized builder class based on the given PromptRoute,
         calls build() on it, and returns the assembled prompt.
         """
+        from typing import Any
         builders = {
             PromptRoute.GENERAL: GeneralPromptBuilder,
             PromptRoute.EXPLAIN_ATTACK: ExplainAttackPromptBuilder,
@@ -35,9 +39,10 @@ class PromptBuilder:
 
         builder_cls = builders.get(route, GeneralPromptBuilder)
         builder_inst = builder_cls(
-            knowledge_doc, question, behavioral_context=behavioral_context
+            knowledge_doc, question, behavioral_context=behavioral_context, policy=policy
         )
         return builder_inst.build()
+
 
     @staticmethod
     def summary(

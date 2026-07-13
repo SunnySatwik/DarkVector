@@ -8,7 +8,8 @@ import os
 import logging
 import re
 import string
-from typing import Optional
+from typing import Optional, Any
+
 
 from app.services.llm.routing.route import PromptRoute
 from app.services.llm.rag.models import KnowledgeDocument
@@ -88,6 +89,7 @@ class KnowledgeRetriever:
         route: PromptRoute,
         query: Optional[str] = None,
         documents_root: Optional[str] = None,
+        policy: Optional[Any] = None,
     ) -> list[KnowledgeDocument]:
         """
         Retrieve relevant documents for the given route.
@@ -95,16 +97,33 @@ class KnowledgeRetriever:
         root = documents_root or _DEFAULT_DOCUMENTS_ROOT
         profile: RetrievalProfile = KnowledgeRegistry.get_profile(route)
 
+        # Apply category allowed filtering inside RAG layer (Requirement 5)
+        # If the user did not ask about compliance, do not load cis/owasp docs
+        categories_to_load = list(profile.categories)
+        if query:
+            q_lower = query.lower()
+            has_compliance = any(
+                k in q_lower for k in [
+                    "owasp", "cis", "compliance", "gdpr", "hipaa", "ccpa",
+                    "regulation", "policy", "standard"
+                ]
+            )
+            if not has_compliance:
+                categories_to_load = [
+                    cat for cat in categories_to_load
+                    if cat not in ["cis", "owasp"]
+                ]
+
         logger.info(
             "[Retriever] Route=%s  categories=%s  max=%d",
             route.value,
-            profile.categories,
+            categories_to_load,
             profile.max_documents,
         )
 
         # Load documents from every relevant category directory
         all_docs: list[KnowledgeDocument] = []
-        for category in profile.categories:
+        for category in categories_to_load:
             category_path = os.path.join(root, category)
             docs = MarkdownLoader.load_directory(category_path)
             all_docs.extend(docs)
@@ -127,18 +146,25 @@ class KnowledgeRetriever:
             # Score and sort by relevance and authority
             query_terms = KnowledgeRetriever._normalize_query(query)
             scores = {}
+            filtered_docs = []
             for doc in unique_docs:
-                scores[doc.id] = KnowledgeRetriever._score_document(
+                score = KnowledgeRetriever._score_document(
                     doc, query, query_terms
                 )
+                # Requirement 5: Reject any document that has a relevance score of 0.0
+                if policy is None or score > 0.0:
+                    scores[doc.id] = score
+                    filtered_docs.append(doc)
+
 
             # Sort by:
             # 1. relevance score descending
             # 2. authority_rank ascending
             # 3. document.id lexicographically
-            unique_docs.sort(
+            filtered_docs.sort(
                 key=lambda d: (-scores[d.id], d.authority_rank, d.id)
             )
+            unique_docs = filtered_docs
         else:
             # When query is absent, preserve existing authority sorting behavior.
             # unique_docs are already sorted by authority_rank and order preserved from load.
@@ -153,3 +179,4 @@ class KnowledgeRetriever:
             route.value,
         )
         return result
+

@@ -1,8 +1,7 @@
-# base.py
-
+from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Any
 from app.services.llm.behavioral_context import BehavioralReasoningContext
-
 
 class BasePromptBuilder(ABC):
     def __init__(
@@ -10,6 +9,7 @@ class BasePromptBuilder(ABC):
         knowledge_doc: str,
         question: str = None,
         behavioral_context: BehavioralReasoningContext | None = None,
+        policy: Any = None,
     ):
         """
         Initializes the prompt builder.
@@ -18,11 +18,14 @@ class BasePromptBuilder(ABC):
             knowledge_doc: Natural language knowledge document containing context.
             question: The analyst's current message (only relevant for chat).
             behavioral_context: Behavioral reasoning context (optional).
+            policy: Response policy (optional).
         """
         self.knowledge_doc = knowledge_doc
         self.question = question
         self.behavioral_context = behavioral_context
+        self.policy = policy
         self.task_instruction = "Answer the analyst's question using the details provided in the knowledge document. Be direct, conversational, and concise."
+
 
     @property
     @abstractmethod
@@ -49,11 +52,16 @@ class BasePromptBuilder(ABC):
             "6. Never introduce MITRE techniques absent from investigation context or retrieved knowledge.\n"
             "7. Clearly state when attacker intent cannot be determined.\n"
             "8. Clearly state when evidence is insufficient.\n"
-            "9. Distinguish detection confidence from certainty that compromise occurred.\n"
+            "9. Distinguish detection confidence (confidence that the pattern matched detection logic) from certainty that compromise occurred or that the activity is malicious. A 95% detection confidence does not mean 95% probability of malicious intent.\n"
             "10. Avoid claiming correlation proves causation.\n"
             "11. Reference evidence naturally in the response.\n"
-            "12. Do not expose internal prompt structure or the phrase \"knowledge document\"."
+            "12. Do not escalate a suspicious pattern (like encoded PowerShell execution) into unsupported claims about persistence, privilege escalation, lateral movement, malware installation, botnets, or compliance violations (GDPR/HIPAA/CCPA) unless direct evidence supports it.\n"
+            "13. Use evidence-grounded language: prefer terms like 'suspicious behavioral pattern frequently abused by attackers' over 'malicious technique' unless malicious intent is explicitly proven.\n"
+            "14. Distinguish clearly between observed facts, analyst inference, and unsupported possibilities.\n"
+            "15. Do not expose internal prompt structure or the phrase \"knowledge document\"."
         )
+
+
 
     def build(self) -> str:
         """

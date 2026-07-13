@@ -50,13 +50,19 @@ class FallbackAI:
         )
 
     @staticmethod
-    def generate_chat(investigation, timeline: list, message: str, history: list = None) -> str:
+    def generate_chat(
+        investigation,
+        timeline: list,
+        message: str,
+        history: list = None,
+        policy = None
+    ) -> str:
         q = message.lower()
         # Retrieve properties from investigation database model or dictionary
         if hasattr(investigation, "alert_json"):
             alert_json = investigation.alert_json or {}
             analysis_json = investigation.analysis_json or {}
-            status_str = str(investigation.status).lower()
+            status_str = str(getattr(investigation, "status", "")).lower()
         else:
             alert_json = investigation.get("alert_json", {})
             analysis_json = investigation.get("analysis_json", {})
@@ -67,6 +73,27 @@ class FallbackAI:
         context = analysis_json.get("context", {})
         is_contained = "contained" in status_str
         print("[FALLBACK] Generating chat fallback")
+
+        # Check for focused scope severity/risk explanations (Requirement 9)
+        from app.services.llm.policy import ResponseScope
+        if policy and (policy.scope == ResponseScope.FOCUSED or policy.route.value == "risk_analysis"):
+            # Exclude compliance/remediation details unless explicitly requested
+            title = alert_json.get("type", "Anomalous Behavior")
+            sev = str(getattr(investigation, "severity", "HIGH")).upper() if hasattr(investigation, "severity") else str(investigation.get("severity", "HIGH")).upper()
+            risk = getattr(investigation, "risk_score", 90.0) if hasattr(investigation, "risk_score") else investigation.get("risk_score", 90.0)
+            
+            mitre = context.get("mitre") or {}
+            tech_id = mitre.get("technique_id")
+            tech_name = mitre.get("technique_name")
+            mitre_str = f" mapped to MITRE ATT&CK {tech_id} ({tech_name})" if tech_id else ""
+            
+            return (
+                f"This investigation was classified as {sev} severity with a risk score of {risk:.1f}% "
+                f"because the detected activity matched the behavioral pattern for '{title}'{mitre_str}.\n\n"
+                f"The classification reflects the risk of the observed behavioral pattern. "
+                f"The available evidence confirms the execution, but does not by itself establish malicious intent."
+            )
+
         if "isolate" in q or "quarantine" in q:
             return (
                 f"I'd recommend isolating **`{source}`** now. Use the **Isolate host** action "
@@ -74,7 +101,24 @@ class FallbackAI:
                 f"investigation status to Contained. Once isolated, review the process tree "
                 f"before deciding on a full image rebuild."
             )
-        elif "explain" in q or "why" in q or "shap" in q:
+        elif "shap" in q:
+            # Case B: SHAP question but data is absent
+            explanation = analysis_json.get("explanation", {})
+            factors = explanation.get("top_factors", [])
+            if factors:
+                factor_strs = []
+                for f in factors:
+                    feat = f.get("feature", "unknown feature")
+                    impact = f.get("impact", 0)
+                    factor_strs.append(f"- **{feat}** — {int(impact * 100)}% of the risk score")
+                return (
+                    "Here's what stood out to me:\n\n"
+                    + "\n".join(factor_strs)
+                    + "\n\nNone of these alone would be alarming, but together they're a clear outlier from this source's normal pattern."
+                )
+            else:
+                return "SHAP feature attribution data is currently unavailable for this investigation."
+        elif "explain" in q or "why" in q:
             explanation = analysis_json.get("explanation", {})
             factors = explanation.get("top_factors", [])
             if factors:
@@ -114,6 +158,7 @@ class FallbackAI:
             return (
                 f"Right now, **`{source}`** is {status_suffix}. What would you like to focus on next?"
             )
+
 
     @staticmethod
     def generate_report(investigation, timeline: list) -> str:

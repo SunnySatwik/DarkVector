@@ -1,86 +1,96 @@
-# citations.py
-
+from typing import Any
 
 class EvidenceCitationBuilder:
     @staticmethod
-    def build(context: dict) -> list[str]:
+    def build(context: dict, policy: Any = None, route: Any = None) -> list[str]:
         """
         Determines what evidence components exist in the active investigation context
-        and builds a list of clean citation strings.
+        and builds a list of clean citation strings based on scoped context and policy.
 
         Args:
-            context: Compiled ContextBuilder dictionary.
+            context: Scoped ContextBuilder dictionary.
+            policy: Resolved ResponsePolicy.
+            route: PromptRoute.
 
         Returns:
             A list of source citation strings in a deterministic, sequential order.
         """
         citations = []
+        from app.services.llm.policy import EvidenceCategory
+
+        # Helper to check if category is allowed/excluded
+        def is_allowed(category: EvidenceCategory) -> bool:
+            if not policy:
+                return True
+            return category not in policy.excluded_evidence
 
         # 1. Behavioral Detection Evidence
         beh = context.get("behavioral_context")
-        if beh and beh.get("detections"):
+        if beh and beh.get("detections") and is_allowed(EvidenceCategory.DETECTION_EVIDENCE):
             citations.append("Behavioral Detection Evidence")
 
         # 2. Process Execution Evidence
         proc_ev = context.get("process_evidence")
-        if proc_ev:
+        if proc_ev and is_allowed(EvidenceCategory.PROCESS_EVIDENCE):
             citations.append("Process Execution Evidence")
 
         # 3. Detection Correlation
         corr = context.get("correlation_context")
-        if corr:
+        if corr and is_allowed(EvidenceCategory.CORRELATION_EVIDENCE):
             citations.append("Detection Correlation")
 
         # 4. MITRE ATT&CK (Deduplicated and sorted technique IDs)
-        mitre_mappings = context.get("mitre_mappings") or []
-        if mitre_mappings:
-            for mapping in mitre_mappings:
-                tech_id = mapping.get("technique_id")
+        if is_allowed(EvidenceCategory.MITRE_EVIDENCE):
+            mitre_mappings = context.get("mitre_mappings") or []
+            if mitre_mappings:
+                for mapping in mitre_mappings:
+                    tech_id = mapping.get("technique_id")
+                    if tech_id and tech_id != "N/A":
+                        citations.append(f"MITRE ATT&CK {tech_id}")
+            else:
+                # Fallback legacy single-mitre mapping
+                mitre = context.get("mitre") or {}
+                tech_id = mitre.get("technique_id")
                 if tech_id and tech_id != "N/A":
                     citations.append(f"MITRE ATT&CK {tech_id}")
-        else:
-            # Fallback legacy single-mitre mapping
-            mitre = context.get("mitre") or {}
-            tech_id = mitre.get("technique_id")
-            if tech_id and tech_id != "N/A":
-                citations.append(f"MITRE ATT&CK {tech_id}")
 
         # 5. Threat Intelligence
         ti = context.get("threat_intelligence") or {}
         reputation = ti.get("reputation")
-        if reputation and reputation != "N/A":
+        if reputation and reputation != "N/A" and is_allowed(EvidenceCategory.TELEMETRY_EVIDENCE):
             citations.append("Threat Intelligence")
 
         # 6. SHAP factors
         shap = context.get("shap_factors") or {}
-        if shap and shap.get("top_factors"):
+        if shap and shap.get("top_factors") and is_allowed(EvidenceCategory.SHAP_EVIDENCE):
             citations.append("SHAP Feature Attribution")
 
         # 7. Evidence Graph
         graph = context.get("evidence_graph") or {}
-        if graph and graph.get("nodes"):
+        if graph and graph.get("nodes") and is_allowed(EvidenceCategory.TELEMETRY_EVIDENCE):
             citations.append("Evidence Graph")
 
         # 8. Timeline
         timeline = context.get("timeline") or []
-        if timeline:
+        if timeline and is_allowed(EvidenceCategory.TIMELINE_EVIDENCE):
             citations.append("Investigation Timeline")
 
         # 9. Conversation History
         conv = context.get("conversation") or {}
-        if conv and (conv.get("recent") or conv.get("summary")):
+        if conv and (conv.get("recent") or conv.get("summary")) and is_allowed(EvidenceCategory.CONVERSATION_HISTORY):
             citations.append("Conversation History")
 
-        # 10. Retrieved RAG Documents
-        retrieved_docs = context.get("retrieved_documents") or []
-        seen_rag = set()
-        for doc in retrieved_docs:
-            if doc.id not in seen_rag:
-                seen_rag.add(doc.id)
-                if doc.source:
-                    citations.append(f"Knowledge: {doc.title} ({doc.source})")
-                else:
-                    citations.append(f"Knowledge: {doc.title}")
+        # 10. Retrieved RAG Documents (Only cite if allowed by policy)
+        if is_allowed(EvidenceCategory.KNOWLEDGE_BASE_EVIDENCE):
+            retrieved_docs = context.get("retrieved_documents") or []
+            seen_rag = set()
+            for doc in retrieved_docs:
+                if doc.id not in seen_rag:
+                    seen_rag.add(doc.id)
+                    if doc.source:
+                        citations.append(f"Knowledge: {doc.title} ({doc.source})")
+                    else:
+                        citations.append(f"Knowledge: {doc.title}")
 
         # Deduplicate citations while preserving deterministic order
         unique_citations = []
@@ -91,3 +101,4 @@ class EvidenceCitationBuilder:
                 unique_citations.append(c)
 
         return unique_citations
+
