@@ -2,10 +2,23 @@
  * VectorPanel
  *
  * AI investigation partner for InvestigationWorkspace.
- * Shows consolidated case intelligence and chat capabilities.
+ *
+ * Sprint 15G.2 — Premium Vector AI Conversation Experience:
+ * - Spring-based spatial expansion from right rail origin
+ * - Multi-stage coordinated modal reveal
+ * - Ambient intelligence layer (pure CSS, no JS loops)
+ * - VectorOrb with 5 distinct states
+ * - VectorContextHeader: compact case identity + context strip
+ * - VectorMessage: premium prose typography + evidence citation block
+ * - VectorSuggestions: directional tool-style investigation actions
+ * - VectorComposer: stateful, auto-grow, reactive illumination
+ * - VectorReasoningIndicator: spectral waveform (not bouncing dots)
+ * - Full focus trap, Escape dismiss, focus restoration
+ * - prefers-reduced-motion: all motion collapses to opacity-only
+ * - Conversation state and draft preserved across minimize/reopen
  */
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, useId } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
 import {
@@ -22,9 +35,17 @@ import axios from "axios";
 import type { Alert } from "../../types";
 import type { ContextEnrichment } from "../../api/types";
 import { sendChatMessage } from "../../api/investigations";
-import { Skeleton, Badge } from "../ui/DesignSystem";
-
+import { Skeleton } from "../ui/DesignSystem";
 import { WorkspaceViewModel } from "../../lib/workspaceMapper";
+
+// Vector sub-components
+import { VectorOrb, VectorOrbState } from "../vector/VectorOrb";
+import { VectorMessage, ChatMessage } from "../vector/VectorMessage";
+import { VectorContextHeader } from "../vector/VectorContextHeader";
+import { VectorSuggestions } from "../vector/VectorSuggestions";
+import { VectorComposer } from "../vector/VectorComposer";
+import { VectorAmbient } from "../vector/VectorAmbient";
+import { VectorReasoningIndicator } from "../vector/VectorReasoningIndicator";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -53,6 +74,16 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── Focus trap utility ───────────────────────────────────────────────────────
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((el) => !el.closest("[aria-hidden]"));
+}
+
 // ─── Root Component ───────────────────────────────────────────────────────────
 
 export function VectorPanel({
@@ -69,20 +100,39 @@ export function VectorPanel({
   investigationId,
   workspace,
 }: VectorPanelProps) {
+  const dialogId = useId();
+
+  // ── Chat state ──
   const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<
-    { sender: "ai" | "user"; text: string; time: string }[]
-  >([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isResponding, setIsResponding] = useState(false);
+  const [isError, setIsError] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [conversationOpen, setConversationOpen] = useState(true);
+  const [newMessageIndex, setNewMessageIndex] = useState<number | null>(null);
 
+  // ── Refs ──
   const compactInputRef = useRef<HTMLInputElement>(null);
-  const expandedInputRef = useRef<HTMLTextAreaElement>(null);
+  const expandedComposerRef = useRef<HTMLTextAreaElement | null>(null);
   const expandedChatEndRef = useRef<HTMLDivElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const ignoreNextFocusRef = useRef(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
+  // ── Derived state ──
+  const currentKey =
+    workspace?.investigation?.investigation_id || investigationId || alert?.id;
+
+  const orbState = useMemo((): VectorOrbState => {
+    if (isError) return "error";
+    if (isResponding) return "reasoning";
+    if (chatInput.length > 0) return "typing";
+    return "idle";
+  }, [isError, isResponding, chatInput]);
+
+  // ── Utility: copy ──
   const handleCopy = (text: string, id: number) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -92,10 +142,8 @@ export function VectorPanel({
       setToastMessage(null);
     }, 2000);
   };
-  const [conversationOpen, setConversationOpen] = useState(true);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Escape key close listener
+  // ── Escape key ──
   useEffect(() => {
     if (!isExpanded) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -107,7 +155,35 @@ export function VectorPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isExpanded]);
 
-  // Focus restoration to compact composer
+  // ── Focus trap ──
+  useEffect(() => {
+    if (!isExpanded || !modalRef.current) return;
+    const modal = modalRef.current;
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = getFocusableElements(modal);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    modal.addEventListener("keydown", handleTab);
+    return () => modal.removeEventListener("keydown", handleTab);
+  }, [isExpanded]);
+
+  // ── Focus restoration ──
   useEffect(() => {
     if (!isExpanded) {
       ignoreNextFocusRef.current = true;
@@ -118,28 +194,30 @@ export function VectorPanel({
       return () => clearTimeout(timer);
     } else {
       setTimeout(() => {
-        expandedInputRef.current?.focus();
-      }, 50);
+        expandedComposerRef.current?.focus();
+      }, 350); // after spring animation
     }
   }, [isExpanded]);
 
-
-  // First-person analyst-voice summaries per category
+  // ── Summary texts ──
   const categorySummary: Record<string, string> = {
-    process: "I spotted a process that spawned outside the normal execution chain for this container. This pattern is consistent with a namespace escape attempt — the binary wasn't part of the expected runtime.",
-    network: "I found an unauthorized outbound connection that doesn't match this server's known egress patterns. The destination hasn't been seen in previous traffic from this host.",
-    authentication: "I noticed a login from an unusual location that doesn't match this account's historical access pattern. The timing and geography are both out of character.",
-    system: "I detected IAM policy changes that opened up privilege escalation paths beyond the expected role boundary. This kind of drift is often the first step in a lateral movement chain.",
+    process:
+      "I spotted a process that spawned outside the normal execution chain for this container. This pattern is consistent with a namespace escape attempt — the binary wasn't part of the expected runtime.",
+    network:
+      "I found an unauthorized outbound connection that doesn't match this server's known egress patterns. The destination hasn't been seen in previous traffic from this host.",
+    authentication:
+      "I noticed a login from an unusual location that doesn't match this account's historical access pattern. The timing and geography are both out of character.",
+    system:
+      "I detected IAM policy changes that opened up privilege escalation paths beyond the expected role boundary. This kind of drift is often the first step in a lateral movement chain.",
   };
 
   const summaryText = workspace
-    ? (workspace.isBehavioral
-        ? `Autonomous behavioral case containing ${workspace.detections.length} correlated detections.`
-        : workspace.legacyAnalysis?.explanation?.summary || "Legacy alert case resolved.")
-    : (categorySummary[alert.category] ??
-      "I detected anomalous activity that significantly deviates from the established baseline for this source.");
+    ? workspace.isBehavioral
+      ? `Autonomous behavioral case containing ${workspace.detections.length} correlated detections.`
+      : workspace.legacyAnalysis?.explanation?.summary || "Legacy alert case resolved."
+    : categorySummary[alert.category] ??
+      "I detected anomalous activity that significantly deviates from the established baseline for this source.";
 
-  // Conversational reasoning from SHAP factors
   const topFactor = alert.details.shapFactors?.[0];
   const secondFactor = alert.details.shapFactors?.[1];
 
@@ -151,16 +229,16 @@ export function VectorPanel({
       }. Together these pushed the risk score above the critical threshold.`
     : "I flagged this because the overall pattern deviates significantly from what I'd normally expect from this source. There isn't a single dominant signal — it's the combination that's unusual.";
 
-  const currentKey = workspace?.investigation?.investigation_id || investigationId || alert?.id;
-
-  // Reset messages and input when switching investigations
+  // ── Reset on investigation switch ──
   useEffect(() => {
     setChatMessages([]);
     setChatInput("");
     setIsExpanded(false);
+    setIsError(false);
+    setNewMessageIndex(null);
   }, [currentKey]);
 
-  // Seed initial Vector message when alert or workspace is loaded and chatMessages is empty
+  // ── Seed initial Vector message ──
   useEffect(() => {
     if (chatMessages.length > 0) return;
 
@@ -186,23 +264,23 @@ export function VectorPanel({
       }
 
       if (workspace.recommendations && workspace.recommendations.length > 0) {
-        text += `\n\n### • Recommended containment playbooks\n` +
+        text +=
+          `\n\n### • Recommended containment playbooks\n` +
           workspace.recommendations.map((r, i) => `${i + 1}. ${r}`).join("\n");
       }
 
-      setChatMessages([
-        {
-          sender: "ai",
-          text,
-          time,
-        },
-      ]);
+      setChatMessages([{ sender: "ai", text, time }]);
     } else if (alert) {
       const processPath = alert.details.processPath || "anomalous executable";
       const source = alert.source;
-      const technique = analysisContext?.mitre?.technique_name || "unauthorized execution";
-      const parentProcess = alert.details.parentProcess ? ` parented by \`${alert.details.parentProcess}\`` : "";
-      const outboundStr = alert.details.ipAddress ? ` and outbound traffic to \`${alert.details.ipAddress}\`` : "";
+      const technique =
+        analysisContext?.mitre?.technique_name || "unauthorized execution";
+      const parentProcess = alert.details.parentProcess
+        ? ` parented by \`${alert.details.parentProcess}\``
+        : "";
+      const outboundStr = alert.details.ipAddress
+        ? ` and outbound traffic to \`${alert.details.ipAddress}\``
+        : "";
 
       const text = `I reviewed this investigation before you opened it.
 
@@ -214,16 +292,11 @@ I'd start by verifying the parent process and confirming whether the affected wo
 
 Ask me anything about this investigation.`;
 
-      setChatMessages([
-        {
-          sender: "ai",
-          text,
-          time,
-        },
-      ]);
+      setChatMessages([{ sender: "ai", text, time }]);
     }
   }, [currentKey, chatMessages.length, workspace, alert, analysisContext]);
 
+  // ── Auto-scroll ──
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, isResponding]);
@@ -234,150 +307,182 @@ Ask me anything about this investigation.`;
     }
   }, [chatMessages, isResponding, isExpanded]);
 
-  // Context indicator chips
+  // ── Context chips ──
   const contextChips = useMemo(() => {
     const chips: string[] = [];
     if (workspace) {
       if (workspace.isBehavioral) {
         chips.push("Behavioral Case");
-        if (workspace.processes && workspace.processes.length > 0) {
+        if (workspace.processes && workspace.processes.length > 0)
           chips.push("Process Evidence");
-        }
-        if (workspace.correlation) {
-          chips.push("Correlation Context");
-        }
-        if (workspace.recommendations && workspace.recommendations.length > 0) {
+        if (workspace.correlation) chips.push("Correlation Context");
+        if (workspace.recommendations && workspace.recommendations.length > 0)
           chips.push("Remediation");
-        }
-        if (workspace.legacyAnalysis?.context?.mitre?.technique_id) {
-          chips.push(workspace.legacyAnalysis.context.mitre.technique_id);
-        } else if (workspace.primaryDetection?.mitre_technique) {
-          chips.push(workspace.primaryDetection.mitre_technique);
-        }
+        const mit =
+          workspace.legacyAnalysis?.context?.mitre?.technique_id ||
+          workspace.primaryDetection?.mitre_technique;
+        if (mit) chips.push(mit);
       } else {
         chips.push("Standard Alert");
-        if (workspace.legacyAnalysis) {
-          chips.push("Anomaly Model");
-        }
-        if (workspace.recommendations && workspace.recommendations.length > 0) {
+        if (workspace.legacyAnalysis) chips.push("Anomaly Model");
+        if (workspace.recommendations && workspace.recommendations.length > 0)
           chips.push("Remediation");
-        }
       }
     } else if (alert) {
       chips.push("Standard Alert");
-      if (alert.details.processPath) {
-        chips.push("Process Evidence");
-      }
-      if (alert.details.ipAddress) {
-        chips.push("Network Connection");
-      }
-      if (analysisContext?.mitre?.technique_id) {
+      if (alert.details.processPath) chips.push("Process Evidence");
+      if (alert.details.ipAddress) chips.push("Network Connection");
+      if (analysisContext?.mitre?.technique_id)
         chips.push(analysisContext.mitre.technique_id);
-      }
     }
     return chips;
   }, [workspace, alert, analysisContext]);
 
-  // Suggested Prompts
+  // ── Suggested prompts ──
   const suggestedPrompts = useMemo(() => {
     const prompts = [
       "Explain the strongest evidence",
       `Why is this severity ${alert ? alert.severity.toUpperCase() : "HIGH"}?`,
       "What should I investigate next?",
     ];
-    const mitreTech = workspace?.legacyAnalysis?.context?.mitre?.technique_id || workspace?.primaryDetection?.mitre_technique || analysisContext?.mitre?.technique_id;
-    if (mitreTech) {
-      prompts.push("Explain the MITRE mapping");
-    }
+    const mit =
+      workspace?.legacyAnalysis?.context?.mitre?.technique_id ||
+      workspace?.primaryDetection?.mitre_technique ||
+      analysisContext?.mitre?.technique_id;
+    if (mit) prompts.push("Explain the MITRE mapping");
     return prompts;
   }, [workspace, alert, analysisContext]);
 
-  // Shared submit message action
-  const submitMessage = async (text: string) => {
-    const time = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    setChatMessages((prev) => [...prev, { sender: "user", text, time }]);
-    setIsResponding(true);
+  // ── Submit message ──
+  const submitMessage = useCallback(
+    async (text: string) => {
+      const time = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      setIsError(false);
+      setChatMessages((prev) => {
+        const next = [...prev, { sender: "user" as const, text, time }];
+        setNewMessageIndex(next.length - 1);
+        return next;
+      });
+      setIsResponding(true);
 
-    try {
-      const currentInvId = workspace ? workspace.investigation.investigation_id : investigationId;
-      let reply = "";
-      if (currentInvId) {
+      try {
+        const currentInvId = workspace
+          ? workspace.investigation.investigation_id
+          : investigationId;
         const formattedHistory = chatMessages.map((m) => ({
           sender: m.sender,
           text: m.text,
         }));
-        reply = await sendChatMessage(currentInvId, text, formattedHistory);
-      } else {
-        const formattedHistory = chatMessages.map((m) => ({
-          sender: m.sender,
-          text: m.text,
-        }));
-        reply = await sendChatMessage(undefined, text, formattedHistory, alert.id);
-      }
-      setChatMessages((prev) => [...prev, { sender: "ai", text: reply, time }]);
-    } catch (err) {
-      console.error("Chat request failed:", err);
-      let errorReply = "Vector could not connect to the reasoning service. Check that the backend is running.";
-      if (axios.isAxiosError(err)) {
-        if (err.code === "ECONNABORTED" || err.message?.toLowerCase().includes("timeout")) {
-          errorReply = "The reasoning request took longer than expected. Please try again.";
-        } else if (err.response) {
-          errorReply = "Vector could not complete the reasoning request. Please try again.";
+        let reply = "";
+        if (currentInvId) {
+          reply = await sendChatMessage(
+            currentInvId,
+            text,
+            formattedHistory
+          );
+        } else {
+          reply = await sendChatMessage(
+            undefined,
+            text,
+            formattedHistory,
+            alert.id
+          );
         }
+        setChatMessages((prev) => {
+          const next = [...prev, { sender: "ai" as const, text: reply, time }];
+          setNewMessageIndex(next.length - 1);
+          return next;
+        });
+      } catch (err) {
+        console.error("Chat request failed:", err);
+        setIsError(true);
+        let errorReply =
+          "Vector could not connect to the reasoning service. Check that the backend is running.";
+        if (axios.isAxiosError(err)) {
+          if (
+            err.code === "ECONNABORTED" ||
+            err.message?.toLowerCase().includes("timeout")
+          ) {
+            errorReply =
+              "The reasoning request took longer than expected. Please try again.";
+          } else if (err.response) {
+            errorReply =
+              "Vector could not complete the reasoning request. Please try again.";
+          }
+        }
+        setChatMessages((prev) => {
+          const next = [
+            ...prev,
+            { sender: "ai" as const, text: errorReply, time },
+          ];
+          setNewMessageIndex(next.length - 1);
+          return next;
+        });
+      } finally {
+        setIsResponding(false);
       }
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          sender: "ai",
-          text: errorReply,
-          time,
-        },
-      ]);
-    } finally {
-      setIsResponding(false);
-    }
-  };
+    },
+    [chatMessages, workspace, investigationId, alert]
+  );
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (isResponding || !chatInput.trim()) return;
-
     const text = chatInput.trim();
     setChatInput("");
-    await submitMessage(text);
+    submitMessage(text);
   };
 
-  const handleSuggestionClick = async (promptText: string) => {
+  const handleSuggestionClick = (promptText: string) => {
     if (isResponding) return;
-    await submitMessage(promptText);
+    submitMessage(promptText);
   };
 
-  const handleKeyDownExpanded = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (!isResponding && chatInput.trim()) {
-        const text = chatInput.trim();
-        setChatInput("");
-        submitMessage(text);
-      }
-    }
+  const handleComposerSubmit = useCallback(() => {
+    if (isResponding || !chatInput.trim()) return;
+    const text = chatInput.trim();
+    setChatInput("");
+    submitMessage(text);
+  }, [isResponding, chatInput, submitMessage]);
+
+  const scoreVal = workspace
+    ? workspace.investigation.risk_score
+    : alert.score;
+  const sourceVal = workspace
+    ? workspace.detections[0]?.host_id || alert.source
+    : alert.source;
+
+  const severity =
+    workspace?.investigation?.severity || alert?.severity || "medium";
+
+  // ── Reduced motion detection ──
+  const prefersReducedMotion =
+    typeof window !== "undefined"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false;
+
+  // Animation helpers
+  const springTransition = prefersReducedMotion
+    ? { duration: 0.15 }
+    : { type: "spring" as const, stiffness: 280, damping: 30, mass: 0.8 };
+
+  const backdropVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+    exit: { opacity: 0 },
   };
 
-
-  const scoreVal = workspace ? workspace.investigation.risk_score : alert.score;
-  const sourceVal = workspace ? (workspace.detections[0]?.host_id || alert.source) : alert.source;
+  // ── Expansion animation variants ──
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* ── Header ── */}
+      {/* ── Compact Header ── */}
       <div className="px-4 py-3 border-b border-border-custom/15 shrink-0 bg-surface/10">
         <div className="flex items-center gap-2.5">
-          <div className="w-5 h-5 rounded-md bg-violet-500/12 flex items-center justify-center">
-            <Sparkles className="w-3 h-3 text-violet-400" />
-          </div>
+          <VectorOrb state={orbState} size="sm" />
           <div>
             <p className="text-[13px] font-medium text-gray-200 font-sans leading-none">
               Vector
@@ -391,8 +496,7 @@ Ask me anything about this investigation.`;
 
       {/* ── Scrollable intelligence body ── */}
       <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-6 scrollbar-thin">
-
-        {/* 1. Summary — What happened? */}
+        {/* 1. Summary */}
         <div className="space-y-2">
           <SectionLabel>Summary</SectionLabel>
           {isAnalysisPending ? (
@@ -412,7 +516,7 @@ Ask me anything about this investigation.`;
           )}
         </div>
 
-        {/* 2. Evidence — What supports this? */}
+        {/* 2. Evidence */}
         <div className="space-y-2">
           <SectionLabel>Evidence</SectionLabel>
           <motion.div
@@ -422,95 +526,53 @@ Ask me anything about this investigation.`;
             transition={{ duration: 0.22, delay: 0.04, ease: "easeOut" }}
             className="space-y-1.5"
           >
-            {workspace && workspace.isBehavioral ? (
-              [
-                {
-                  label: "Detections",
-                  value: `${workspace.detections.length} correlated items`,
-                },
-                workspace.primaryDetection && {
-                  label: "Primary",
-                  value: workspace.primaryDetection.title,
-                },
-                workspace.processes[0] && {
-                  label: "Process",
-                  value: workspace.processes[0].executable || "",
-                },
-                workspace.correlation && {
-                  label: "Duration",
-                  value: `${workspace.correlation.duration.toFixed(1)}s`,
-                },
-              ]
-                .filter(Boolean)
-                .map((item, i) => {
-                  if (!item) return null;
-                  return (
-                    <div key={i} className="flex items-baseline gap-3 py-0.5">
-                      <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
-                        {item.label}
-                      </span>
-                      <span className="text-[11px] font-mono text-gray-300 min-w-0 flex-1 truncate select-all">
-                        {item.value}
-                      </span>
-                    </div>
-                  );
-                })
-            ) : (
-              [
-                alert.details.processPath && {
-                  label: "Process",
-                  value: alert.details.processPath,
-                },
-                alert.details.commandLine && {
-                  label: "Command",
-                  value: alert.details.commandLine,
-                },
-                alert.details.ipAddress && {
-                  label: "Remote IP",
-                  value: `${alert.details.ipAddress}${alert.details.port ? `:${alert.details.port}` : ""}`,
-                },
-                alert.details.username && {
-                  label: "User",
-                  value: alert.details.username,
-                },
-                alert.details.bytesTransferred && {
-                  label: "Transferred",
-                  value: `${(alert.details.bytesTransferred / 1024).toFixed(1)} KB`,
-                },
-              ]
-                .filter(Boolean)
-                .map((item, i) => {
-                  if (!item) return null;
-                  return (
-                    <div key={i} className="flex items-baseline gap-3 py-0.5">
-                      <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
-                        {item.label}
-                      </span>
-                      <span className="text-[11px] font-mono text-gray-300 min-w-0 flex-1 truncate select-all">
-                        {item.value as string}
-                      </span>
-                    </div>
-                  );
-                })
-            )}
+            {workspace && workspace.isBehavioral
+              ? ([
+                  { label: "Detections", value: `${workspace.detections.length} correlated items` },
+                  workspace.primaryDetection && { label: "Primary", value: workspace.primaryDetection.title },
+                  workspace.processes[0] && { label: "Process", value: workspace.processes[0].executable || "" },
+                  workspace.correlation && { label: "Duration", value: `${workspace.correlation.duration.toFixed(1)}s` },
+                ] as Array<{ label: string; value: string } | false | null | undefined>)
+                  .filter(Boolean)
+                  .map((item, i) => {
+                    if (!item) return null;
+                    return (
+                      <div key={i} className="flex items-baseline gap-3 py-0.5">
+                        <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">{item.label}</span>
+                        <span className="text-[11px] font-mono text-gray-300 min-w-0 flex-1 truncate select-all">{item.value}</span>
+                      </div>
+                    );
+                  })
+              : ([
+                  alert.details.processPath && { label: "Process", value: alert.details.processPath },
+                  alert.details.commandLine && { label: "Command", value: alert.details.commandLine },
+                  alert.details.ipAddress && { label: "Remote IP", value: `${alert.details.ipAddress}${alert.details.port ? `:${alert.details.port}` : ""}` },
+                  alert.details.username && { label: "User", value: alert.details.username },
+                  alert.details.bytesTransferred && { label: "Transferred", value: `${(alert.details.bytesTransferred / 1024).toFixed(1)} KB` },
+                ] as Array<{ label: string; value: string } | false | null | undefined>)
+                  .filter(Boolean)
+                  .map((item, i) => {
+                    if (!item) return null;
+                    return (
+                      <div key={i} className="flex items-baseline gap-3 py-0.5">
+                        <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">{item.label}</span>
+                        <span className="text-[11px] font-mono text-gray-300 min-w-0 flex-1 truncate select-all">{item.value as string}</span>
+                      </div>
+                    );
+                  })}
 
-            {/* Score inline */}
             <div className="flex items-baseline gap-3 py-0.5">
-              <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">
-                Risk Score
-              </span>
+              <span className="text-[10px] text-gray-500 font-sans tracking-wide uppercase shrink-0 w-18">Risk Score</span>
               {isAnalysisPending ? (
                 <Skeleton width={40} height={11} className="rounded animate-pulse-slow mt-0.5" />
               ) : (
-                <span className="text-[11px] font-mono text-red-400">
-                  {scoreVal.toFixed(0)}%
-                </span>
+                <span className="text-[11px] font-mono text-red-400">{scoreVal.toFixed(0)}%</span>
               )}
             </div>
           </motion.div>
         </div>
 
-        {/* 3. Reasoning — Why was it flagged? */}
+        {/* 3. Reasoning */}
         <div className="space-y-2">
           <SectionLabel>Reasoning</SectionLabel>
           {isAnalysisPending ? (
@@ -524,6 +586,7 @@ Ask me anything about this investigation.`;
               <span>Failed to load analysis.</span>
               {onRetryAnalysis && (
                 <button
+                  type="button"
                   onClick={onRetryAnalysis}
                   className="text-violet-400 hover:text-violet-300 underline cursor-pointer font-medium"
                 >
@@ -553,41 +616,31 @@ Ask me anything about this investigation.`;
                 </div>
               )}
 
-              {/* SHAP bar chart — compact (only for legacy/alerts) */}
-              {!workspace && alert.details.shapFactors &&
-                alert.details.shapFactors.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    {alert.details.shapFactors.slice(0, 3).map((f, i) => (
-                      <div key={i} className="space-y-0.5">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] text-gray-500 font-sans truncate pr-2">
-                            {f.factor}
-                          </span>
-                          <span className="text-[10px] font-mono text-gray-500 shrink-0">
-                            {(f.impact * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                        <div className="w-full h-0.5 bg-border-custom/25 rounded-full overflow-hidden">
-                          <motion.div
-                            className="bg-violet-400/60 h-full rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${f.impact * 100}%` }}
-                            transition={{
-                              duration: 0.4,
-                              delay: i * 0.06,
-                              ease: "easeOut",
-                            }}
-                          />
-                        </div>
+              {!workspace && alert.details.shapFactors && alert.details.shapFactors.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  {alert.details.shapFactors.slice(0, 3).map((f, i) => (
+                    <div key={i} className="space-y-0.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] text-gray-500 font-sans truncate pr-2">{f.factor}</span>
+                        <span className="text-[10px] font-mono text-gray-500 shrink-0">{(f.impact * 100).toFixed(0)}%</span>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <div className="w-full h-0.5 bg-border-custom/25 rounded-full overflow-hidden">
+                        <motion.div
+                          className="bg-violet-400/60 h-full rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${f.impact * 100}%` }}
+                          transition={{ duration: 0.4, delay: i * 0.06, ease: "easeOut" }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
         </div>
 
-        {/* 4. Recommended actions — isolation playbooks */}
+        {/* 4. Remediation actions */}
         <div className="space-y-2">
           <SectionLabel>Remediation actions</SectionLabel>
           <motion.div
@@ -597,20 +650,14 @@ Ask me anything about this investigation.`;
             transition={{ duration: 0.22, delay: 0.12, ease: "easeOut" }}
             className="space-y-1.5"
           >
-            {/* Isolate node */}
             <div className="flex items-center justify-between py-1.5 group">
               <div className="flex items-center gap-2 min-w-0">
                 <Unplug className="w-3 h-3 text-red-400/70 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[12px] text-gray-300 font-sans">
-                    Isolate host
-                  </p>
-                  <p className="text-[10px] text-gray-600 font-mono truncate">
-                    {sourceVal}
-                  </p>
+                  <p className="text-[12px] text-gray-300 font-sans">Isolate host</p>
+                  <p className="text-[10px] text-gray-600 font-mono truncate">{sourceVal}</p>
                 </div>
               </div>
-
               {quarantineStatus === "quarantining" ? (
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
                   <div className="w-16 h-0.5 bg-border-custom/30 rounded-full overflow-hidden">
@@ -619,12 +666,11 @@ Ask me anything about this investigation.`;
                       style={{ width: `${quarantineProgress}%` }}
                     />
                   </div>
-                  <span className="text-[10px] text-gray-500 font-mono shrink-0">
-                    {quarantineProgress}%
-                  </span>
+                  <span className="text-[10px] text-gray-500 font-mono shrink-0">{quarantineProgress}%</span>
                 </div>
               ) : (
                 <button
+                  type="button"
                   onClick={onIsolate}
                   disabled={quarantineStatus !== "active"}
                   className={`shrink-0 ml-2 text-[11px] px-2.5 py-1 rounded-md border transition-all duration-120 cursor-pointer font-sans ${
@@ -638,22 +684,19 @@ Ask me anything about this investigation.`;
               )}
             </div>
 
-            {/* Block IP — only if available */}
             {alert.details.ipAddress && (
               <div className="flex items-center justify-between py-1.5">
                 <div className="flex items-center gap-2 min-w-0">
                   <Shield className="w-3 h-3 text-blue-400/70 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-[12px] text-gray-300 font-sans">
-                      Block IP
-                    </p>
+                    <p className="text-[12px] text-gray-300 font-sans">Block IP</p>
                     <p className="text-[10px] text-gray-600 font-mono truncate">
-                      {alert.details.ipAddress}
-                      {alert.details.port ? `:${alert.details.port}` : ""}
+                      {alert.details.ipAddress}{alert.details.port ? `:${alert.details.port}` : ""}
                     </p>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={onBlockIp}
                   disabled={isBlockApplied}
                   className={`shrink-0 ml-2 text-[11px] px-2.5 py-1 rounded-md border transition-all duration-120 cursor-pointer font-sans ${
@@ -670,7 +713,7 @@ Ask me anything about this investigation.`;
         </div>
       </div>
 
-      {/* ── Isolation toast banner ── */}
+      {/* ── Isolation toast ── */}
       {quarantineStatus === "quarantined" && (
         <div className="mx-4 mb-0 mt-2 px-3 py-2 rounded-lg bg-emerald-500/8 border border-emerald-500/20 flex items-center gap-2 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -680,16 +723,15 @@ Ask me anything about this investigation.`;
         </div>
       )}
 
-      {/* ── Pinned Conversation history ── */}
+      {/* ── Compact conversation history ── */}
       <div className="border-t border-border-custom/15 bg-bg/50 px-4 py-3 shrink-0 flex flex-col min-h-0 max-h-[260px] md:max-h-[300px]">
         <button
+          type="button"
           onClick={() => setConversationOpen((v) => !v)}
           className="flex items-center justify-between w-full group cursor-pointer pb-2"
           aria-expanded={conversationOpen}
         >
-          <p className="text-[10px] tracking-wide text-gray-500 font-sans uppercase">
-            Case Chat
-          </p>
+          <p className="text-[10px] tracking-wide text-gray-500 font-sans uppercase">Case Chat</p>
           <ChevronDown
             className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-150 ${
               conversationOpen ? "rotate-0" : "-rotate-90"
@@ -714,9 +756,7 @@ Ask me anything about this investigation.`;
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.18, ease: "easeOut" }}
-                    className={`flex flex-col ${
-                      msg.sender === "user" ? "items-end" : "items-start"
-                    }`}
+                    className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
                   >
                     <span className="text-[10px] text-gray-600 mb-1 px-0.5 font-sans">
                       {msg.sender === "ai" ? "Vector" : "You"} · {msg.time}
@@ -738,6 +778,7 @@ Ask me anything about this investigation.`;
                         onClick={() => handleCopy(msg.text, i)}
                         className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-300 p-1 rounded transition-opacity cursor-pointer shrink-0"
                         title="Copy message"
+                        aria-label="Copy message"
                       >
                         {copiedId === i ? (
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -749,28 +790,7 @@ Ask me anything about this investigation.`;
                   </motion.div>
                 ))}
 
-                {isResponding && (
-                  <div className="flex flex-col items-start">
-                    <span className="text-[10px] text-gray-600 mb-1 px-0.5 font-sans">
-                      Vector
-                    </span>
-                    <div className="bg-surface/60 rounded-lg px-2.5 py-2 flex items-center gap-1">
-                      {[0, 100, 200].map((delay) => (
-                        <motion.span
-                          key={delay}
-                          className="w-1 h-1 rounded-full bg-violet-400/60"
-                          animate={{ opacity: [0.3, 1, 0.3] }}
-                          transition={{
-                            duration: 1.2,
-                            repeat: Infinity,
-                            delay: delay / 1000,
-                            ease: "easeInOut",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {isResponding && <VectorReasoningIndicator />}
 
                 <div ref={chatEndRef} />
               </div>
@@ -779,7 +799,7 @@ Ask me anything about this investigation.`;
         </AnimatePresence>
       </div>
 
-      {/* ── Input — always pinned to bottom ── */}
+      {/* ── Compact input ── */}
       <form
         onSubmit={handleSend}
         className="px-4 py-3 border-t border-border-custom/15 flex items-center gap-2 shrink-0 bg-surface/10"
@@ -804,12 +824,13 @@ Ask me anything about this investigation.`;
           type="submit"
           disabled={isResponding || !chatInput.trim()}
           className="p-1.5 text-gray-500 hover:text-violet-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors duration-120 cursor-pointer shrink-0"
+          aria-label="Send message"
         >
           <Send className="w-3.5 h-3.5" />
         </button>
       </form>
 
-      {/* Toast Notification */}
+      {/* ── Toast ── */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div
@@ -824,195 +845,153 @@ Ask me anything about this investigation.`;
         )}
       </AnimatePresence>
 
-      {/* Expanded Conversation Portal */}
-      {isExpanded && createPortal(
-        <AnimatePresence mode="wait">
-          <div className="fixed inset-0 z-50 flex items-center justify-end p-6 font-sans">
-            {/* Backdrop overlay */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsExpanded(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-[4px] cursor-pointer"
-            />
-
-            {/* Expanded conversation container (unfolding from the right rail) */}
-            <motion.div
-              initial={{ opacity: 0, x: 200, scale: 0.95 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 200, scale: 0.95 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="relative w-[75vw] h-[86vh] max-w-[1200px] bg-[#0C0E14] border border-[#23262F]/35 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+      {/* ═══════════════════════════════════════════════
+          EXPANDED CONVERSATION PORTAL
+          Premium spring-based spatial expansion from
+          the right rail origin.
+          ═══════════════════════════════════════════════ */}
+      {isExpanded &&
+        createPortal(
+          <AnimatePresence mode="wait">
+            <div
+              key="vector-expanded"
+              className="fixed inset-0 z-50 flex items-center justify-end p-6 font-sans"
             >
-              {/* TOP HEADER */}
-              <div className="px-6 py-4 border-b border-[#23262F]/35 bg-[#161A22]/20 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-md bg-violet-500/12 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-violet-400" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-100 font-sans">AI Investigation Partner</span>
-                      <span className="text-xs text-gray-500 font-mono">({workspace?.investigation?.investigation_id || alert?.id})</span>
-                    </div>
-                    <div className="text-xs text-purple-400 mt-0.5 max-w-[400px] truncate font-sans">
-                      {workspace?.investigation?.title || alert?.type}
-                    </div>
-                  </div>
-                </div>
+              {/* Backdrop */}
+              <motion.div
+                key="backdrop"
+                variants={backdropVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: prefersReducedMotion ? 0.15 : 0.25 }}
+                onClick={() => setIsExpanded(false)}
+                className="absolute inset-0 bg-black/65 cursor-pointer"
+                style={{
+                  backdropFilter: prefersReducedMotion ? undefined : "blur(3px)",
+                  WebkitBackdropFilter: prefersReducedMotion ? undefined : "blur(3px)",
+                }}
+                aria-hidden="true"
+              />
 
-                <div className="flex items-center gap-3">
-                  <Badge variant={workspace?.investigation?.severity || alert?.severity}>
-                    {(workspace?.investigation?.severity || alert?.severity || "low").toUpperCase()}
-                  </Badge>
-                  <span className="text-xs font-mono text-gray-500">
-                    Risk: <span className="text-red-400">{((workspace?.investigation?.risk_score || alert?.score || 0)).toFixed(0)}%</span>
-                  </span>
-                  <button
-                    onClick={() => setIsExpanded(false)}
-                    className="p-1.5 text-gray-500 hover:text-gray-300 hover:bg-[#1C1F26] rounded-lg transition-colors cursor-pointer ml-2"
-                    title="Minimize"
+              {/* Modal shell — spring spatial entry */}
+              <motion.div
+                ref={modalRef}
+                key="modal"
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 120, scale: 0.96 }}
+                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, x: 0, scale: 1 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 60, scale: 0.97 }}
+                transition={springTransition}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Vector AI Investigation Partner"
+                aria-labelledby={`${dialogId}-title`}
+                className="relative w-[78vw] h-[88vh] max-w-[1280px] bg-[#0A0C12] border border-[#1E2130]/60 rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden"
+              >
+                {/* Ambient intelligence layer */}
+                <VectorAmbient severity={severity} />
+
+                {/* Content sits above ambient layer */}
+                <div className="relative z-10 flex flex-col h-full">
+                  {/* Header — staggered reveal */}
+                  <motion.div
+                    key="header"
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={prefersReducedMotion ? { duration: 0.15 } : { delay: 0.12, duration: 0.22, ease: "easeOut" }}
                   >
-                    <ChevronDown className="w-5 h-5 rotate-90" />
-                  </button>
-                </div>
-              </div>
+                    <VectorContextHeader
+                      investigationId={workspace?.investigation?.investigation_id}
+                      alertId={alert?.id}
+                      title={workspace?.investigation?.title || alert?.type}
+                      severity={severity}
+                      riskScore={workspace?.investigation?.risk_score ?? alert?.score}
+                      contextChips={contextChips}
+                      orbState={orbState}
+                      onClose={() => setIsExpanded(false)}
+                    />
+                  </motion.div>
 
-              {/* CONTEXT INDICATORS */}
-              {contextChips.length > 0 && (
-                <div className="px-6 py-2 bg-[#0E1118] border-b border-[#23262F]/20 flex flex-wrap gap-2 items-center shrink-0">
-                  <span className="text-[10px] text-gray-500 font-mono uppercase mr-1">Available Context:</span>
-                  {contextChips.map((chip, idx) => (
-                    <span key={idx} className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-500/10 text-violet-400 border border-violet-500/15">
-                      {chip}
-                    </span>
-                  ))}
-                </div>
-              )}
+                  {/* Message thread — staggered reveal */}
+                  <motion.div
+                    key="messages"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={prefersReducedMotion ? { duration: 0.15 } : { delay: 0.2, duration: 0.25 }}
+                    className="flex-1 overflow-y-auto min-h-0 scrollbar-thin"
+                    role="log"
+                    aria-live="polite"
+                    aria-label="Investigation conversation"
+                  >
+                    <div className="px-8 py-6 max-w-[880px] mx-auto space-y-5">
+                      {chatMessages.map((msg, i) => (
+                        <VectorMessage
+                          key={i}
+                          msg={msg}
+                          index={i}
+                          isNew={i === newMessageIndex}
+                        />
+                      ))}
 
-              {/* MAIN CONVERSATION AREA */}
-              <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6 space-y-4 scrollbar-thin bg-black/10">
-                <div className="max-w-[800px] mx-auto space-y-6">
-                  {chatMessages.map((msg, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      className={`flex flex-col ${
-                        msg.sender === "user" ? "items-end" : "items-start"
-                      }`}
-                    >
-                      <span className="text-[10px] text-gray-500 mb-1 px-1 font-sans">
-                        {msg.sender === "ai" ? "Vector" : "You"} · {msg.time}
-                      </span>
-                      <div className="flex items-start gap-3 max-w-[90%] group relative">
-                        <div
-                          className={`rounded-xl px-4 py-3 text-[13px] leading-relaxed shadow-sm ${
-                            msg.sender === "user"
-                              ? "bg-violet-500/8 text-gray-200 border border-violet-500/15"
-                              : "bg-[#161A22]/55 text-gray-300 border border-[#23262F]/30"
-                          }`}
-                        >
-                          <div className="prose prose-invert prose-sm max-w-none [&_p]:my-2 [&_strong]:text-gray-100 font-sans select-text">
-                            <ReactMarkdown>{msg.text}</ReactMarkdown>
-                          </div>
+                      {isResponding && (
+                        <div className="vector-msg-enter">
+                          <VectorReasoningIndicator />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(msg.text, i)}
-                          className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-300 p-1.5 rounded transition-opacity cursor-pointer shrink-0 mt-1"
-                          title="Copy message"
-                        >
-                          {copiedId === i ? (
-                            <Check className="w-4 h-4 text-emerald-400" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
+                      )}
 
-                  {isResponding && (
-                    <div className="flex flex-col items-start">
-                      <span className="text-[10px] text-gray-500 mb-1 px-1 font-sans">
-                        Vector
-                      </span>
-                      <div className="bg-[#161A22]/55 border border-[#23262F]/30 rounded-xl px-4 py-3 flex items-center gap-1.5">
-                        {[0, 100, 200].map((delay) => (
-                          <motion.span
-                            key={delay}
-                            className="w-1.5 h-1.5 rounded-full bg-violet-400/70"
-                            animate={{ opacity: [0.3, 1, 0.3] }}
-                            transition={{
-                              duration: 1.2,
-                              repeat: Infinity,
-                              delay: delay / 1000,
-                              ease: "easeInOut",
-                            }}
-                          />
-                        ))}
-                      </div>
+                      <div ref={expandedChatEndRef} />
                     </div>
-                  )}
+                  </motion.div>
 
-                  <div ref={expandedChatEndRef} />
-                </div>
-              </div>
+                  {/* Suggestions — staggered */}
+                  <AnimatePresence>
+                    {!isResponding && suggestedPrompts.length > 0 && (
+                      <motion.div
+                        key="suggestions"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          transition: prefersReducedMotion
+                            ? { duration: 0.15 }
+                            : { delay: 0.3, duration: 0.2, ease: "easeOut" },
+                        }}
+                        exit={{ opacity: 0, y: 8, transition: { duration: 0.1 } }}
+                      >
+                        <VectorSuggestions
+                          prompts={suggestedPrompts}
+                          disabled={isResponding}
+                          onSelect={handleSuggestionClick}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-              {/* SUGGESTED QUESTIONS */}
-              {!isResponding && suggestedPrompts.length > 0 && (
-                <div className="px-8 py-3 border-t border-[#23262F]/20 bg-[#0E1118]/80 shrink-0 flex flex-wrap gap-2 justify-center">
-                  {suggestedPrompts.map((promptText, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSuggestionClick(promptText)}
-                      className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 bg-[#161A22]/65 hover:bg-[#1C1F26] border border-[#23262F]/35 hover:border-gray-500/40 rounded-full transition-all duration-120 cursor-pointer shadow-sm font-sans"
-                    >
-                      {promptText}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* COMPOSER */}
-              <div className="px-8 py-4 border-t border-[#23262F]/35 bg-[#161A22]/10 shrink-0">
-                <div className="max-w-[800px] mx-auto flex gap-3 items-end">
-                  <textarea
-                    ref={expandedInputRef}
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={handleKeyDownExpanded}
-                    disabled={isResponding}
-                    placeholder={isResponding ? "Vector is thinking..." : "Ask Vector to explain rules, suggest queries, or verify timeline artifacts..."}
-                    className="flex-1 min-h-[44px] max-h-[160px] bg-transparent border border-[#23262F]/45 focus:border-violet-500/40 focus:outline-none rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 transition-colors duration-150 font-sans disabled:opacity-50 resize-none scrollbar-thin"
-                    rows={1}
-                  />
-                  <button
-                    onClick={() => {
-                      if (!isResponding && chatInput.trim()) {
-                        const text = chatInput.trim();
-                        setChatInput("");
-                        submitMessage(text);
-                      }
-                    }}
-                    disabled={isResponding || !chatInput.trim()}
-                    className="p-3 bg-violet-600 hover:bg-violet-500 disabled:bg-[#1C1F26] text-white disabled:text-gray-600 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-120 cursor-pointer shrink-0 shadow-md"
+                  {/* Composer — settles last */}
+                  <motion.div
+                    key="composer"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={prefersReducedMotion ? { duration: 0.15 } : { delay: 0.28, duration: 0.22, ease: "easeOut" }}
                   >
-                    <Send className="w-4 h-4" />
-                  </button>
+                    <VectorComposer
+                      value={chatInput}
+                      onChange={setChatInput}
+                      onSubmit={handleComposerSubmit}
+                      isResponding={isResponding}
+                      isError={isError}
+                      inputRef={expandedComposerRef}
+                    />
+                  </motion.div>
                 </div>
-              </div>
-            </motion.div>
-          </div>
-        </AnimatePresence>,
-        document.body
-      )}
+              </motion.div>
+            </div>
+          </AnimatePresence>,
+          document.body
+        )}
     </div>
   );
 }
-
-
-

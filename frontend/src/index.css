@@ -165,3 +165,128 @@ body {
   animation: shimmer 2s infinite linear;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   VECTOR AI — Premium Animation System
+   All animations: GPU-friendly transform + opacity only.
+   Wrapped in prefers-reduced-motion media query.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Orb idle breathing */
+@keyframes vectorOrbBreath {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+/* Orb idle gradient rotation */
+@keyframes vectorOrbSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Reasoning waveform bars */
+@keyframes vectorWave0 {
+  0%, 100% { transform: scaleY(0.3); opacity: 0.4; }
+  25% { transform: scaleY(1); opacity: 1; }
+  75% { transform: scaleY(0.5); opacity: 0.6; }
+}
+@keyframes vectorWave1 {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+  35% { transform: scaleY(1); opacity: 1; }
+  80% { transform: scaleY(0.3); opacity: 0.4; }
+}
+@keyframes vectorWave2 {
+  0%, 100% { transform: scaleY(0.8); opacity: 0.7; }
+  15% { transform: scaleY(1); opacity: 1; }
+  60% { transform: scaleY(0.2); opacity: 0.3; }
+}
+@keyframes vectorWave3 {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+  85% { transform: scaleY(0.6); opacity: 0.6; }
+}
+@keyframes vectorWave4 {
+  0%, 100% { transform: scaleY(0.6); opacity: 0.6; }
+  40% { transform: scaleY(1); opacity: 1; }
+  70% { transform: scaleY(0.3); opacity: 0.4; }
+}
+
+/* Ambient gradient drift for the expanded modal */
+@keyframes vectorAmbientDrift {
+  0% { opacity: 0.025; transform: translateX(0) translateY(0) scale(1); }
+  33% { opacity: 0.04; transform: translateX(20px) translateY(-12px) scale(1.04); }
+  66% { opacity: 0.02; transform: translateX(-15px) translateY(8px) scale(0.97); }
+  100% { opacity: 0.025; transform: translateX(0) translateY(0) scale(1); }
+}
+
+/* Edge top illumination pulse */
+@keyframes vectorEdgePulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.45; }
+}
+
+/* Context chip scan sweep */
+@keyframes vectorChipScan {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(110%); }
+}
+
+/* Composer reactive glow pulse (when waiting) */
+@keyframes vectorComposerWait {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.08); }
+}
+
+/* Error flicker for orb */
+@keyframes vectorErrorFlicker {
+  0%, 100% { opacity: 1; }
+  10% { opacity: 0.6; }
+  20% { opacity: 1; }
+  30% { opacity: 0.75; }
+  40% { opacity: 1; }
+}
+
+/* Message entrance animation classes */
+.vector-msg-enter {
+  animation: vectorMsgIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes vectorMsgIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Suggestion chip hover shift */
+.vector-chip {
+  transition: transform 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.vector-chip:hover {
+  transform: translateX(3px);
+}
+.vector-chip:active {
+  transform: translateX(1px) scale(0.98);
+}
+
+/* Utility: apply Vector ambient animation */
+.vector-ambient-layer {
+  animation: vectorAmbientDrift 24s ease-in-out infinite;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Utility: edge pulse */
+.vector-edge-pulse {
+  animation: vectorEdgePulse 4s ease-in-out infinite;
+}
+
+/* ── Reduced-motion overrides ── */
+@media (prefers-reduced-motion: reduce) {
+  .vector-ambient-layer,
+  .vector-edge-pulse,
+  .vector-msg-enter,
+  .vector-chip {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+
