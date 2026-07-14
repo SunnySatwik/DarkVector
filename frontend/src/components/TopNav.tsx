@@ -68,12 +68,9 @@ export default function TopNav({
 
         {/* Profile */}
         <div className="flex items-center gap-2.5 p-1 rounded-lg border border-border-custom bg-elevated/40 hover:bg-elevated/80 transition-colors duration-150 cursor-pointer shrink-0">
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"
-            alt="User profile"
-            referrerPolicy="no-referrer"
-            className="w-7 h-7 rounded-full object-cover border border-blue-500/30 shrink-0"
-          />
+          <div className="w-7 h-7 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-[10px] font-mono text-blue-400 font-bold shrink-0">
+            SS
+          </div>
           <div className="hidden sm:flex flex-col min-w-0 pr-1.5">
             <span className="text-xs font-semibold text-gray-200 truncate leading-none">
               sunnysatwik95

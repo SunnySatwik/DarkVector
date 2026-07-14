@@ -352,6 +352,10 @@ body {
   }
 }
 
+.threat-link-dash {
+  animation: dash 10s linear infinite;
+}
+
 /* ── Reduced-motion overrides ── */
 @media (prefers-reduced-motion: reduce) {
   .vector-ambient-layer,

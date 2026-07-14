@@ -113,13 +113,17 @@ export function VectorPanel({
   const [conversationOpen, setConversationOpen] = useState(true);
   const [newMessageIndex, setNewMessageIndex] = useState<number | null>(null);
 
-  // ── Refs ──
   const compactInputRef = useRef<HTMLInputElement>(null);
   const expandedComposerRef = useRef<HTMLTextAreaElement | null>(null);
   const expandedChatEndRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const ignoreNextFocusRef = useRef(false);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  const chatMessagesRef = useRef(chatMessages);
+  useEffect(() => {
+    chatMessagesRef.current = chatMessages;
+  }, [chatMessages]);
 
   // ── Derived state ──
   const currentKey =
@@ -185,18 +189,19 @@ export function VectorPanel({
 
   // ── Focus restoration ──
   useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (!isExpanded) {
       ignoreNextFocusRef.current = true;
       compactInputRef.current?.focus();
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         ignoreNextFocusRef.current = false;
       }, 100);
-      return () => clearTimeout(timer);
     } else {
-      setTimeout(() => {
+      timer = setTimeout(() => {
         expandedComposerRef.current?.focus();
       }, 350); // after spring animation
     }
+    return () => clearTimeout(timer);
   }, [isExpanded]);
 
   // ── Summary texts ──
@@ -303,9 +308,18 @@ Ask me anything about this investigation.`;
 
   useEffect(() => {
     if (isExpanded) {
+      const timer = setTimeout(() => {
+        expandedChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [isExpanded]);
+
+  useEffect(() => {
+    if (isExpanded) {
       expandedChatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [chatMessages, isResponding, isExpanded]);
+  }, [chatMessages, isResponding]);
 
   // ── Context chips ──
   const contextChips = useMemo(() => {
@@ -372,7 +386,7 @@ Ask me anything about this investigation.`;
         const currentInvId = workspace
           ? workspace.investigation.investigation_id
           : investigationId;
-        const formattedHistory = chatMessages.map((m) => ({
+        const formattedHistory = chatMessagesRef.current.map((m) => ({
           sender: m.sender,
           text: m.text,
         }));
@@ -425,7 +439,7 @@ Ask me anything about this investigation.`;
         setIsResponding(false);
       }
     },
-    [chatMessages, workspace, investigationId, alert]
+    [workspace, investigationId, alert]
   );
 
   const handleSend = (e: React.FormEvent) => {

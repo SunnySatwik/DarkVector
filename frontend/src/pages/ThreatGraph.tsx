@@ -73,6 +73,13 @@ export default function ThreatGraph({
   const [isolatedNodes, setIsolatedNodes] = useState<string[]>([]);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
+  // Reset selected node and containment states when the active target investigation changes
+  useEffect(() => {
+    setSelectedNode(null);
+    setIsolatedNodes([]);
+    setHoveredNodeId(null);
+  }, [targetId]);
+
   // Dynamically build graph data when detailed investigation completes loading
   const graph = useMemo(() => {
     if (!detailData) return { nodes: [], links: [] };
@@ -288,7 +295,7 @@ export default function ThreatGraph({
                         strokeDasharray={link.isThreat && !(isSourceIsolated || isTargetIsolated) ? "4,4" : undefined}
                         className={
                           link.isThreat && !(isSourceIsolated || isTargetIsolated)
-                            ? "animate-[dash_10s_linear_infinite]"
+                            ? "threat-link-dash"
                             : ""
                         }
                       />
@@ -332,10 +339,21 @@ export default function ThreatGraph({
                   return (
                     <motion.g
                       key={node.id}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Inspect ${node.type} node: ${node.label}`}
                       onClick={() => setSelectedNode(node)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedNode(node);
+                        }
+                      }}
                       onMouseEnter={() => setHoveredNodeId(node.id)}
                       onMouseLeave={() => setHoveredNodeId(null)}
-                      className="cursor-pointer"
+                      onFocus={() => setHoveredNodeId(node.id)}
+                      onBlur={() => setHoveredNodeId(null)}
+                      className="cursor-pointer outline-none focus:ring-1 focus:ring-purple-500/50 rounded-full"
                       style={{ opacity: isDimmed ? 0.35 : 1 }}
                       animate={{
                         y: [0, -3, 0],

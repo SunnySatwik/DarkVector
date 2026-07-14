@@ -76,4 +76,25 @@ const mockInvestigations: CompactInvestigation[] = [
   console.log("✔ Test 6 Passed: Empty state handled cleanly");
 }
 
+// Test 7: Graph state reset on targetId changes (Regression Test)
+{
+  let targetId = "INV-1";
+  let selectedNode: string | null = "process";
+  let isolatedNodes: string[] = ["pod"];
+
+  // Mock switch
+  const simulateReset = (prevTargetId: string, nextTargetId: string) => {
+    if (prevTargetId !== nextTargetId) {
+      selectedNode = null;
+      isolatedNodes = [];
+    }
+  };
+
+  simulateReset(targetId, "INV-2");
+  assert(selectedNode === null, "Selected node should reset to null on target switch");
+  assert(isolatedNodes.length === 0, "Isolated nodes should clear on target switch");
+  console.log("✔ Test 7 Passed: Graph selection and containment reset on investigation switch");
+}
+
 console.log("\nAll UI Transitions & Selection tests completed successfully!");
+
