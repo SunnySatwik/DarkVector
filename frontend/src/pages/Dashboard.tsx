@@ -236,6 +236,9 @@ function PriorityInvestigation({
 
       {/* Hero block — no heavy border, elevation via background only */}
       <div className="relative rounded-xl bg-red-950/8 border border-red-500/10 px-6 py-5 overflow-hidden">
+        {/* Top edge glow accent */}
+        <div className="vector-edge-pulse absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
+
         {/* Left accent line */}
         <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-gradient-to-b from-red-500/70 via-red-500/30 to-transparent rounded-full" />
 
@@ -356,7 +359,7 @@ function RecentAlerts({
         </span>
       </div>
 
-      <div className="divide-y divide-border-custom/15">
+      <div key={alerts.length} className="divide-y divide-border-custom/15 list-update-pulse">
         {alerts.slice(0, 5).map((alert, i) => (
           <motion.button
             key={alert.id}
@@ -435,8 +438,9 @@ function ActiveInvestigations({
           <p className="text-[13px] font-medium text-gray-300 font-sans">Active investigations</p>
           <span className="text-[10px] font-mono text-gray-600">0 open</span>
         </div>
-        <div className="border border-border-custom/15 rounded-xl p-6 text-center bg-surface/5">
-          <p className="text-xs text-gray-500 font-sans">No active investigations.</p>
+        <div className="border border-border-custom/15 rounded-xl p-6 text-center bg-surface/5 relative overflow-hidden">
+          <div className="absolute inset-0 empty-wireframe-bg opacity-[0.03] cyber-grid pointer-events-none" />
+          <p className="text-xs text-gray-500 font-sans relative z-10">No active investigations.</p>
         </div>
       </motion.section>
     );

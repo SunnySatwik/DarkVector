@@ -71,6 +71,7 @@ export default function ThreatGraph({
   // Selected node inspection state
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isolatedNodes, setIsolatedNodes] = useState<string[]>([]);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   // Dynamically build graph data when detailed investigation completes loading
   const graph = useMemo(() => {
@@ -222,8 +223,16 @@ export default function ThreatGraph({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* SVG Graph Canvas */}
         <div className="lg:col-span-8">
-          <Card className="p-0 bg-black/45 overflow-hidden">
-            <div className="p-4 border-b border-[#23262F]/40 flex items-center justify-between">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={detailData.investigation.investigation_id}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+            >
+              <Card className="p-0 bg-black/45 overflow-hidden">
+                <div className="p-4 border-b border-[#23262F]/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Network className="w-4 h-4 text-blue-400" />
                 <span className="font-mono text-xs font-bold text-gray-200">
@@ -247,22 +256,36 @@ export default function ThreatGraph({
                   const isSourceIsolated = isolatedNodes.includes(sourceNode.id);
                   const isTargetIsolated = isolatedNodes.includes(targetNode.id);
 
+                  const isLinkHighlighted = hoveredNodeId !== null && (link.source === hoveredNodeId || link.target === hoveredNodeId);
+                  const isLinkDimmed = hoveredNodeId !== null && !isLinkHighlighted;
+
+                  const linkStrokeColor = isLinkHighlighted
+                    ? "#A855F7"
+                    : isSourceIsolated || isTargetIsolated
+                    ? "#23262F"
+                    : link.isThreat
+                    ? "#EF4444"
+                    : "#23262F";
+
+                  const linkStrokeWidth = isLinkHighlighted ? "2.5" : link.isThreat ? "2" : "1.5";
+                  const linkOpacity = isLinkDimmed ? 0.12 : 1;
+
                   return (
                     <g key={idx}>
-                      <line
-                        x1={sourceNode.x}
-                        y1={sourceNode.y}
-                        x2={targetNode.x}
-                        y2={targetNode.y}
-                        stroke={
-                          isSourceIsolated || isTargetIsolated
-                            ? "#23262F"
-                            : link.isThreat
-                              ? "#EF4444"
-                              : "#23262F"
-                        }
-                        strokeWidth={link.isThreat ? "2" : "1.5"}
-                        strokeDasharray={link.isThreat ? "4,4" : undefined}
+                      <motion.line
+                        initial={{ x1: 375, y1: 150, x2: 375, y2: 150 }}
+                        animate={{ x1: sourceNode.x, y1: sourceNode.y, x2: targetNode.x, y2: targetNode.y }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 140,
+                          damping: 15,
+                          mass: 0.7,
+                          delay: Math.min(6, sourceNode.id.charCodeAt(0) % 6) * 0.04
+                        }}
+                        stroke={linkStrokeColor}
+                        strokeWidth={linkStrokeWidth}
+                        strokeOpacity={linkOpacity}
+                        strokeDasharray={link.isThreat && !(isSourceIsolated || isTargetIsolated) ? "4,4" : undefined}
                         className={
                           link.isThreat && !(isSourceIsolated || isTargetIsolated)
                             ? "animate-[dash_10s_linear_infinite]"
@@ -277,6 +300,13 @@ export default function ThreatGraph({
                 {graph.nodes.map((node) => {
                   const isSelected = selectedNode?.id === node.id;
                   const isIsolated = isolatedNodes.includes(node.id);
+
+                  const isDimmed = hoveredNodeId !== null && 
+                    node.id !== hoveredNodeId && 
+                    !graph.links.some(l => 
+                      (l.source === hoveredNodeId && l.target === node.id) || 
+                      (l.target === hoveredNodeId && l.source === node.id)
+                    );
 
                   // Node icons
                   const renderIcon = (type: string) => {
@@ -300,14 +330,29 @@ export default function ThreatGraph({
                   };
 
                   return (
-                    <g
+                    <motion.g
                       key={node.id}
                       onClick={() => setSelectedNode(node)}
+                      onMouseEnter={() => setHoveredNodeId(node.id)}
+                      onMouseLeave={() => setHoveredNodeId(null)}
                       className="cursor-pointer"
+                      style={{ opacity: isDimmed ? 0.35 : 1 }}
+                      animate={{
+                        y: [0, -3, 0],
+                      }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 3.5 + (node.id.charCodeAt(0) % 4) * 0.5,
+                        ease: "easeInOut",
+                        delay: (node.id.charCodeAt(0) % 6) * 0.2
+                      }}
                     >
                       {/* Node indicator ring on selection */}
                       {isSelected && (
-                        <circle
+                        <motion.circle
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: [1, 1.08, 1], opacity: 1 }}
+                          transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
                           cx={node.x}
                           cy={node.y}
                           r="28"
@@ -324,10 +369,16 @@ export default function ThreatGraph({
                       )}
 
                       {/* Main Node bubble */}
-                      <circle
-                        cx={node.x}
-                        cy={node.y}
-                        r="20"
+                      <motion.circle
+                        initial={{ cx: 375, cy: 150, r: 0 }}
+                        animate={{ cx: node.x, cy: node.y, r: 20 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 140,
+                          damping: 15,
+                          mass: 0.7,
+                          delay: Math.min(6, node.id.charCodeAt(0) % 6) * 0.04
+                        }}
                         fill={isIsolated ? "#111317" : isSelected ? "#161A22" : "#09090B"}
                         stroke={
                           isIsolated
@@ -352,9 +403,16 @@ export default function ThreatGraph({
                       />
 
                       {/* Embed small foreignObject for Lucide Icons */}
-                      <foreignObject
-                        x={node.x - 8}
-                        y={node.y - 8}
+                      <motion.foreignObject
+                        initial={{ x: 375 - 8, y: 150 - 8 }}
+                        animate={{ x: node.x - 8, y: node.y - 8 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 140,
+                          damping: 15,
+                          mass: 0.7,
+                          delay: Math.min(6, node.id.charCodeAt(0) % 6) * 0.04
+                        }}
                         width="16"
                         height="16"
                         className={`pointer-events-none ${
@@ -378,30 +436,41 @@ export default function ThreatGraph({
                         <div className="flex items-center justify-center">
                           {renderIcon(node.type)}
                         </div>
-                      </foreignObject>
+                      </motion.foreignObject>
 
                       {/* Label Text below node */}
-                      <text
-                        x={node.x}
-                        y={node.y + 35}
+                      <motion.text
+                        initial={{ x: 375, y: 150 + 35 }}
+                        animate={{ x: node.x, y: node.y + 35 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 140,
+                          damping: 15,
+                          mass: 0.7,
+                          delay: Math.min(6, node.id.charCodeAt(0) % 6) * 0.04
+                        }}
                         textAnchor="middle"
                         className={`text-[9px] font-mono font-medium ${isIsolated ? "fill-gray-600" : isSelected ? "fill-white" : "fill-gray-400"}`}
                       >
                         {node.label.length > 20 ? `${node.label.slice(0, 18)}...` : node.label}
-                      </text>
+                      </motion.text>
 
                       {/* Isolation Line Slash marker if isolated */}
                       {isIsolated && (
-                        <line
-                          x1={node.x - 14}
-                          y1={node.y + 14}
-                          x2={node.x + 14}
-                          y2={node.y - 14}
+                        <motion.line
+                          initial={{ x1: 375 - 14, y1: 150 + 14, x2: 375 + 14, y2: 150 - 14 }}
+                          animate={{ x1: node.x - 14, y1: node.y + 14, x2: node.x + 14, y2: node.y - 14 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 140,
+                            damping: 15,
+                            mass: 0.7
+                          }}
                           stroke="#EF4444"
                           strokeWidth="2.5"
                         />
                       )}
-                    </g>
+                    </motion.g>
                   );
                 })}
               </svg>
@@ -429,6 +498,8 @@ export default function ThreatGraph({
               <span>Click nodes to inspect metadata</span>
             </div>
           </Card>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Selected Node Details sidecard */}
@@ -437,10 +508,10 @@ export default function ThreatGraph({
             {selectedNode ? (
               <motion.div
                 key={selectedNode.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
+                initial={{ opacity: 0, x: 15 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 15 }}
+                transition={{ type: "spring" as const, stiffness: 300, damping: 26 }}
               >
                 <Card className="space-y-4">
                   <div className="flex items-center justify-between border-b border-[#23262F]/40 pb-3">

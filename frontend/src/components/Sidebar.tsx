@@ -1,4 +1,6 @@
 import { motion } from "motion/react";
+import { SPRINGS } from "../lib/motion";
+
 import {
   LayoutDashboard,
   ChevronLeft,
@@ -37,7 +39,7 @@ export default function Sidebar({
     <motion.aside
       id="main-sidebar"
       animate={{ width: isCollapsed ? 68 : 240 }}
-      transition={{ duration: 0.22, ease: "easeInOut" }}
+      transition={SPRINGS.gentle}
       className="bg-surface border-r border-border-custom flex flex-col justify-between h-screen shrink-0 relative z-30"
     >
       {/* Sidebar Toggle Button */}
@@ -136,8 +138,8 @@ export default function Sidebar({
                 {isActive && (
                   <motion.div
                     layoutId="sidebarActiveBackground"
-                    className="absolute inset-0 bg-blue-500/10 rounded-lg border-l-2 border-blue-500 z-0"
-                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="absolute inset-0 bg-blue-500/5 rounded-lg active-navigation-trace z-0"
+                    transition={SPRINGS.snappy}
                   />
                 )}
 
@@ -164,12 +166,22 @@ export default function Sidebar({
       {/* Footer Info */}
       <div className="p-3 border-t border-border-custom/60">
         {isCollapsed ? (
-          <div className="flex justify-center text-gray-500">
+          <div className="flex justify-center items-center text-gray-500 relative">
+            <span className="relative flex h-1.5 w-1.5 shrink-0 absolute -top-1 right-2">
+              <span className="telemetry-pulse-outer absolute inline-flex h-full w-full rounded-full bg-emerald-500/60 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+            </span>
             <span className="text-[10px] font-mono">v1.2</span>
           </div>
         ) : (
           <div className="flex items-center justify-between text-caption font-sans text-gray-500">
-            <span>Agent Active</span>
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                <span className="telemetry-pulse-outer absolute inline-flex h-full w-full rounded-full bg-emerald-500/60 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+              <span>Agent Active</span>
+            </div>
             <span className="font-mono text-gray-600">v1.2.4</span>
           </div>
         )}

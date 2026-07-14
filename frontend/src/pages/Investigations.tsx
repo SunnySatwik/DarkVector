@@ -189,8 +189,8 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
           </div>
 
           {/* Scrollable Investigation Queue */}
-          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-2 max-h-[640px] overflow-y-auto scrollbar-thin space-y-1.5">
-            {filteredCases.map((c) => {
+          <div key={filteredCases.length} className="bg-[#111317] border border-[#23262F] rounded-xl p-2 max-h-[640px] overflow-y-auto scrollbar-thin space-y-1.5 list-update-pulse">
+            {filteredCases.map((c, i) => {
               const isSelected = selectedCase && c.id === selectedCase.id;
               const statusLabels = {
                 new: { text: "New", dot: "bg-red-400" },
@@ -201,8 +201,11 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
               const statusInfo = statusLabels[c.status];
 
               return (
-                <div
+                <motion.div
                   key={c.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(5, i) * 0.04, ease: "easeOut" }}
                   onClick={() => setActiveCaseId(c.id)}
                   className={`p-3.5 rounded-lg border text-left cursor-pointer transition-all duration-150 flex items-center justify-between group ${
                     isSelected
@@ -256,7 +259,7 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 group-hover:translate-x-0.5 transition-all duration-150 shrink-0" />
                   </div>
-                </div>
+                </motion.div>
               );
             })}
 
@@ -271,8 +274,16 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
 
         {/* RIGHT COLUMN: Case Detail / Investigation Workspace Preview (60%) */}
         <div className="lg:col-span-7">
-          <div className="bg-[#111317] border border-[#23262F] rounded-xl p-5 flex flex-col justify-between min-h-[560px] space-y-6">
-            {cases.length === 0 ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedCase?.id || "empty"}
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-[#111317] border border-[#23262F] rounded-xl p-5 flex flex-col justify-between min-h-[560px] space-y-6"
+            >
+              {cases.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-gray-600 font-mono text-xs gap-3">
                 <Briefcase className="w-8 h-8 opacity-25" />
                 <span>No investigations found in environment.</span>
@@ -490,8 +501,9 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
                 </div>
               </>
             )}
-          </div>
-        </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
       </div>
       {/* Toast Notification */}
       <AnimatePresence>

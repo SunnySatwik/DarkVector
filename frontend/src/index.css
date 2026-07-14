@@ -277,16 +277,97 @@ body {
   animation: vectorEdgePulse 4s ease-in-out infinite;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL LIVING INTERFACE & MOTION LANGUAGE
+   ═══════════════════════════════════════════════════════════ */
+
+/* Drifting background grid */
+@keyframes gridPan {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 40px; }
+}
+
+.cyber-grid-drifting {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(35, 38, 47, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(35, 38, 47, 0.12) 1px, transparent 1px);
+  animation: gridPan 20s linear infinite;
+  will-change: background-position;
+}
+
+/* Telemetry status double pulse */
+@keyframes doublePulseOuter {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(2); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+.telemetry-pulse-outer {
+  animation: doublePulseOuter 2.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Active tab trace pulse */
+@keyframes activeTrace {
+  0%, 100% { border-left-color: rgba(59, 130, 246, 0.8); box-shadow: inset 4px 0 10px rgba(59, 130, 246, 0.04); }
+  50% { border-left-color: rgba(139, 92, 246, 0.9); box-shadow: inset 4px 0 16px rgba(139, 92, 246, 0.08); }
+}
+
+.active-navigation-trace {
+  animation: activeTrace 4s ease-in-out infinite;
+  border-left-width: 2px;
+}
+
+/* Content update shimmer for list updates */
+@keyframes updateHighlight {
+  0% { background-color: rgba(139, 92, 246, 0.12); }
+  100% { background-color: transparent; }
+}
+
+.list-update-pulse {
+  animation: updateHighlight 1.5s ease-out;
+}
+
+/* Empty State environmental wireframe rotation */
+@keyframes emptyWireframe {
+  0% { transform: rotate(0deg) scale(0.95); opacity: 0.15; }
+  50% { transform: rotate(180deg) scale(1.05); opacity: 0.25; }
+  100% { transform: rotate(360deg) scale(0.95); opacity: 0.15; }
+}
+
+.empty-wireframe-bg {
+  animation: emptyWireframe 18s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Easing transition for sidebar collapse button */
+.sidebar-collapse-transition {
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* SVG graph link threat dash animation */
+@keyframes dash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
 /* ── Reduced-motion overrides ── */
 @media (prefers-reduced-motion: reduce) {
   .vector-ambient-layer,
   .vector-edge-pulse,
   .vector-msg-enter,
-  .vector-chip {
+  .vector-chip,
+  .cyber-grid-drifting,
+  .telemetry-pulse-outer,
+  .active-navigation-trace,
+  .list-update-pulse,
+  .empty-wireframe-bg {
     animation: none !important;
     transition: none !important;
     transform: none !important;
   }
 }
+
 
 

@@ -105,8 +105,13 @@ export function TimelinePanel({
       <SectionLabel icon={Clock}>Investigation timeline</SectionLabel>
 
       <div className="relative pl-4 space-y-5">
-        {/* Continuous Track Line */}
-        <div className="absolute left-[27px] top-[14px] bottom-[14px] w-px bg-border-custom/15 pointer-events-none" />
+        {/* Continuous Track Line drawing itself */}
+        <motion.div 
+          initial={{ height: 0 }}
+          animate={{ height: "calc(100% - 28px)" }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+          className="absolute left-[27px] top-[14px] w-px bg-gradient-to-b from-purple-500/40 via-border-custom/25 to-transparent pointer-events-none" 
+        />
 
         {timeline.map((evt, i) => {
           const Icon = getActorIcon(evt.actor);

@@ -23,9 +23,15 @@ export default function AppLayout({
   onToggleSidebarCollapse,
 }: AppLayoutProps) {
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg text-gray-100 animate-theme-transition">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg text-gray-100 relative">
+      {/* Background drifting topology grid */}
+      <div 
+        className="absolute inset-0 cyber-grid-drifting opacity-[0.22] pointer-events-none z-0" 
+        aria-hidden="true"
+      />
+
       {/* Upper Main Section */}
-      <div className="flex-1 flex overflow-hidden h-full">
+      <div className="flex-1 flex overflow-hidden h-full relative z-10">
         {/* Sidebar Navigation */}
         <Sidebar
           activeTab={activeTab}
@@ -42,7 +48,7 @@ export default function AppLayout({
           />
 
           {/* Scrollable Main Content Frame with full workspace width */}
-          <main className="flex-1 overflow-y-auto p-4 scrollbar-thin">
+          <main className="flex-1 overflow-y-auto p-4 scrollbar-thin relative z-10">
             <div className="max-w-[1600px] mx-auto w-full h-full">{children}</div>
           </main>
         </div>

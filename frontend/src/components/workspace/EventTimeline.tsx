@@ -10,6 +10,7 @@ import { CheckCircle2, Cpu, Network, ShieldAlert, Sparkles, Circle } from "lucid
 import type { Alert } from "../../types";
 import { TimelineEvent } from "../../api/types";
 import { formatLocalTimeOnly } from "../../lib/timeFormatter";
+import { motion } from "motion/react";
 
 interface LeftTimelineEvent {
   title: string;
@@ -104,9 +105,14 @@ export function EventTimeline({ alert, timeline }: EventTimelineProps) {
             key={i}
             className="group relative flex gap-3 px-2.5 py-1.5 -mx-2.5 rounded-md hover:bg-elevated/12 transition-all duration-120 cursor-default"
           >
-            {/* Absolute Track Line */}
+            {/* Absolute Track Line drawing itself */}
             {!isLast && (
-              <div className="absolute left-[14px] top-[18px] bottom-0 w-px bg-border-custom/15 pointer-events-none" />
+              <motion.div 
+                initial={{ height: 0 }}
+                animate={{ height: "100%" }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: i * 0.05 }}
+                className="absolute left-[14px] top-[18px] w-px bg-border-custom/15 pointer-events-none" 
+              />
             )}
 
             {/* Track Dot */}
