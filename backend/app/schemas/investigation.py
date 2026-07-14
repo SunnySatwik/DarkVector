@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from app.models.investigation import (
     InvestigationSeverity,
@@ -7,6 +7,18 @@ from app.models.investigation import (
 )
 from app.schemas.analyze import AnalysisResponse, AnalyzeRequest
 from app.schemas.timeline import TimelineEventResponse
+
+
+def normalize_confidence_scale(v: float | None) -> float | None:
+    """
+    Standardizes database/persisted confidence metrics to the canonical 0-100 scale.
+    Maintains safe backward compatibility for legacy 0-1 values.
+    """
+    if v is not None:
+        if 0.0 < v <= 1.0:
+            return round(v * 100.0, 1)
+        return round(max(0.0, min(v, 100.0)), 1)
+    return v
 
 
 class InvestigationResponse(BaseModel):
@@ -26,6 +38,11 @@ class InvestigationResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def validate_confidence(cls, v: float | None) -> float | None:
+        return normalize_confidence_scale(v)
 
     @field_serializer("created_at", "updated_at")
     def serialize_datetime(self, dt: datetime, _info) -> str:

@@ -240,7 +240,7 @@ export default function InvestigationReportView({
                 <div className="flex justify-between items-baseline py-0.5">
                   <span className="text-[11px] text-gray-500 font-sans print-text-muted">Analysis Confidence</span>
                   <span className="text-xs font-mono text-purple-400 font-bold print-text-dark">
-                    {(analysis.analysis.confidence * 100).toFixed(0)}%
+                    {analysis.analysis.confidence.toFixed(0)}%
                   </span>
                 </div>
               </div>

@@ -39,6 +39,9 @@ export async function getInvestigation(
           analysis: {
             ...data.analysis.analysis,
             severity: data.analysis.analysis.severity.toLowerCase() as Severity,
+            confidence: data.analysis.analysis.confidence <= 1.0
+              ? data.analysis.analysis.confidence * 100
+              : data.analysis.analysis.confidence,
           },
         }
       : null,

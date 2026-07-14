@@ -86,13 +86,13 @@ class InferenceService:
 
         # --------------------------------------------------
         # Confidence
-        # Temporary heuristic until calibrated confidence
+        # Legacy raw confidence heuristic, normalized to 0.0 - 100.0 percentage scale
         # --------------------------------------------------
-
-        confidence = round(
+        raw_confidence = round(
             min(risk.risk_score / 100 + 0.20, 0.99),
             2,
         )
+        confidence = round(max(0.0, min(raw_confidence * 100.0, 100.0)), 1)
 
         # --------------------------------------------------
         # Context Enrichment (MITRE + Threat Intelligence)

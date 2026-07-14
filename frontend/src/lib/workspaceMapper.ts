@@ -34,6 +34,9 @@ export function mapWorkspaceResponse(
       severity: workspace.investigation.severity
         ? (workspace.investigation.severity.toLowerCase() as Severity)
         : "medium",
+      confidence: workspace.investigation.confidence !== null && workspace.investigation.confidence !== undefined
+        ? (workspace.investigation.confidence <= 1.0 ? workspace.investigation.confidence * 100 : workspace.investigation.confidence)
+        : null,
     },
     legacyAlert: workspace.alert
       ? {
@@ -51,6 +54,9 @@ export function mapWorkspaceResponse(
             severity: workspace.analysis.analysis.severity
               ? (workspace.analysis.analysis.severity.toLowerCase() as Severity)
               : "medium",
+            confidence: workspace.analysis.analysis.confidence <= 1.0
+              ? workspace.analysis.analysis.confidence * 100
+              : workspace.analysis.analysis.confidence,
           },
         }
       : null,
