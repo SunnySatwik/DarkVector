@@ -41,6 +41,8 @@ class FeatureContribution(BaseModel):
 class Explanation(BaseModel):
     summary: str
     top_factors: list[FeatureContribution]
+    confidence_breakdown: Optional[dict] = None
+    confidence_reasons: Optional[list[str]] = None
 
 
 # ---------- Metadata ----------

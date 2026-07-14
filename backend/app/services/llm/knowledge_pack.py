@@ -262,6 +262,19 @@ class KnowledgePack:
             else:
                 evidence_parts.append("No specific SHAP anomaly score feature attributions were calculated.")
 
+            breakdown = shap.get("confidence_breakdown")
+            reasons = shap.get("confidence_reasons")
+            if breakdown:
+                evidence_parts.append(
+                    f"The analysis confidence is structured as: Model Evidence: {breakdown.get('model_evidence')}, "
+                    f"Explanation Attribution Quality: {breakdown.get('explanation_evidence')}, "
+                    f"Context Corroboration: {breakdown.get('contextual_evidence')}, "
+                    f"Input Completeness: {breakdown.get('input_completeness')}."
+                )
+            if reasons:
+                reasons_str = " ".join(reasons)
+                evidence_parts.append(f"Evidence reliability assessment notes: {reasons_str}")
+
             if nodes or links:
                 nodes_str = ", ".join(f"{n.get('label')} ({n.get('type')})" for n in nodes)
                 links_str = ", ".join(f"{l.get('source')} -> {l.get('target')}" for l in links)

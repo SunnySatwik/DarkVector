@@ -7,6 +7,7 @@ from app.ml.explainer import Explainer
 from app.ml.feature_mapper import FeatureMapper
 from app.ml.model_loader import ModelLoader
 from app.ml.risk_scorer import RiskScorer
+from app.services.confidence_scorer import ConfidenceScorer
 
 from app.schemas.analyze import (
     AnalysisResponse,
@@ -85,21 +86,25 @@ class InferenceService:
         top_factors = self.explainer.explain(features)
 
         # --------------------------------------------------
-        # Confidence
-        # Legacy raw confidence heuristic, normalized to 0.0 - 100.0 percentage scale
-        # --------------------------------------------------
-        raw_confidence = round(
-            min(risk.risk_score / 100 + 0.20, 0.99),
-            2,
-        )
-        confidence = round(max(0.0, min(raw_confidence * 100.0, 100.0)), 1)
-
         # --------------------------------------------------
         # Context Enrichment (MITRE + Threat Intelligence)
         # --------------------------------------------------
-
         context_dict = ContextService.enrich(alert_data)
         context = ContextEnrichment.model_validate(context_dict)
+
+        # --------------------------------------------------
+        # Confidence
+        # Calculate legacy ML confidence based on evidence signals & calibration
+        # --------------------------------------------------
+        confidence_result = ConfidenceScorer.calculate(
+            anomaly_score=anomaly_score,
+            score_distribution=self.model_metadata.get("score_distribution", {}),
+            top_factors=top_factors,
+            mitre_mapping=context_dict.get("mitre"),
+            threat_intelligence=context_dict.get("threat_intelligence"),
+            alert_data=alert_data,
+        )
+        confidence = confidence_result.score
 
         # --------------------------------------------------
         # Executive Summary (via LLMService / FallbackAI)
@@ -145,10 +150,10 @@ class InferenceService:
             ),
 
             explanation=Explanation(
-
                 summary=summary,
-
                 top_factors=top_factors,
+                confidence_breakdown=confidence_result.to_dict(),
+                confidence_reasons=confidence_result.reasons,
             ),
 
             metadata=Metadata(
