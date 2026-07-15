@@ -161,6 +161,44 @@ class ContextBuilder:
                         correlation_context["aggregate_confidence"]
                     )
 
+
+        # Build canonical confidence context data (Phase 2)
+        confidence_data = None
+        if analysis_json:
+            explanation = analysis_json.get("explanation") or {}
+            breakdown = explanation.get("confidence_breakdown")
+            reasons = explanation.get("confidence_reasons")
+            conf_val = analysis_json.get("analysis", {}).get("confidence")
+            if conf_val is None:
+                conf_val = investigation.confidence if investigation else 0.0
+            if breakdown or reasons:
+                confidence_data = {
+                    "score": conf_val,
+                    "semantic": "evidence_strength",
+                    "breakdown": breakdown,
+                    "reasons": reasons
+                }
+        
+        if not confidence_data and (investigation or analysis_json or detection_json):
+            conf_val = 0.0
+            if investigation:
+                conf_val = investigation.confidence or 0.0
+            elif analysis_json:
+                conf_val = analysis_json.get("analysis", {}).get("confidence", 0.0)
+            elif detection_json:
+                # Handle single detection or group
+                if "detections" in detection_json and detection_json["detections"]:
+                    conf_val = detection_json["detections"][0].get("confidence", 0.0)
+                else:
+                    conf_val = detection_json.get("confidence", 0.0)
+                
+            confidence_data = {
+                "score": conf_val,
+                "semantic": "evidence_strength",
+                "breakdown": None,
+                "reasons": None
+            }
+
         return {
             "investigation": (
                 {
@@ -217,6 +255,7 @@ class ContextBuilder:
             "process_evidence": process_evidence,
             "mitre_mappings": mitre_mappings,
             "recommendations": recommendations,
+            "confidence": confidence_data,
         }
 
     @staticmethod

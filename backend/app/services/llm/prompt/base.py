@@ -24,7 +24,12 @@ class BasePromptBuilder(ABC):
         self.question = question
         self.behavioral_context = behavioral_context
         self.policy = policy
-        self.task_instruction = "Answer the analyst's question using the details provided in the knowledge document. Be direct, conversational, and concise."
+        self.task_instruction = (
+            "Answer the analyst's question using the details provided in the knowledge document. "
+            "Be direct, conversational, and concise. "
+            "Do NOT write any 'Evidence Used' section, citation list, or list of source materials at the end of your response. "
+            "The system will automatically append that section to your response."
+        )
 
 
     @property

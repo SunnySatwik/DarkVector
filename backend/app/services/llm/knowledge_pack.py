@@ -36,6 +36,32 @@ class KnowledgePack:
 
         sections.append(f"## Investigation Overview\n{overview_text}")
 
+        # 1.1 ## Evidence Confidence Assessment (Phase 3)
+        conf_data = context.get("confidence")
+        if conf_data:
+            score = conf_data.get("score", 0.0)
+            semantic = conf_data.get("semantic", "evidence_strength")
+            breakdown = conf_data.get("breakdown")
+            reasons = conf_data.get("reasons")
+            
+            conf_text = (
+                f"Investigation Confidence: {score:.0f}%\n"
+                f"Confidence Definition: represents the strength and reliability of the available evidence supporting the analysis.\n"
+            )
+            if breakdown:
+                conf_text += (
+                    f"Confidence Breakdown:\n"
+                    f"- Model Evidence Strength: {breakdown.get('model_evidence', 0.0):.1f}%\n"
+                    f"- Explanation Attribution Quality: {breakdown.get('explanation_evidence', 0.0):.1f}%\n"
+                    f"- Contextual Corroboration: {breakdown.get('contextual_evidence', 0.0):.1f}%\n"
+                    f"- Input Telemetry Completeness: {breakdown.get('input_completeness', 0.0):.1f}%\n"
+                )
+            if reasons:
+                conf_text += "Reliability Assessment Notes:\n"
+                for r in reasons:
+                    conf_text += f"- {r}\n"
+            sections.append(f"## Evidence Confidence Assessment\n{conf_text}")
+
         # If it's a behavioral investigation
         if beh:
             # 2. ## Behavioral Detection Assessment
@@ -262,18 +288,7 @@ class KnowledgePack:
             else:
                 evidence_parts.append("No specific SHAP anomaly score feature attributions were calculated.")
 
-            breakdown = shap.get("confidence_breakdown")
-            reasons = shap.get("confidence_reasons")
-            if breakdown:
-                evidence_parts.append(
-                    f"The analysis confidence is structured as: Model Evidence: {breakdown.get('model_evidence')}, "
-                    f"Explanation Attribution Quality: {breakdown.get('explanation_evidence')}, "
-                    f"Context Corroboration: {breakdown.get('contextual_evidence')}, "
-                    f"Input Completeness: {breakdown.get('input_completeness')}."
-                )
-            if reasons:
-                reasons_str = " ".join(reasons)
-                evidence_parts.append(f"Evidence reliability assessment notes: {reasons_str}")
+
 
             if nodes or links:
                 nodes_str = ", ".join(f"{n.get('label')} ({n.get('type')})" for n in nodes)

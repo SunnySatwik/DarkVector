@@ -74,6 +74,52 @@ class FallbackAI:
         is_contained = "contained" in status_str
         print("[FALLBACK] Generating chat fallback")
 
+        # 0. Check for legacy confidence questions
+        is_conf = any(k in q for k in ["confidence", "reliability", "reliable"])
+        if is_conf:
+            explanation = analysis_json.get("explanation") or {}
+            breakdown = explanation.get("confidence_breakdown")
+            reasons = explanation.get("confidence_reasons")
+            
+            # Fetch score
+            score_val = 0.0
+            if hasattr(investigation, "confidence") and getattr(investigation, "confidence") is not None:
+                score_val = getattr(investigation, "confidence")
+            elif "analysis" in analysis_json:
+                score_val = analysis_json["analysis"].get("confidence", 0.0)
+            elif isinstance(investigation, dict) and "confidence" in investigation:
+                score_val = investigation["confidence"]
+                
+            if score_val <= 1.0 and score_val > 0.0:
+                score_val *= 100.0
+                
+            if breakdown:
+                breakdown_lines = (
+                    f"- Model Evidence: {breakdown.get('model_evidence', 0.0):.1f}%\n"
+                    f"- Explanation Evidence: {breakdown.get('explanation_evidence', 0.0):.1f}%\n"
+                    f"- Contextual Evidence: {breakdown.get('contextual_evidence', 0.0):.1f}%\n"
+                    f"- Input Completeness: {breakdown.get('input_completeness', 0.0):.1f}%"
+                )
+                reasons_str = "\n".join(f"- {r}" for r in reasons) if reasons else ""
+                reasons_section = f"\n\nEvidence reliability notes:\n{reasons_str}" if reasons_str else ""
+                
+                return (
+                    f"The analysis confidence score of {score_val:.0f}% measures the strength and reliability "
+                    f"of the available evidence supporting the analysis of this event. It is composed of "
+                    f"four key components:\n\n"
+                    f"{breakdown_lines}"
+                    f"{reasons_section}\n\n"
+                    f"This metric is distinct from the risk score, which evaluates the threat concern/severity. "
+                    f"A high risk score means the event is concerning, while this {score_val:.0f}% confidence rating "
+                    f"verifies that the evidence supporting that assessment is solid."
+                )
+            else:
+                return (
+                    f"This investigation predates structured confidence breakdown metadata. I can report the "
+                    f"persisted analysis confidence score of {score_val:.0f}%, which represents the overall strength "
+                    f"and reliability of the evidence, but detailed component attributions are unavailable for this record."
+                )
+
         # Check for focused scope severity/risk explanations (Requirement 9)
         from app.services.llm.policy import ResponseScope
         if policy and (policy.scope == ResponseScope.FOCUSED or policy.route.value == "risk_analysis"):

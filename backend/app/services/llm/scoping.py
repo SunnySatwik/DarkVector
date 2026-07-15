@@ -58,4 +58,7 @@ class ContextScoper:
         if EvidenceCategory.INVESTIGATION_METADATA in policy.excluded_evidence:
             scoped["investigation"] = None
 
+        if EvidenceCategory.CONFIDENCE_EVIDENCE in policy.excluded_evidence:
+            scoped["confidence"] = None
+
         return scoped

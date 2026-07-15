@@ -31,6 +31,7 @@ class EvidenceCategory(Enum):
     RECOMMENDATION_EVIDENCE = "recommendation_evidence"
     CONVERSATION_HISTORY = "conversation_history"
     KNOWLEDGE_BASE_EVIDENCE = "knowledge_base_evidence"
+    CONFIDENCE_EVIDENCE = "confidence_evidence"
 
 
 @dataclass(frozen=True)
@@ -150,8 +151,43 @@ class PolicyResolver:
             k in q for k in ["shap", "attribution", "feature", "anomaly"]
         )
 
+        is_confidence_question = any(
+            k in q for k in ["confidence", "reliability", "reliable"]
+        )
+
         # Resolve scope, retrieval, and evidence list
-        if route == PromptRoute.RISK_ANALYSIS or any(k in q for k in ["severity", "risk", "score"]):
+        if is_confidence_question:
+            scope = ResponseScope.FOCUSED
+            retrieval_decision = RetrievalDecision.SKIP
+            required_evidence = {
+                EvidenceCategory.INVESTIGATION_METADATA,
+                EvidenceCategory.CONFIDENCE_EVIDENCE,
+            }
+            optional_evidence = {
+                EvidenceCategory.DETECTION_EVIDENCE,
+                EvidenceCategory.PROCESS_EVIDENCE,
+                EvidenceCategory.MITRE_EVIDENCE,
+                EvidenceCategory.SHAP_EVIDENCE,
+            }
+            excluded_evidence = {
+                EvidenceCategory.KNOWLEDGE_BASE_EVIDENCE,
+                EvidenceCategory.TIMELINE_EVIDENCE,
+                EvidenceCategory.RECOMMENDATION_EVIDENCE,
+                EvidenceCategory.CONVERSATION_HISTORY,
+            }
+            allowed_sections = {
+                "Direct Explanation",
+                "Supporting Evidence",
+                "Evidence Used",
+            }
+            forbidden_sections = {
+                "### Full Timeline",
+                "### Analyst Recommendations",
+                "### Full Remediation Plan",
+                "OWASP",
+                "CIS"
+            }
+        elif route == PromptRoute.RISK_ANALYSIS or any(k in q for k in ["severity", "risk", "score"]):
             if is_focused_severity:
                 scope = ResponseScope.FOCUSED
                 retrieval_decision = RetrievalDecision.SKIP
@@ -174,6 +210,7 @@ class PolicyResolver:
                     EvidenceCategory.PROCESS_EVIDENCE,
                     EvidenceCategory.CORRELATION_EVIDENCE,
                     EvidenceCategory.MITRE_EVIDENCE,
+                    EvidenceCategory.CONFIDENCE_EVIDENCE,
                 }
                 excluded_evidence = {
                     EvidenceCategory.SHAP_EVIDENCE,
@@ -216,6 +253,7 @@ class PolicyResolver:
                     EvidenceCategory.CORRELATION_EVIDENCE,
                     EvidenceCategory.MITRE_EVIDENCE,
                     EvidenceCategory.TELEMETRY_EVIDENCE,
+                    EvidenceCategory.CONFIDENCE_EVIDENCE,
                 }
                 excluded_evidence = {
                     EvidenceCategory.SHAP_EVIDENCE,
@@ -252,7 +290,8 @@ class PolicyResolver:
             }
             excluded_evidence = {
                 EvidenceCategory.SHAP_EVIDENCE,
-                EvidenceCategory.TIMELINE_EVIDENCE
+                EvidenceCategory.TIMELINE_EVIDENCE,
+                EvidenceCategory.CONFIDENCE_EVIDENCE,
             }
             if is_shap_question:
                 optional_evidence.add(EvidenceCategory.SHAP_EVIDENCE)
@@ -282,7 +321,8 @@ class PolicyResolver:
             excluded_evidence = {
                 EvidenceCategory.SHAP_EVIDENCE,
                 EvidenceCategory.TIMELINE_EVIDENCE,
-                EvidenceCategory.CONVERSATION_HISTORY
+                EvidenceCategory.CONVERSATION_HISTORY,
+                EvidenceCategory.CONFIDENCE_EVIDENCE,
             }
             allowed_sections = {
                 "MITRE ATT&CK Mapping",
@@ -308,7 +348,8 @@ class PolicyResolver:
             }
             excluded_evidence = {
                 EvidenceCategory.SHAP_EVIDENCE,
-                EvidenceCategory.KNOWLEDGE_BASE_EVIDENCE
+                EvidenceCategory.KNOWLEDGE_BASE_EVIDENCE,
+                EvidenceCategory.CONFIDENCE_EVIDENCE,
             }
             allowed_sections = {
                 "Timeline Progression",
@@ -330,7 +371,8 @@ class PolicyResolver:
                 EvidenceCategory.PROCESS_EVIDENCE
             }
             optional_evidence = {
-                EvidenceCategory.CORRELATION_EVIDENCE
+                EvidenceCategory.CORRELATION_EVIDENCE,
+                EvidenceCategory.CONFIDENCE_EVIDENCE,
             }
             excluded_evidence = {
                 EvidenceCategory.KNOWLEDGE_BASE_EVIDENCE
@@ -377,7 +419,8 @@ class PolicyResolver:
                 EvidenceCategory.TELEMETRY_EVIDENCE,
                 EvidenceCategory.RECOMMENDATION_EVIDENCE,
                 EvidenceCategory.CONVERSATION_HISTORY,
-                EvidenceCategory.KNOWLEDGE_BASE_EVIDENCE
+                EvidenceCategory.KNOWLEDGE_BASE_EVIDENCE,
+                EvidenceCategory.CONFIDENCE_EVIDENCE,
             }
             excluded_evidence = {
                 EvidenceCategory.SHAP_EVIDENCE

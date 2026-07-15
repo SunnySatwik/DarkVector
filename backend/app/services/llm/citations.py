@@ -92,6 +92,15 @@ class EvidenceCitationBuilder:
                     else:
                         citations.append(f"Knowledge: {doc.title}")
 
+        # 11. Confidence Scoring Evidence (Phase 6)
+        conf = context.get("confidence")
+        if conf and (conf.get("breakdown") or conf.get("reasons")) and is_allowed(EvidenceCategory.CONFIDENCE_EVIDENCE):
+            citations.append("Confidence Scoring Evidence")
+
+        # 12. Investigation Metadata
+        if is_allowed(EvidenceCategory.INVESTIGATION_METADATA):
+            citations.append("Investigation Metadata")
+
         # Deduplicate citations while preserving deterministic order
         unique_citations = []
         seen = set()

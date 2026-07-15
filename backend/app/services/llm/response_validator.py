@@ -175,9 +175,9 @@ class ResponseValidator:
                 )
 
     @staticmethod
-    def validate_confidence_semantics(text: str) -> None:
+    def validate_confidence_semantics(text: str, knowledge_doc: str = None) -> None:
         """
-        Rejects absolute certainty claims based on confidence metrics.
+        Rejects absolute certainty claims and incorrect semantic interpretations of legacy ML confidence.
         """
         forbidden = [
             "100% confirmed compromise",
@@ -212,6 +212,38 @@ class ResponseValidator:
                 raise ValueError(
                     f"Response validator failed: Prohibited aggregate confidence reinterpretation detected: '{phrase}'"
                 )
+
+        # Check if legacy ML investigation based on knowledge doc content
+        is_legacy = False
+        if knowledge_doc:
+            is_legacy = "## Alert Analysis" in knowledge_doc or "ML analysis" in knowledge_doc
+
+        if is_legacy:
+            legacy_forbidden = [
+                "pattern-matching accuracy",
+                "pattern matching accuracy",
+                "accuracy of the detection",
+                "accuracy and strength of the detection",
+                "reliability of our pattern-matching",
+                "reliability of pattern-matching",
+                "reliability of the pattern-matching",
+                "reliability of pattern matching",
+                "reliability of the pattern matching",
+                "accuracy of the pattern",
+                "accuracy and strength of the pattern",
+                "gauges the accuracy",
+                "gauges the strength of the detection",
+                "reliability of our detection",
+                "reliability of the detection logic",
+                "accuracy of the detection logic",
+                "ai confidence",
+                "analyst confidence",
+            ]
+            for phrase in legacy_forbidden:
+                if phrase in text_lower:
+                    raise ValueError(
+                        f"Response validator failed: Prohibited legacy confidence reinterpretation detected: '{phrase}'"
+                    )
 
 
     @staticmethod
@@ -292,7 +324,7 @@ class ResponseValidator:
             cls.validate_severity_consistency(text, knowledge_doc)
             cls.validate_mitre_consistency(text, knowledge_doc)
             cls.validate_process_claims(text, knowledge_doc)
-        cls.validate_confidence_semantics(text)
+        cls.validate_confidence_semantics(text, knowledge_doc)
         cls.validate_evidence_references(text)
         cls.validate_policy_conformance(text, policy)
 
