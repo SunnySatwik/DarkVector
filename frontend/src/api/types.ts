@@ -82,6 +82,9 @@ export interface Investigation {
   summary: string | null;
   created_at: string;
   updated_at: string;
+  is_deleted?: boolean;
+  containment_status?: string | null;
+  containment_message?: string | null;
 }
 
 export interface InvestigationListResponse {
@@ -154,6 +157,16 @@ export interface MitreMapping {
   [key: string]: any; // supports extra metadata returned by backend
 }
 
+export interface ContainmentJob {
+  job_id: string;
+  status: string;
+  executor: string;
+  message: string | null;
+  started_at: string;
+  completed_at: string | null;
+  last_update: string;
+}
+
 export interface InvestigationWorkspace {
   investigation: Investigation;
   alert: AnalyzeRequest | null;
@@ -166,4 +179,5 @@ export interface InvestigationWorkspace {
   mitre_mappings: MitreMapping[];
   recommendations: string[];
   timeline: TimelineEvent[];
+  containment_job: ContainmentJob | null;
 }

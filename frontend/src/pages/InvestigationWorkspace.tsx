@@ -5,6 +5,8 @@ import { MOCK_ALERTS } from "../mockData";
 import { useAnalysis } from "../hooks/useAnalysis";
 import { useInvestigations, useUpdateInvestigationStatus } from "../hooks/useInvestigations";
 import WorkspaceView from "../components/workspace/WorkspaceView";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { triggerContainment } from "../api/investigations";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -32,10 +34,6 @@ export default function InvestigationWorkspace({
   onCloseWorkspace,
   onOpenReport,
 }: InvestigationWorkspaceProps) {
-  const [quarantineStatus, setQuarantineStatus] = useState<
-    "active" | "quarantining" | "quarantined"
-  >("active");
-  const [quarantineProgress, setQuarantineProgress] = useState(0);
   const [isBlockApplied, setIsBlockApplied] = useState(false);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
 
@@ -53,6 +51,53 @@ export default function InvestigationWorkspace({
   const investigationId = matchedInv?.investigation_id;
 
   const updateStatusMutation = useUpdateInvestigationStatus(investigationId);
+  const queryClient = useQueryClient();
+
+  const triggerContainmentMutation = useMutation({
+    mutationFn: () => triggerContainment(investigationId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["investigations"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline", investigationId] });
+      showSuccessToast("Containment playbook dispatched. Monitoring agent status...");
+    }
+  });
+
+  const handleIsolate = () => {
+    if (investigationId) {
+      triggerContainmentMutation.mutate();
+    } else {
+      showSuccessToast("Cannot isolate host: investigation not created yet.");
+    }
+  };
+
+  // Derive quarantineStatus and progress dynamically from containment job state
+  const bContainmentStatus = matchedInv?.containment_status || null;
+  const isPolling = bContainmentStatus === "QUEUED" || bContainmentStatus === "EXECUTING";
+
+  useEffect(() => {
+    if (!isPolling || !investigationId) return;
+
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["investigations"] });
+      queryClient.invalidateQueries({ queryKey: ["timeline", investigationId] });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPolling, investigationId, queryClient]);
+
+  let quarantineStatus: "active" | "quarantining" | "quarantined" = "active";
+  let quarantineProgress = 0;
+
+  if (bContainmentStatus === "QUEUED") {
+    quarantineStatus = "quarantining";
+    quarantineProgress = 30;
+  } else if (bContainmentStatus === "EXECUTING") {
+    quarantineStatus = "quarantining";
+    quarantineProgress = 70;
+  } else if (bContainmentStatus === "COMPLETED") {
+    quarantineStatus = "quarantined";
+    quarantineProgress = 100;
+  }
 
   useEffect(() => {
     mutation.reset();
@@ -75,33 +120,10 @@ export default function InvestigationWorkspace({
     }
     : activeAlert;
 
-  // Reset remediation state when the active alert changes
+  // Reset remediation block state when the active alert changes
   useEffect(() => {
-    setQuarantineStatus("active");
-    setQuarantineProgress(0);
     setIsBlockApplied(false);
   }, [activeAlert.id]);
-
-  const handleIsolate = () => {
-    setQuarantineStatus("quarantining");
-    setQuarantineProgress(0);
-    const interval = setInterval(() => {
-      setQuarantineProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setQuarantineStatus("quarantined");
-          // Automatically update investigation status and record timeline event
-          updateStatusMutation.mutate("CONTAINED", {
-            onSuccess: () => {
-              showSuccessToast("Containment initiated successfully. The affected host has been marked as contained.");
-            }
-          });
-          return 100;
-        }
-        return prev + 20;
-      });
-    }, 220);
-  };
 
   const relatedAlerts = MOCK_ALERTS.filter(
     (a) => a.id !== activeAlert.id && a.category === activeAlert.category

@@ -7,8 +7,10 @@ import {
   InvestigationWorkspace,
 } from "./types";
 
-export async function getInvestigations(): Promise<Investigation[]> {
-  const response = await api.get("/investigations");
+export async function getInvestigations(includeArchived: boolean = false): Promise<Investigation[]> {
+  const response = await api.get("/investigations", {
+    params: { include_archived: includeArchived }
+  });
   const raw = response.data.investigations as Investigation[];
   return raw.map((inv) => ({
     ...inv,
@@ -97,5 +99,69 @@ export async function getInvestigationReport(
   investigationId: string
 ): Promise<{ report: string }> {
   const response = await api.get(`/investigations/${investigationId}/report`);
+  return response.data;
+}
+
+export async function archiveInvestigation(
+  investigationId: string
+): Promise<Investigation> {
+  const response = await api.post(`/investigations/${investigationId}/archive`);
+  const inv = response.data as Investigation;
+  return {
+    ...inv,
+    severity: inv.severity.toLowerCase() as Severity,
+  };
+}
+
+export async function restoreInvestigation(
+  investigationId: string
+): Promise<Investigation> {
+  const response = await api.post(`/investigations/${investigationId}/restore`);
+  const inv = response.data as Investigation;
+  return {
+    ...inv,
+    severity: inv.severity.toLowerCase() as Severity,
+  };
+}
+
+export async function dismissInvestigation(
+  investigationId: string
+): Promise<Investigation> {
+  const response = await api.post(`/investigations/${investigationId}/dismiss`);
+  const inv = response.data as Investigation;
+  return {
+    ...inv,
+    severity: inv.severity.toLowerCase() as Severity,
+  };
+}
+
+export async function deleteInvestigation(
+  investigationId: string,
+  permanent: boolean = false
+): Promise<any> {
+  const response = await api.delete(`/investigations/${investigationId}`, {
+    params: { permanent }
+  });
+  return response.data;
+}
+
+export async function triggerContainment(
+  investigationId: string
+): Promise<any> {
+  const response = await api.post(`/investigations/${investigationId}/containment`);
+  return response.data;
+}
+
+export async function bulkArchiveDemoInvestigations(filters?: any): Promise<any> {
+  const response = await api.post("/investigations/bulk-archive", null, {
+    params: filters
+  });
+  return response.data;
+}
+
+export async function bulkDeleteDemoInvestigations(permanent: boolean = false, filters?: any): Promise<any> {
+  const response = await api.post("/investigations/bulk-delete", null, {
+    params: { permanent, ...filters }
+  });
   return response.data;
 }

@@ -50,6 +50,7 @@ from app.models.timeline import TimelineEvent       # noqa: F401
 from app.models.telemetry import TelemetryEvent    # noqa: F401
 from app.models.endpoint_agent import EndpointAgent # noqa: F401
 from app.models.event import Event                  # noqa: F401
+from app.models.containment import ContainmentJob   # noqa: F401
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +166,24 @@ def test_engine():
 
     # Create schema once for the entire test session
     Base.metadata.create_all(bind=engine)
+
+    # Run migrations on test DB
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        try:
+            if engine.dialect.name == "postgresql":
+                # Add columns to investigations
+                conn.execute(text("ALTER TABLE investigations ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"))
+                conn.execute(text("ALTER TABLE investigations ADD COLUMN IF NOT EXISTS containment_status VARCHAR(50) DEFAULT NULL"))
+                conn.execute(text("ALTER TABLE investigations ADD COLUMN IF NOT EXISTS containment_message TEXT DEFAULT NULL"))
+                # Update null values for safety
+                conn.execute(text("UPDATE investigations SET is_deleted = FALSE WHERE is_deleted IS NULL"))
+                try:
+                    conn.execute(text("ALTER TYPE investigation_status ADD VALUE 'ARCHIVED'"))
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"Warning altering test investigations table: {e}")
 
     yield engine
 

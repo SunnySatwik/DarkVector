@@ -37,6 +37,10 @@ class InvestigationResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    is_deleted: bool = False
+    containment_status: str | None = None
+    containment_message: str | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
     @field_validator("confidence", mode="before")
@@ -122,6 +126,16 @@ class MitreMappingResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="allow")
 
 
+class ContainmentJobResponse(BaseModel):
+    job_id: str
+    status: str
+    executor: str
+    message: str | None = None
+    started_at: str
+    completed_at: str | None = None
+    last_update: str
+
+
 class InvestigationWorkspaceResponse(BaseModel):
     investigation: InvestigationResponse
 
@@ -141,5 +155,6 @@ class InvestigationWorkspaceResponse(BaseModel):
     mitre_mappings: list[MitreMappingResponse] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     timeline: list[TimelineEventResponse] = Field(default_factory=list)
+    containment_job: ContainmentJobResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -33,11 +33,11 @@ export function useInvestigationWorkspace(investigationId?: string) {
   });
 }
 
-export function useInvestigations() {
+export function useInvestigations(includeArchived: boolean = false) {
   return useQuery({
-    queryKey: ["investigations"],
+    queryKey: ["investigations", includeArchived],
 
-    queryFn: getInvestigations,
+    queryFn: () => getInvestigations(includeArchived),
 
     staleTime: 30000,
   });

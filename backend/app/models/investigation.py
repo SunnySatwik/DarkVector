@@ -13,6 +13,7 @@ class InvestigationStatus(str, Enum):
     CONTAINED = "CONTAINED"
     RESOLVED = "RESOLVED"
     FALSE_POSITIVE = "FALSE_POSITIVE"
+    ARCHIVED = "ARCHIVED"
 
 class InvestigationSeverity(str, Enum):
     LOW = "LOW"
@@ -62,6 +63,9 @@ class Investigation(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False
     )
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
+    containment_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, default=None)
+    containment_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None)
     timeline = relationship(
         "TimelineEvent",
         back_populates="investigation",

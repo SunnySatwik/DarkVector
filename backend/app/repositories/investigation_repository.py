@@ -28,20 +28,23 @@ class InvestigationRepository:
         db: Session,
         id: int,
     ) -> Investigation | None:
-        return db.get(Investigation, id)
+        inv = db.get(Investigation, id)
+        if inv and inv.is_deleted:
+            return None
+        return inv
 
     @staticmethod
     def get_by_investigation_id(
         db: Session,
         investigation_id: str,
+        include_deleted: bool = False,
     ) -> Investigation | None:
 
-        stmt = (
-            select(Investigation)
-            .where(
-                Investigation.investigation_id == investigation_id
-            )
+        stmt = select(Investigation).where(
+            Investigation.investigation_id == investigation_id
         )
+        if not include_deleted:
+            stmt = stmt.where(Investigation.is_deleted == False)
 
         return db.scalar(stmt)
 
@@ -49,14 +52,14 @@ class InvestigationRepository:
     def get_by_alert_id(
         db: Session,
         alert_id: str,
+        include_deleted: bool = False,
     ) -> Investigation | None:
 
-        stmt = (
-            select(Investigation)
-            .where(
-                Investigation.alert_id == alert_id
-            )
+        stmt = select(Investigation).where(
+            Investigation.alert_id == alert_id
         )
+        if not include_deleted:
+            stmt = stmt.where(Investigation.is_deleted == False)
 
         return db.scalar(stmt)
 
@@ -65,14 +68,18 @@ class InvestigationRepository:
         db: Session,
         limit: int = 100,
         offset: int = 0,
+        include_archived: bool = False,
+        include_deleted: bool = False,
     ) -> list[Investigation]:
 
-        stmt = (
-            select(Investigation)
-            .offset(offset)
-            .limit(limit)
-            .order_by(Investigation.created_at.desc())
-        )
+        stmt = select(Investigation)
+        if not include_deleted:
+            stmt = stmt.where(Investigation.is_deleted == False)
+        if not include_archived:
+            from app.models.investigation import InvestigationStatus
+            stmt = stmt.where(Investigation.status != InvestigationStatus.ARCHIVED)
+            
+        stmt = stmt.offset(offset).limit(limit).order_by(Investigation.created_at.desc())
 
         return list(db.scalars(stmt))
 
@@ -106,7 +113,7 @@ class InvestigationRepository:
         Locates all investigations containing any of the member detection IDs
         or related process GUIDs in their detection_json.
         """
-        stmt = select(Investigation).order_by(Investigation.created_at.desc())
+        stmt = select(Investigation).where(Investigation.is_deleted == False).order_by(Investigation.created_at.desc())
         invs = list(db.scalars(stmt))
 
         matches = []

@@ -610,6 +610,12 @@ export default function WorkspaceView({
                       >
                         RESOLVED
                       </option>
+                      <option
+                        value="ARCHIVED"
+                        className="bg-[#111317] text-gray-300"
+                      >
+                        ARCHIVED
+                      </option>
                     </select>
                   ) : (
                     <Badge variant="default">NEW</Badge>

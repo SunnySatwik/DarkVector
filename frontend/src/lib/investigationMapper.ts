@@ -11,11 +11,12 @@ export interface CaseItem {
     id: string;
     title: string;
     assignedAnalyst: string;
-    status: "new" | "investigating" | "contained" | "resolved";
+    status: "new" | "investigating" | "contained" | "resolved" | "archived";
     severity: Severity;
     riskScore: number;
     summary: string | null;
     createdTime: string;
+    containmentStatus: string | null;
 }
 
 // ─── Status mapping ───────────────────────────────────────────────────────────
@@ -34,6 +35,8 @@ function mapStatus(
         case "RESOLVED":
         case "FALSE_POSITIVE":
             return "resolved";
+        case "ARCHIVED":
+            return "archived";
         default:
             return "new";
     }
@@ -63,5 +66,6 @@ export function mapInvestigationToCase(
         riskScore: investigation.risk_score,
         summary: investigation.summary ?? null,
         createdTime: formatLocalLocale(investigation.created_at),
+        containmentStatus: investigation.containment_status ?? null,
     };
 }

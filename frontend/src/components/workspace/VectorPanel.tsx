@@ -824,10 +824,9 @@ Ask me anything about this investigation.`;
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           onFocus={() => {
-            if (ignoreNextFocusRef.current) {
-              ignoreNextFocusRef.current = false;
-              return;
-            }
+            // Do not expand automatically on focus to prevent auto-opening on tab switch.
+          }}
+          onClick={() => {
             setIsExpanded(true);
           }}
           disabled={isResponding}

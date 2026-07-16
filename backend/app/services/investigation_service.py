@@ -176,12 +176,14 @@ class InvestigationService:
     @staticmethod
     def list_investigations(
         db: Session,
+        include_archived: bool = False,
     ) -> list[Investigation]:
         """
         Return all investigations ordered by newest first.
         """
 
-        return InvestigationRepository.list_all(db)
+        return InvestigationRepository.list_all(db, include_archived=include_archived)
+
     @staticmethod
     def get_investigation(
         db: Session,
@@ -230,6 +232,274 @@ class InvestigationService:
         return investigation
 
     @staticmethod
+    def archive_investigation(db: Session, investigation_id: str) -> Investigation | None:
+        investigation = InvestigationRepository.get_by_investigation_id(db, investigation_id)
+        if not investigation:
+            return None
+        
+        if investigation.status != InvestigationStatus.ARCHIVED:
+            investigation.status = InvestigationStatus.ARCHIVED
+            InvestigationRepository.update(db, investigation)
+            
+            timeline_repo = TimelineRepository(db)
+            timeline_service = TimelineService(timeline_repo)
+            timeline_service.add_event(
+                investigation_id=investigation_id,
+                event_type=TimelineEventType.STATUS_CHANGED,
+                actor=TimelineActor.ANALYST,
+                title="Investigation archived",
+                description="Investigation archived by analyst.",
+            )
+        return investigation
+
+    @staticmethod
+    def restore_investigation(db: Session, investigation_id: str) -> Investigation | None:
+        investigation = InvestigationRepository.get_by_investigation_id(db, investigation_id)
+        if not investigation:
+            return None
+        
+        if investigation.status == InvestigationStatus.ARCHIVED:
+            investigation.status = InvestigationStatus.NEW
+            InvestigationRepository.update(db, investigation)
+            
+            timeline_repo = TimelineRepository(db)
+            timeline_service = TimelineService(timeline_repo)
+            timeline_service.add_event(
+                investigation_id=investigation_id,
+                event_type=TimelineEventType.STATUS_CHANGED,
+                actor=TimelineActor.ANALYST,
+                title="Investigation restored",
+                description="Investigation restored from archive.",
+            )
+        return investigation
+
+    @staticmethod
+    def delete_investigation(db: Session, investigation_id: str, permanent: bool = False) -> bool:
+        investigation = InvestigationRepository.get_by_investigation_id(db, investigation_id, include_deleted=True)
+        if not investigation:
+            return False
+            
+        if permanent:
+            InvestigationRepository.delete(db, investigation)
+        else:
+            if not investigation.is_deleted:
+                investigation.is_deleted = True
+                InvestigationRepository.update(db, investigation)
+                
+                timeline_repo = TimelineRepository(db)
+                timeline_service = TimelineService(timeline_repo)
+                timeline_service.add_event(
+                    investigation_id=investigation_id,
+                    event_type=TimelineEventType.STATUS_CHANGED,
+                    actor=TimelineActor.ANALYST,
+                    title="Investigation soft-deleted",
+                    description="Investigation soft-deleted by analyst.",
+                )
+        return True
+
+    @staticmethod
+    def dismiss_investigation(db: Session, investigation_id: str) -> Investigation | None:
+        investigation = InvestigationRepository.get_by_investigation_id(db, investigation_id)
+        if not investigation:
+            return None
+        
+        timeline_repo = TimelineRepository(db)
+        timeline_service = TimelineService(timeline_repo)
+        
+        if investigation.status != InvestigationStatus.RESOLVED:
+            investigation.status = InvestigationStatus.RESOLVED
+            timeline_service.add_event(
+                investigation_id=investigation_id,
+                event_type=TimelineEventType.STATUS_CHANGED,
+                actor=TimelineActor.ANALYST,
+                title="Status changed",
+                description="Investigation marked as Resolved.",
+            )
+            
+        investigation.status = InvestigationStatus.ARCHIVED
+        timeline_service.add_event(
+            investigation_id=investigation_id,
+            event_type=TimelineEventType.STATUS_CHANGED,
+            actor=TimelineActor.ANALYST,
+            title="Investigation dismissed",
+            description="Investigation dismissed (resolved and archived).",
+        )
+        
+        InvestigationRepository.update(db, investigation)
+        return investigation
+
+    @staticmethod
+    def bulk_archive_investigations(
+        db: Session,
+        status: str | None = None,
+        severity: str | None = None,
+        generated_by: str | None = None,
+        demo_only: bool = False,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> int:
+        from sqlalchemy import select
+        
+        stmt = select(Investigation).where(
+            Investigation.is_deleted == False,
+            Investigation.status != InvestigationStatus.ARCHIVED,
+        )
+        
+        if status:
+            stmt = stmt.where(Investigation.status == status.upper())
+        if severity:
+            stmt = stmt.where(Investigation.severity == severity.upper())
+        if demo_only:
+            stmt = stmt.where(Investigation.detection_json == None)
+        if generated_by:
+            if generated_by.lower() == "behavioral":
+                stmt = stmt.where(Investigation.detection_json != None)
+            elif generated_by.lower() == "ml":
+                stmt = stmt.where(Investigation.detection_json == None)
+        if start_date:
+            try:
+                s_dt = datetime.fromisoformat(start_date)
+                stmt = stmt.where(Investigation.created_at >= s_dt)
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                e_dt = datetime.fromisoformat(end_date)
+                stmt = stmt.where(Investigation.created_at <= e_dt)
+            except ValueError:
+                pass
+                
+        invs = list(db.scalars(stmt))
+        count = 0
+        timeline_repo = TimelineRepository(db)
+        timeline_service = TimelineService(timeline_repo)
+        
+        for inv in invs:
+            inv.status = InvestigationStatus.ARCHIVED
+            InvestigationRepository.update(db, inv)
+            timeline_service.add_event(
+                investigation_id=inv.investigation_id,
+                event_type=TimelineEventType.STATUS_CHANGED,
+                actor=TimelineActor.ANALYST,
+                title="Investigation archived",
+                description="Investigation archived during bulk operation.",
+            )
+            count += 1
+        return count
+
+    @staticmethod
+    def bulk_delete_investigations(
+        db: Session,
+        permanent: bool = False,
+        status: str | None = None,
+        severity: str | None = None,
+        generated_by: str | None = None,
+        demo_only: bool = False,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> int:
+        from sqlalchemy import select
+        
+        stmt = select(Investigation)
+        if not permanent:
+            stmt = stmt.where(Investigation.is_deleted == False)
+            
+        if status:
+            stmt = stmt.where(Investigation.status == status.upper())
+        if severity:
+            stmt = stmt.where(Investigation.severity == severity.upper())
+        if demo_only:
+            stmt = stmt.where(Investigation.detection_json == None)
+        if generated_by:
+            if generated_by.lower() == "behavioral":
+                stmt = stmt.where(Investigation.detection_json != None)
+            elif generated_by.lower() == "ml":
+                stmt = stmt.where(Investigation.detection_json == None)
+        if start_date:
+            try:
+                s_dt = datetime.fromisoformat(start_date)
+                stmt = stmt.where(Investigation.created_at >= s_dt)
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                e_dt = datetime.fromisoformat(end_date)
+                stmt = stmt.where(Investigation.created_at <= e_dt)
+            except ValueError:
+                pass
+                
+        invs = list(db.scalars(stmt))
+        count = 0
+        timeline_repo = TimelineRepository(db)
+        timeline_service = TimelineService(timeline_repo)
+        
+        for inv in invs:
+            if permanent:
+                InvestigationRepository.delete(db, inv)
+            else:
+                inv.is_deleted = True
+                InvestigationRepository.update(db, inv)
+                timeline_service.add_event(
+                    investigation_id=inv.investigation_id,
+                    event_type=TimelineEventType.STATUS_CHANGED,
+                    actor=TimelineActor.ANALYST,
+                    title="Investigation soft-deleted",
+                    description="Investigation soft-deleted during bulk operation.",
+                )
+            count += 1
+        return count
+
+    @staticmethod
+    def trigger_containment(db: Session, investigation_id: str, background_tasks) -> dict | None:
+        investigation = InvestigationRepository.get_by_investigation_id(db, investigation_id)
+        if not investigation:
+            return None
+            
+        from app.models.containment import ContainmentJob
+        import uuid
+        
+        job = ContainmentJob(
+            investigation_id=investigation_id,
+            status="QUEUED",
+            executor="simulated",
+            message="Host network containment task queued."
+        )
+        db.add(job)
+        
+        investigation.containment_status = "QUEUED"
+        investigation.containment_message = "Host network containment task queued."
+        
+        timeline_repo = TimelineRepository(db)
+        timeline_service = TimelineService(timeline_repo)
+        timeline_service.add_event(
+            investigation_id=investigation_id,
+            event_type=TimelineEventType.STATUS_CHANGED,
+            actor=TimelineActor.ANALYST,
+            title="Containment Requested",
+            description="Analyst dispatched active host network isolation task.",
+        )
+        db.commit()
+        db.refresh(job)
+        
+        from app.services.containment_provider import SimulatedProvider
+        from app.database.session import SessionLocal
+        
+        def run_job_bg(job_id: uuid.UUID, inv_id: str):
+            with SessionLocal() as bg_db:
+                provider = SimulatedProvider()
+                provider.execute(bg_db, job_id, inv_id)
+                
+        background_tasks.add_task(run_job_bg, job.id, investigation_id)
+        
+        return {
+            "job_id": str(job.id),
+            "status": job.status,
+            "message": job.message,
+            "started_at": job.started_at.isoformat(),
+            "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+        }
+
+    @staticmethod
     def get_workspace(
         db: Session,
         investigation_id: str,
@@ -271,6 +541,23 @@ class InvestigationService:
             mitre_mappings = context.get("mitre_mappings") or []
             recommendations = context.get("recommendations") or []
 
+        from app.models.containment import ContainmentJob
+        active_job = db.query(ContainmentJob).filter(
+            ContainmentJob.investigation_id == investigation_id
+        ).order_by(ContainmentJob.started_at.desc()).first()
+        
+        job_details = None
+        if active_job:
+            job_details = {
+                "job_id": str(active_job.id),
+                "status": active_job.status,
+                "executor": active_job.executor,
+                "message": active_job.message,
+                "started_at": active_job.started_at.isoformat(),
+                "completed_at": active_job.completed_at.isoformat() if active_job.completed_at else None,
+                "last_update": active_job.last_update.isoformat(),
+            }
+
         return {
             "investigation": investigation,
             "alert": investigation.alert_json,
@@ -283,4 +570,5 @@ class InvestigationService:
             "mitre_mappings": mitre_mappings,
             "recommendations": recommendations,
             "timeline": timeline_events,
+            "containment_job": job_details,
         }
