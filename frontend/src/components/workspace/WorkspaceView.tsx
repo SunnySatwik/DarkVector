@@ -46,6 +46,7 @@ export interface WorkspaceViewProps {
   onUpdateStatus?: (status: string) => void;
   onOpenReport?: (investigationId: string) => void;
   analysisContext?: ContextEnrichment;
+  explanationSummary?: string;
   openTabs?: Alert[];
   onSelectAlert?: (alert: Alert) => void;
   onCloseAlertTab?: (alertId: string) => void;
@@ -391,6 +392,7 @@ export default function WorkspaceView({
   onUpdateStatus,
   onOpenReport,
   analysisContext,
+  explanationSummary,
   openTabs = [],
   onSelectAlert,
   onCloseAlertTab,
@@ -446,6 +448,13 @@ export default function WorkspaceView({
   // If node isolated
   const isNodeIsolated =
     viewStatus === "CONTAINED" || quarantineStatus === "quarantined";
+
+  const summaryText = isBehavioral
+    ? (viewModel?.investigation?.summary || "No behavioral summary resolved.")
+    : (explanationSummary ||
+       viewModel?.legacyAnalysis?.explanation?.summary ||
+       displayAlert?.description ||
+       "No reasoning available.");
 
   return (
     <motion.div
@@ -804,10 +813,7 @@ export default function WorkspaceView({
                     </div>
                   ) : (
                     <p className="text-[13px] text-gray-400 leading-relaxed font-sans max-w-[72ch]">
-                      I reviewed the signals from this source and found activity
-                      that doesn't match the expected behavior for this host.
-                      The combination of process lineage, network activity, and
-                      timing patterns pushed the score above the critical threshold.
+                      {summaryText}
                     </p>
                   )}
 

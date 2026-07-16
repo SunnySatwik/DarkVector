@@ -423,7 +423,7 @@ class LLMService:
                 raw_reply = f"{raw_reply}\n\nEvidence Used\n{citation_lines}"
 
             stage = "Response Validator"
-            reply = ResponseValidator.validate_report(raw_reply, knowledge_doc)
+            reply = ResponseValidator.validate_report(raw_reply, knowledge_doc, is_behavioral=beh_ctx.is_behavioral)
             logger.info("[Validator] ✓ Passed")
 
             # Timing and Metrics Logging

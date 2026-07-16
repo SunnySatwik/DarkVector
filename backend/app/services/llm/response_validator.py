@@ -353,7 +353,7 @@ class ResponseValidator:
         return text.strip()
 
     @classmethod
-    def validate_report(cls, text: str, knowledge_doc: str = None, policy: Any = None) -> str:
+    def validate_report(cls, text: str, knowledge_doc: str = None, policy: Any = None, is_behavioral: bool = None) -> str:
         """
         Validates a generated markdown report.
         """
@@ -362,9 +362,11 @@ class ResponseValidator:
                 "Response validator failed: Report response is empty."
             )
 
-        is_beh_report = False
-        if knowledge_doc and "behavioral" in knowledge_doc.lower():
-            is_beh_report = True
+        is_beh_report = is_behavioral
+        if is_beh_report is None:
+            is_beh_report = False
+            if knowledge_doc and "behavioral" in knowledge_doc.lower():
+                is_beh_report = True
 
         if is_beh_report:
             required_headers = [

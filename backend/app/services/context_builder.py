@@ -162,6 +162,17 @@ class ContextBuilder:
                     )
 
 
+        # Normalize confidence and risk score values (Part 3)
+        def normalize_scale(val: float | None) -> float:
+            if val is None:
+                return 0.0
+            if 0.0 < val <= 1.0:
+                val = val * 100.0
+            return round(max(0.0, min(val, 100.0)), 1)
+
+        if risk_score is not None:
+            risk_score = normalize_scale(risk_score)
+
         # Build canonical confidence context data (Phase 2)
         confidence_data = None
         if analysis_json:
@@ -171,6 +182,7 @@ class ContextBuilder:
             conf_val = analysis_json.get("analysis", {}).get("confidence")
             if conf_val is None:
                 conf_val = investigation.confidence if investigation else 0.0
+            conf_val = normalize_scale(conf_val)
             if breakdown or reasons:
                 confidence_data = {
                     "score": conf_val,
@@ -191,7 +203,8 @@ class ContextBuilder:
                     conf_val = detection_json["detections"][0].get("confidence", 0.0)
                 else:
                     conf_val = detection_json.get("confidence", 0.0)
-                
+            
+            conf_val = normalize_scale(conf_val)
             confidence_data = {
                 "score": conf_val,
                 "semantic": "evidence_strength",

@@ -170,6 +170,42 @@ _RULES: list[tuple[list[str], MitreInfo]] = [
             "targets for subsequent exploitation.",
         ),
     ),
+    (
+        ["command and scripting interpreter", "powershell cmd", "interpreter"],
+        MitreInfo(
+            "T1059",
+            "Command and Scripting Interpreter",
+            "Execution",
+            "Adversaries may abuse command and scripting interpreters to execute commands, scripts, or binaries.",
+        ),
+    ),
+    (
+        ["system binary proxy execution", "lolbin", "suspicious lolbins", "lolbin chain"],
+        MitreInfo(
+            "T1218",
+            "System Binary Proxy Execution",
+            "Defense Evasion",
+            "Adversaries may bypass process and/or signature-based defenses by proxying execution of malicious code with signed, trusted system binaries.",
+        ),
+    ),
+    (
+        ["ingress tool transfer", "certutil download", "tool transfer"],
+        MitreInfo(
+            "T1105",
+            "Ingress Tool Transfer",
+            "Command and Control",
+            "Adversaries may transfer tools or other files from an external system into a compromised environment.",
+        ),
+    ),
+    (
+        ["user execution", "office spawn", "office spawning powershell"],
+        MitreInfo(
+            "T1204",
+            "User Execution",
+            "Execution",
+            "Adversaries may rely on the actions of a user in order to gain execution of malicious code, such as opening a malicious document or link.",
+        ),
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -220,6 +256,13 @@ def lookup_by_id(technique_id: str, default_tactic: str = None) -> dict:
     If not matched, preserve the technique ID and default tactic (if provided)
     but do not add generic fallback names/descriptions.
     """
+    if not technique_id or technique_id == "N/A":
+        return {
+            "technique_id": "N/A",
+            "technique_name": "N/A",
+            "tactic": default_tactic or "N/A",
+            "description": "N/A",
+        }
     for _, info in _RULES:
         if info.technique_id == technique_id:
             return info.to_dict()
@@ -231,4 +274,47 @@ def lookup_by_id(technique_id: str, default_tactic: str = None) -> dict:
         "tactic": default_tactic or "N/A",
         "description": "N/A",
     }
+
+
+def validate_registered_rules():
+    """
+    Validation check that runs on import to fail loudly during development
+    if any registered DetectionRule references an unknown/unmapped MITRE technique.
+    """
+    try:
+        from app.services.detection.rules import (
+            PowerShellEncodedRule,
+            PowerShellCmdRule,
+            OfficeSpawnRule,
+            CertutilDownloadRule,
+            SuspiciousLOLBinsRule,
+            LOLBinChainRule,
+        )
+        rules = [
+            PowerShellEncodedRule(),
+            PowerShellCmdRule(),
+            OfficeSpawnRule(),
+            CertutilDownloadRule(),
+            SuspiciousLOLBinsRule(),
+            LOLBinChainRule(),
+        ]
+        
+        registered_ids = {r.mitre_technique for r in rules if r.mitre_technique}
+        mapped_ids = {info.technique_id for _, info in _RULES}
+        mapped_ids.add(_FALLBACK.technique_id)
+        
+        for tech_id in registered_ids:
+            if tech_id not in mapped_ids:
+                raise KeyError(
+                    f"DetectionRule references unknown MITRE technique ID '{tech_id}'. "
+                    f"Please register it in mitre_mapping.py first."
+                )
+    except ImportError:
+        # Prevent import loop/failure during early DB initialization or test setup
+        pass
+
+
+validate_registered_rules()
+
+
 

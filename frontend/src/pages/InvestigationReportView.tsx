@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Badge, Skeleton } from "../components/ui/DesignSystem";
-import { useInvestigation, useTimeline, useInvestigationReport } from "../hooks/useInvestigations";
+import { useInvestigationWorkspace, useInvestigationReport } from "../hooks/useInvestigations";
 import { severityBadgeVariant } from "../lib/severity";
 import { Severity } from "../types";
 import { motion, AnimatePresence } from "motion/react";
@@ -29,8 +29,7 @@ export default function InvestigationReportView({
   investigationId,
   onClose,
 }: InvestigationReportViewProps) {
-  const { data: detailData, isPending: isDetailPending, isError: isDetailError } = useInvestigation(investigationId);
-  const { data: timelineData, isPending: isTimelinePending } = useTimeline(investigationId);
+  const { data: workspaceData, isPending: isWorkspacePending, isError: isWorkspaceError } = useInvestigationWorkspace(investigationId);
   const { data: reportData, isPending: isReportPending } = useInvestigationReport(investigationId);
 
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
@@ -47,21 +46,21 @@ export default function InvestigationReportView({
     }, 2000);
   };
 
-  const isPending = isDetailPending || isTimelinePending || isReportPending;
-  const isError = isDetailError;
+  const isPending = isWorkspacePending || isReportPending;
+  const isError = isWorkspaceError || !workspaceData;
 
   const formattedDate = useMemo(() => {
-    if (!detailData?.investigation.created_at) return "";
+    if (!workspaceData?.investigation?.created_at) return "";
     try {
-      const d = parseUtcDate(detailData.investigation.created_at);
+      const d = parseUtcDate(workspaceData.investigation.created_at);
       return d.toLocaleString([], {
         dateStyle: "medium",
         timeStyle: "short",
       });
     } catch (e) {
-      return detailData.investigation.created_at;
+      return workspaceData.investigation.created_at;
     }
-  }, [detailData]);
+  }, [workspaceData]);
 
   if (isPending) {
     return (
@@ -72,7 +71,7 @@ export default function InvestigationReportView({
     );
   }
 
-  if (isError || !detailData) {
+  if (isError || !workspaceData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] bg-[#09090b] text-red-400 font-mono text-xs gap-3">
         <Shield className="w-6 h-6 text-red-500 animate-pulse" />
@@ -87,8 +86,58 @@ export default function InvestigationReportView({
     );
   }
 
-  const { investigation, alert, analysis } = detailData;
-  const context = analysis.context;
+  const { investigation, alert, analysis, timeline: timelineData } = workspaceData;
+  const isBehavioral = workspaceData.is_behavioral;
+
+  // Source / Host
+  const sourceVal = isBehavioral
+    ? (workspaceData.primary_detection?.host_id || "N/A")
+    : (alert?.source || "N/A");
+
+  // Alert ID
+  const alertIdVal = isBehavioral
+    ? (workspaceData.primary_detection?.id || investigation?.alert_id || "N/A")
+    : (alert?.id || "N/A");
+
+  // Detection Severity
+  const detectionSeverityVal = isBehavioral
+    ? (workspaceData.primary_detection?.severity || investigation?.severity || "medium")
+    : (alert?.severity || "medium");
+
+  // AI Assessment Severity
+  const aiSeverityVal = isBehavioral
+    ? (investigation?.severity || "medium")
+    : (analysis?.analysis?.severity || investigation?.severity || "medium");
+
+  // Risk Score
+  const riskScoreVal = isBehavioral
+    ? (investigation?.risk_score ?? 0)
+    : (analysis?.analysis?.risk_score ?? investigation?.risk_score ?? 0);
+
+  // Confidence
+  const confidenceVal = isBehavioral
+    ? (investigation?.confidence ?? 0)
+    : (analysis?.analysis?.confidence ?? investigation?.confidence ?? 0);
+
+  const contextMitre = isBehavioral
+    ? (workspaceData.mitre_mappings && workspaceData.mitre_mappings.length > 0
+        ? {
+            technique_id: workspaceData.mitre_mappings[0].technique_id,
+            technique_name: workspaceData.mitre_mappings[0].technique_name,
+            tactic: workspaceData.mitre_mappings[0].tactic,
+            description: workspaceData.mitre_mappings[0].description,
+          }
+        : null)
+    : analysis?.context?.mitre;
+
+  const contextIntel = isBehavioral
+    ? {
+        reputation: "suspicious",
+        category: "Behavioral Detection",
+        confidence: investigation?.confidence || 75,
+        summary: workspaceData.primary_detection?.description || "Autonomous behavioral telemetry markers resolved.",
+      }
+    : analysis?.context?.threat_intelligence;
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#09090b] text-gray-200 overflow-y-auto scrollbar-thin">
@@ -213,34 +262,34 @@ export default function InvestigationReportView({
               <div className="bg-black/20 border border-border-custom/15 rounded-lg p-4 space-y-3 print-card">
                 <div className="flex justify-between items-baseline py-0.5">
                   <span className="text-[11px] text-gray-500 font-sans print-text-muted">Target Host/Source</span>
-                  <span className="text-xs font-mono text-gray-300 font-semibold print-text-dark">{alert.source}</span>
+                  <span className="text-xs font-mono text-gray-300 font-semibold print-text-dark">{sourceVal}</span>
                 </div>
                 <div className="flex justify-between items-baseline py-0.5">
                   <span className="text-[11px] text-gray-500 font-sans print-text-muted">Alert ID</span>
-                  <span className="text-xs font-mono text-gray-300 print-text-dark">{alert.id}</span>
+                  <span className="text-xs font-mono text-gray-300 print-text-dark">{alertIdVal}</span>
                 </div>
                 <div className="flex justify-between items-baseline py-0.5">
                   <span className="text-[11px] text-gray-500 font-sans print-text-muted">Detection Severity</span>
-                  <Badge variant={severityBadgeVariant(alert.severity as Severity)} className="print-badge">
-                    {alert.severity}
+                  <Badge variant={severityBadgeVariant(detectionSeverityVal.toLowerCase() as Severity)} className="print-badge">
+                    {detectionSeverityVal}
                   </Badge>
                 </div>
                 <div className="flex justify-between items-baseline py-0.5">
                   <span className="text-[11px] text-gray-500 font-sans print-text-muted">AI Assessment Severity</span>
-                  <Badge variant={severityBadgeVariant(analysis.analysis.severity as Severity)} className="print-badge">
-                    {analysis.analysis.severity}
+                  <Badge variant={severityBadgeVariant(aiSeverityVal.toLowerCase() as Severity)} className="print-badge">
+                    {aiSeverityVal}
                   </Badge>
                 </div>
                 <div className="flex justify-between items-baseline py-0.5">
                   <span className="text-[11px] text-gray-500 font-sans print-text-muted">Risk Score</span>
                   <span className="text-xs font-mono text-red-400 font-bold print-text-dark">
-                    {analysis.analysis.risk_score.toFixed(1)}%
+                    {riskScoreVal.toFixed(1)}%
                   </span>
                 </div>
                 <div className="flex justify-between items-baseline py-0.5">
                   <span className="text-[11px] text-gray-500 font-sans print-text-muted">Analysis Confidence</span>
                   <span className="text-xs font-mono text-purple-400 font-bold print-text-dark">
-                    {analysis.analysis.confidence.toFixed(0)}%
+                    {confidenceVal.toFixed(0)}%
                   </span>
                 </div>
               </div>
@@ -314,8 +363,7 @@ export default function InvestigationReportView({
             <div className="space-y-4">
               <h3 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider print-text-muted">
                 4. MITRE ATT&amp;CK Context
-              </h3>
-              {context?.mitre ? (
+              </h3>              {contextMitre ? (
                 <div className="bg-black/20 border border-border-custom/15 rounded-lg p-5 space-y-3 print-card h-[calc(100%-2rem)]">
                   <div className="flex items-center gap-2 text-[10px] font-mono text-blue-400 print-text-dark">
                     <Crosshair className="w-3.5 h-3.5" />
@@ -323,14 +371,14 @@ export default function InvestigationReportView({
                   </div>
                   <div className="space-y-1">
                     <div className="text-[11px] font-mono text-gray-400 print-text-muted">
-                      Technique: <span className="text-blue-300 font-semibold print-text-dark">{context.mitre.technique_id} · {context.mitre.technique_name}</span>
+                      Technique: <span className="text-blue-300 font-semibold print-text-dark">{contextMitre.technique_id} · {contextMitre.technique_name}</span>
                     </div>
                     <div className="text-[11px] font-mono text-gray-400 print-text-muted">
-                      Tactic: <span className="text-gray-300 print-text-dark">{context.mitre.tactic}</span>
+                      Tactic: <span className="text-gray-300 print-text-dark">{contextMitre.tactic}</span>
                     </div>
                   </div>
                   <p className="text-[11px] text-gray-500 font-sans leading-relaxed print-text-muted">
-                    {context.mitre.description}
+                    {contextMitre.description}
                   </p>
                 </div>
               ) : (
@@ -339,13 +387,13 @@ export default function InvestigationReportView({
                 </div>
               )}
             </div>
-
+ 
             {/* Threat Intelligence Summary */}
             <div className="space-y-4">
               <h3 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider print-text-muted">
                 5. Threat Intelligence Details
               </h3>
-              {context?.threat_intelligence ? (
+              {contextIntel ? (
                 <div className="bg-black/20 border border-border-custom/15 rounded-lg p-5 space-y-3 print-card h-[calc(100%-2rem)]">
                   <div className="flex items-center gap-2 text-[10px] font-mono text-purple-400 print-text-dark">
                     <Shield className="w-3.5 h-3.5" />
@@ -353,17 +401,17 @@ export default function InvestigationReportView({
                   </div>
                   <div className="space-y-1">
                     <div className="text-[11px] font-mono text-gray-400 print-text-muted">
-                      Reputation: <span className="text-red-400 font-bold uppercase print-text-dark">{context.threat_intelligence.reputation}</span>
+                      Reputation: <span className="text-red-400 font-bold uppercase print-text-dark">{contextIntel.reputation}</span>
                     </div>
                     <div className="text-[11px] font-mono text-gray-400 print-text-muted">
-                      Category: <span className="text-gray-300 print-text-dark">{context.threat_intelligence.category}</span>
+                      Category: <span className="text-gray-300 print-text-dark">{contextIntel.category}</span>
                     </div>
                     <div className="text-[11px] font-mono text-gray-400 print-text-muted">
-                      Intel Confidence: <span className="text-gray-300 print-text-dark">{context.threat_intelligence.confidence}%</span>
+                      Intel Confidence: <span className="text-gray-300 print-text-dark">{contextIntel.confidence}%</span>
                     </div>
                   </div>
                   <p className="text-[11px] text-gray-500 font-sans leading-relaxed print-text-muted">
-                    {context.threat_intelligence.summary}
+                    {contextIntel.summary}
                   </p>
                 </div>
               ) : (

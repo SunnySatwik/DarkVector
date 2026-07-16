@@ -139,6 +139,7 @@ export default function InvestigationWorkspace({
         onUpdateStatus={(status) => updateStatusMutation.mutate(status)}
         onOpenReport={onOpenReport}
         analysisContext={analysisData?.context ?? undefined}
+        explanationSummary={analysisData?.explanation?.summary}
         openTabs={openTabs}
         onSelectAlert={onSelectAlert}
         onCloseAlertTab={onCloseAlertTab}
