@@ -1,6 +1,7 @@
 import React from "react";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import AmbientBackground from "../components/AmbientBackground";
 import { Workspace } from "../types";
 
 interface AppLayoutProps {
@@ -24,15 +25,12 @@ export default function AppLayout({
 }: AppLayoutProps) {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg text-gray-100 relative">
-      {/* Background drifting topology grid */}
-      <div 
-        className="absolute inset-0 cyber-grid-drifting opacity-[0.22] pointer-events-none z-0" 
-        aria-hidden="true"
-      />
+      {/* Ambient background — 3 layers, always below content */}
+      <AmbientBackground />
 
       {/* Upper Main Section */}
       <div className="flex-1 flex overflow-hidden h-full relative z-10">
-        {/* Sidebar Navigation */}
+        {/* Sidebar Navigation — glass effect */}
         <Sidebar
           activeTab={activeTab}
           onSelectTab={onSelectTab}
@@ -56,4 +54,3 @@ export default function AppLayout({
     </div>
   );
 }
-

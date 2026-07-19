@@ -35,6 +35,7 @@ import {
   FlameKindling,
 } from "lucide-react";
 import { Badge, Skeleton } from "../components/ui/DesignSystem";
+import EmptyStateMonitor from "../components/EmptyStateMonitor";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -438,10 +439,7 @@ function ActiveInvestigations({
           <p className="text-[13px] font-medium text-gray-300 font-sans">Active investigations</p>
           <span className="text-[10px] font-mono text-gray-600">0 open</span>
         </div>
-        <div className="border border-border-custom/15 rounded-xl p-6 text-center bg-surface/5 relative overflow-hidden">
-          <div className="absolute inset-0 empty-wireframe-bg opacity-[0.03] cyber-grid pointer-events-none" />
-          <p className="text-xs text-gray-500 font-sans relative z-10">No active investigations.</p>
-        </div>
+        <EmptyStateMonitor variant="investigations" />
       </motion.section>
     );
   }
@@ -456,35 +454,49 @@ function ActiveInvestigations({
       </div>
 
       <div className="divide-y divide-border-custom/15">
-        {investigations.map((inv, i) => (
-          <motion.button
-            key={inv.investigation_id}
-            {...fadeUp(0.2 + i * 0.04)}
-            onClick={() => onOpen(inv.investigation_id)}
-            className="w-full flex items-center justify-between py-3.5 group transition-colors duration-120 text-left cursor-pointer"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${severityDot(inv.severity)} ${inv.status.toLowerCase() === "investigating" || inv.status.toLowerCase() === "new" ? "animate-pulse" : ""
-                  }`}
-              />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-mono text-gray-500">{inv.investigation_id}</span>
-                  <Badge variant={severityVariant(inv.severity)}>{inv.severity}</Badge>
+        {investigations.map((inv, i) => {
+          // Only pulse if actively investigating or brand new — motion communicates state
+          const isLive = inv.status.toLowerCase() === "investigating" || inv.status.toLowerCase() === "new";
+          return (
+            <motion.button
+              key={inv.investigation_id}
+              {...fadeUp(0.2 + i * 0.04)}
+              onClick={() => onOpen(inv.investigation_id)}
+              className="investigation-card w-full flex items-center justify-between py-3.5 group text-left cursor-pointer rounded-lg px-2 -mx-2"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Live-state indicator — pulse only when actively working */}
+                <div className="relative shrink-0">
+                  <div className={`w-1.5 h-1.5 rounded-full ${severityDot(inv.severity)}`} />
+                  {isLive && (
+                    <div className={`absolute inset-0 rounded-full ${severityDot(inv.severity)} opacity-50`}
+                      style={{ animation: "doublePulseOuter 2.5s cubic-bezier(0.16, 1, 0.3, 1) infinite" }}
+                    />
+                  )}
                 </div>
-                <p className="text-[13px] text-gray-200 font-medium font-sans truncate group-hover:text-white transition-colors">
-                  {inv.title}
-                </p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Clock className="w-2.5 h-2.5 text-gray-600" />
-                  <span className="text-[10px] text-gray-500 font-mono">Updated {formatRelativeTime(inv.updated_at)}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[10px] font-mono text-gray-500">{inv.investigation_id}</span>
+                    <Badge variant={severityVariant(inv.severity)}>{inv.severity}</Badge>
+                    {isLive && (
+                      <span className="text-[9px] font-mono text-blue-400/70 uppercase tracking-wider">
+                        {inv.status}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[13px] text-gray-200 font-medium font-sans truncate group-hover:text-white transition-colors">
+                    {inv.title}
+                  </p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Clock className="w-2.5 h-2.5 text-gray-600" />
+                    <span className="text-[10px] text-gray-500 font-mono">Updated {formatRelativeTime(inv.updated_at)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 shrink-0 ml-4 transition-colors" />
-          </motion.button>
-        ))}
+              <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 shrink-0 ml-4 transition-all duration-120 group-hover:translate-x-0.5" />
+            </motion.button>
+          );
+        })}
       </div>
     </motion.section>
   );

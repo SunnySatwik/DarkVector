@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Play, Pause, Trash2, Terminal, ShieldCheck, Database, Search } from "lucide-react";
 import { PageHeader } from "../components/ui/DesignSystem";
 import { formatLocalTimeOnly } from "../lib/timeFormatter";
+import EmptyStateMonitor from "../components/EmptyStateMonitor";
 
 
 interface LogLine {
@@ -221,10 +222,8 @@ export default function LiveEvents() {
           ))}
 
           {filteredLogs.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-gray-500">
-              <span className="text-xs font-mono uppercase tracking-wider text-gray-600">
-                [ No terminal logs streamed match the filter parameters ]
-              </span>
+            <div className="py-12">
+              <EmptyStateMonitor variant="events" />
             </div>
           )}
 

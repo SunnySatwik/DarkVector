@@ -51,9 +51,31 @@ export const SPRINGS = {
     damping: 15,
     mass: 0.7,
   },
+  // Dialogs, modals, expanded panels — elevated entry feel
+  dialog: {
+    type: "spring" as const,
+    stiffness: 420,
+    damping: 34,
+    mass: 0.7,
+  },
+  // Timeline expansion — gentle unfold
+  unfold: {
+    type: "spring" as const,
+    stiffness: 180,
+    damping: 22,
+    mass: 0.9,
+  },
+  // Evidence inspector side panel
+  panel: {
+    type: "spring" as const,
+    stiffness: 280,
+    damping: 28,
+    mass: 0.8,
+  },
 };
 
-// Reusable Framer Motion presets
+// ─── Reusable Framer Motion presets ──────────────────────────────────────────
+
 export const fadeUp = (delay = 0, distance = 8) => ({
   initial: { opacity: 0, y: distance },
   animate: { opacity: 1, y: 0 },
@@ -82,5 +104,54 @@ export const staggerContainer = (staggerDelay = 0.04) => ({
     },
   },
 });
+
+/**
+ * Dialog reveal — coordinate 3-phase entry.
+ * Use with AnimatePresence on the outer wrapper.
+ */
+export const dialogReveal = (prefersReducedMotion = false) =>
+  prefersReducedMotion
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+        transition: { duration: DURATIONS.fast },
+      }
+    : {
+        initial: { opacity: 0, y: 14, scale: 0.97 },
+        animate: { opacity: 1, y: 0, scale: 1 },
+        exit: { opacity: 0, y: 8, scale: 0.98 },
+        transition: SPRINGS.dialog,
+      };
+
+/**
+ * Workspace slide — entering from right, lighter than dialog.
+ * Reduced compared to before: short x offset, quick opacity.
+ */
+export const workspaceSlide = (prefersReducedMotion = false) =>
+  prefersReducedMotion
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+        transition: { duration: DURATIONS.fast },
+      }
+    : {
+        initial: { opacity: 0, x: 5 },
+        animate: { opacity: 1, x: 0 },
+        exit: { opacity: 0, x: -4 },
+        transition: { duration: DURATIONS.standard, ease: EASINGS.emphasized },
+      };
+
+/**
+ * Timeline item unfold — used for investigaton event items.
+ */
+export const timelineItem = (delay = 0) => ({
+  initial: { opacity: 0, x: -6, height: 0 },
+  animate: { opacity: 1, x: 0, height: "auto" },
+  exit: { opacity: 0, x: -4, height: 0 },
+  transition: { ...SPRINGS.unfold, delay },
+});
+
 export type Easing = typeof EASINGS[keyof typeof EASINGS];
 export type Spring = typeof SPRINGS[keyof typeof SPRINGS];

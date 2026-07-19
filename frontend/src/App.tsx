@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { DURATIONS, EASINGS } from "./lib/motion";
+import { workspaceSlide } from "./lib/motion";
 import AppLayout from "./layouts/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import ThreatFeed from "./pages/ThreatFeed";
@@ -19,6 +19,13 @@ import { MOCK_WORKSPACES } from "./mockData";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
+
+  const prefersReducedMotion = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
+
+  const pageSlide = workspaceSlide(prefersReducedMotion);
 
   // ── Live workspace state ──────────────────────────────────────────────────
   const [activeWorkspaceAlert, setActiveWorkspaceAlert] = useState<Alert | null>(null);
@@ -190,10 +197,10 @@ export default function App() {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activeWorkspaceAlert ? `workspace-${activeWorkspaceAlert.id}` : activeTab}
-            initial={{ opacity: 0, x: 6 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -6 }}
-            transition={{ duration: DURATIONS.standard, ease: EASINGS.emphasized }}
+            initial={pageSlide.initial}
+            animate={pageSlide.animate}
+            exit={pageSlide.exit}
+            transition={pageSlide.transition}
             className="w-full h-full"
           >
             {renderContent()}

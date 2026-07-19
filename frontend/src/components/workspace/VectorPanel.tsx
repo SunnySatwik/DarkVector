@@ -21,6 +21,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, useId } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { createPortal } from "react-dom";
+import { SPRINGS } from "../../lib/motion";
 import {
   Sparkles,
   Send,
@@ -481,7 +482,7 @@ Ask me anything about this investigation.`;
   // Animation helpers
   const springTransition = prefersReducedMotion
     ? { duration: 0.15 }
-    : { type: "spring" as const, stiffness: 280, damping: 30, mass: 0.8 };
+    : SPRINGS.dialog;
 
   const backdropVariants = {
     hidden: { opacity: 0 },
@@ -831,7 +832,14 @@ Ask me anything about this investigation.`;
           }}
           disabled={isResponding}
           placeholder={isResponding ? "Vector is thinking..." : "Ask Vector..."}
-          className="flex-1 bg-transparent border border-border-custom/20 focus:border-violet-500/30 focus:outline-none rounded-lg px-3 py-1.5 text-[12px] text-gray-200 placeholder-gray-600 transition-colors duration-150 font-sans disabled:opacity-50"
+          className="flex-1 bg-transparent border border-border-custom/20 focus:border-violet-500/30 focus:outline-none rounded-lg px-3 py-1.5 text-[12px] text-gray-200 placeholder-gray-600 transition-all duration-200 font-sans disabled:opacity-50"
+          style={{ transition: "border-color 0.2s ease, box-shadow 0.2s ease" }}
+          onFocusCapture={(e) => {
+            (e.target as HTMLInputElement).style.boxShadow = "0 0 0 2px rgba(139, 92, 246, 0.2)";
+          }}
+          onBlurCapture={(e) => {
+            (e.target as HTMLInputElement).style.boxShadow = "none";
+          }}
         />
         <button
           type="submit"
@@ -870,36 +878,37 @@ Ask me anything about this investigation.`;
               key="vector-expanded"
               className="fixed inset-0 z-50 flex items-center justify-end p-6 font-sans"
             >
-              {/* Backdrop */}
+              {/* Backdrop — blur + brightness like modern desktop apps */}
               <motion.div
                 key="backdrop"
                 variants={backdropVariants}
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                transition={{ duration: prefersReducedMotion ? 0.15 : 0.25 }}
+                transition={{ duration: prefersReducedMotion ? 0.15 : 0.2 }}
                 onClick={() => setIsExpanded(false)}
-                className="absolute inset-0 bg-black/65 cursor-pointer"
+                className="absolute inset-0 cursor-pointer"
                 style={{
-                  backdropFilter: prefersReducedMotion ? undefined : "blur(3px)",
-                  WebkitBackdropFilter: prefersReducedMotion ? undefined : "blur(3px)",
+                  backgroundColor: "rgba(0,0,0,0.5)",
+                  backdropFilter: prefersReducedMotion ? undefined : "blur(7px) brightness(0.7)",
+                  WebkitBackdropFilter: prefersReducedMotion ? undefined : "blur(7px) brightness(0.7)",
                 }}
                 aria-hidden="true"
               />
 
-              {/* Modal shell — spring spatial entry */}
+              {/* Modal shell — dialog spring entry */}
               <motion.div
                 ref={modalRef}
                 key="modal"
-                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 120, scale: 0.96 }}
-                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, x: 0, scale: 1 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 60, scale: 0.97 }}
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.97 }}
+                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.98 }}
                 transition={springTransition}
                 role="dialog"
                 aria-modal="true"
                 aria-label="Vector AI Investigation Partner"
                 aria-labelledby={`${dialogId}-title`}
-                className="relative w-[78vw] h-[88vh] max-w-[1280px] bg-[#0A0C12] border border-[#1E2130]/60 rounded-2xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden"
+                className="relative w-[78vw] h-[88vh] max-w-[1280px] glass-dialog rounded-2xl flex flex-col overflow-hidden"
               >
                 {/* Ambient intelligence layer */}
                 <VectorAmbient severity={severity} />
@@ -926,36 +935,64 @@ Ask me anything about this investigation.`;
                     />
                   </motion.div>
 
-                  {/* Message thread — staggered reveal */}
+                  {/* Message thread — staggered reveal with scroll fade */}
                   <motion.div
                     key="messages"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={prefersReducedMotion ? { duration: 0.15 } : { delay: 0.2, duration: 0.25 }}
-                    className="flex-1 overflow-y-auto min-h-0 scrollbar-thin"
+                    className="flex-1 min-h-0 relative"
                     role="log"
                     aria-live="polite"
                     aria-label="Investigation conversation"
                   >
-                    <div className="px-8 py-6 max-w-[880px] mx-auto space-y-5">
-                      {chatMessages.map((msg, i) => (
-                        <VectorMessage
-                          key={i}
-                          msg={msg}
-                          index={i}
-                          isNew={i === newMessageIndex}
-                        />
-                      ))}
+                    {/* Sticky scroll fade at top */}
+                    <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-[#0A0C12] to-transparent pointer-events-none z-10" />
 
-                      {isResponding && (
-                        <div className="vector-msg-enter">
-                          <VectorReasoningIndicator />
-                        </div>
-                      )}
+                    <div className="overflow-y-auto h-full scrollbar-thin">
+                      <div className="px-8 py-6 max-w-[880px] mx-auto space-y-5">
+                        {chatMessages.map((msg, i) => (
+                          <VectorMessage
+                            key={i}
+                            msg={msg}
+                            index={i}
+                            isNew={i === newMessageIndex}
+                          />
+                        ))}
 
-                      <div ref={expandedChatEndRef} />
+                        {/* Typing indicator — shows between user send and AI reply */}
+                        {isResponding && (
+                          <motion.div
+                            className="vector-msg-enter flex items-start gap-2.5"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.18 }}
+                          >
+                            <div className="rounded-2xl rounded-tl-sm bg-[#111520]/70 border border-[#23262F]/50 px-4 py-3 flex items-center gap-1.5">
+                              {[0, 1, 2].map((i) => (
+                                <div
+                                  key={i}
+                                  className="w-1.5 h-1.5 rounded-full bg-violet-400/60"
+                                  style={{
+                                    animation: `vectorWave${i} 1.4s ease-in-out infinite`,
+                                    animationDelay: `${i * 0.12}s`,
+                                    transformOrigin: "center",
+                                    transform: "scaleY(1)",
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-gray-600 font-mono mt-2 ml-1">Vector is reasoning...</span>
+                          </motion.div>
+                        )}
+
+                        <div ref={expandedChatEndRef} />
+                      </div>
                     </div>
+
+                    {/* Scroll fade at bottom */}
+                    <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-[#0A0C12] to-transparent pointer-events-none z-10" />
                   </motion.div>
 
                   {/* Suggestions — staggered */}

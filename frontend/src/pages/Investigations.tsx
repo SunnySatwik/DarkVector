@@ -25,6 +25,7 @@ import { severityBadgeClass } from "../lib/severity";
 import { useInvestigations, useUpdateInvestigationStatus } from "../hooks/useInvestigations";
 import { CaseItem, mapInvestigationToCase } from "../lib/investigationMapper";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import EmptyStateMonitor from "../components/EmptyStateMonitor";
 import {
   archiveInvestigation,
   restoreInvestigation,
@@ -404,7 +405,7 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: Math.min(5, i) * 0.04, ease: "easeOut" }}
                   onClick={() => setActiveCaseId(c.id)}
-                  className={`p-3.5 rounded-lg border text-left cursor-pointer transition-all duration-150 flex items-center justify-between group ${
+                  className={`investigation-card p-3.5 rounded-lg border text-left cursor-pointer flex items-center justify-between group ${
                     isSelected
                       ? "bg-[#161A22] border-purple-500/60 shadow shadow-purple-500/10"
                       : "bg-black/10 border-transparent hover:bg-black/25 hover:border-[#23262F]"
@@ -430,8 +431,15 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
                         {c.severity}
                       </span>
                       <span className="flex items-center gap-1 text-[9px] text-gray-500">
-                        <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
-                        <span>{statusInfo.text}</span>
+                        <span className="relative flex shrink-0">
+                          <span className={`w-1.5 h-1.5 rounded-full status-chip ${statusInfo.dot}`} />
+                          {(c.status === "new" || c.status === "investigating") && (
+                            <span className={`absolute inset-0 rounded-full ${statusInfo.dot} opacity-60`}
+                              style={{ animation: "doublePulseOuter 2.5s cubic-bezier(0.16, 1, 0.3, 1) infinite" }}
+                            />
+                          )}
+                        </span>
+                        <span className="status-chip">{statusInfo.text}</span>
                       </span>
                       <span className="text-[9px] text-gray-500 truncate max-w-[90px]">
                         @{c.assignedAnalyst}
@@ -461,10 +469,7 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
             })}
 
             {filteredCases.length === 0 && (
-              <div className="py-12 text-center text-gray-600 font-mono text-xs flex flex-col items-center justify-center gap-2">
-                <Shield className="w-8 h-8 opacity-25" />
-                <span>No matching investigations found.</span>
-              </div>
+              <EmptyStateMonitor variant="queue" />
             )}
           </div>
         </div>
@@ -481,13 +486,13 @@ export default function Investigations({ onOpenInvestigation, onOpenReport }: In
               className="bg-[#111317] border border-[#23262F] rounded-xl p-5 flex flex-col justify-between min-h-[560px] space-y-6"
             >
               {cases.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-gray-600 font-mono text-xs gap-3">
-                  <Briefcase className="w-8 h-8 opacity-25" />
-                  <span>No investigations found in environment.</span>
-                </div>
+                <EmptyStateMonitor variant="investigations" />
               ) : !selectedCase ? (
-                <div className="flex flex-col items-center justify-center py-24 text-gray-600 font-mono text-xs gap-3">
-                  <ShieldAlert className="w-8 h-8 opacity-25" />
+                <div className="flex flex-col items-center justify-center py-24 text-gray-400 font-mono text-xs gap-3">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+                  </span>
                   <span>Select an investigation to view details.</span>
                 </div>
               ) : (

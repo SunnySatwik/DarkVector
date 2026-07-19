@@ -166,6 +166,99 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   AMBIENT BACKGROUND SYSTEM
+   3-layer: radial glow + topology grid + vignette
+   ═══════════════════════════════════════════════════════════ */
+
+/* Slow breathing corner glow */
+@keyframes ambientGlow {
+  0%, 100% { opacity: 0.035; transform: scale(1); }
+  50% { opacity: 0.06; transform: scale(1.08); }
+}
+
+.ambient-glow-tl {
+  background: radial-gradient(circle at 0% 0%, rgba(90, 142, 255, 1) 0%, transparent 60%);
+  animation: ambientGlow 18s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.ambient-glow-br {
+  background: radial-gradient(circle at 100% 100%, rgba(132, 108, 255, 1) 0%, transparent 60%);
+  animation: ambientGlow 22s ease-in-out infinite 4s;
+  will-change: transform, opacity;
+}
+
+/* Vignette overlay — darkens edges, draws eye to center */
+.ambient-vignette {
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 50%,
+    transparent 0%,
+    transparent 40%,
+    rgba(9, 11, 17, 0.35) 70%,
+    rgba(9, 11, 17, 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLASS / DEPTH SYSTEM
+   Used only on: sidebar, popups, hero card, dialogs
+   ═══════════════════════════════════════════════════════════ */
+
+.glass-sidebar {
+  background: rgba(17, 20, 27, 0.82);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border-right: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.glass-dialog {
+  background: rgba(10, 12, 18, 0.92);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.025) inset,
+    0 1px 0 rgba(255, 255, 255, 0.015) inset,
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.glass-hero {
+  background: rgba(17, 20, 27, 0.75);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INVESTIGATION CARD INTERACTIONS (Linear-style)
+   ═══════════════════════════════════════════════════════════ */
+
+.investigation-card {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.15s ease;
+}
+
+.investigation-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATUS CHIP MORPHING TRANSITIONS
+   ═══════════════════════════════════════════════════════════ */
+
+.status-chip {
+  transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════
    VECTOR AI — Premium Animation System
    All animations: GPU-friendly transform + opacity only.
    Wrapped in prefers-reduced-motion media query.
@@ -254,6 +347,21 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Vector scroll fade — masks top of message area */
+.vector-scroll-fade-top::before {
+  content: '';
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(10, 12, 18, 0.9) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+  display: block;
+  flex-shrink: 0;
+}
+
 /* Suggestion chip hover shift */
 .vector-chip {
   transition: transform 0.12s ease, border-color 0.12s ease, color 0.12s ease;
@@ -340,6 +448,45 @@ body {
   will-change: transform, opacity;
 }
 
+/* ─── Empty State Monitor Radar ───────────────────────────────────────── */
+@keyframes radarRing {
+  0% { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.radar-ring {
+  animation: radarRing 3s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  will-change: transform, opacity;
+}
+
+.radar-ring-2 {
+  animation: radarRing 3s cubic-bezier(0.16, 1, 0.3, 1) infinite 1s;
+}
+
+/* ─── Event-driven PulseRing (2 pulses then stops) ───────────────────── */
+@keyframes pulseOnce {
+  0% { transform: scale(1); opacity: 0.7; }
+  40% { transform: scale(1.7); opacity: 0.15; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.pulse-ring-once {
+  animation: pulseOnce 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ─── SOC Live Clock Tick ─────────────────────────────────────────────── */
+@keyframes clockTick {
+  0% { opacity: 1; }
+  49% { opacity: 1; }
+  50% { opacity: 0; }
+  99% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.clock-colon {
+  animation: clockTick 1s step-end infinite;
+}
+
 /* Easing transition for sidebar collapse button */
 .sidebar-collapse-transition {
   transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -366,12 +513,16 @@ body {
   .telemetry-pulse-outer,
   .active-navigation-trace,
   .list-update-pulse,
-  .empty-wireframe-bg {
+  .empty-wireframe-bg,
+  .ambient-glow-tl,
+  .ambient-glow-br,
+  .radar-ring,
+  .radar-ring-2,
+  .pulse-ring-once,
+  .clock-colon,
+  .investigation-card {
     animation: none !important;
     transition: none !important;
     transform: none !important;
   }
 }
-
-
-

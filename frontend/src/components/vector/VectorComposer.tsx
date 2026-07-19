@@ -80,12 +80,12 @@ export function VectorComposer({
     ? "border-violet-500/50"
     : "border-[#23262F]/50 hover:border-[#2D3140]/70";
 
-  // Glow state
+  // Glow state — Cursor-style: strong violet bloom on focus
   const glowStyle =
     isResponding
       ? { animation: "vectorComposerWait 2.4s ease-in-out infinite" }
       : isFocused
-      ? { boxShadow: "0 0 0 3px rgba(139,92,246,0.07)" }
+      ? { boxShadow: "0 0 0 2px rgba(139,92,246,0.18), 0 0 20px rgba(139,92,246,0.06)" }
       : {};
 
   return (
